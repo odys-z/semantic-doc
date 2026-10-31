@@ -1,12 +1,21 @@
 /**
  * `npm test`: run all cases in Node (no browser), exit 1 on failure.
  * The same cases are shown in the browser at /test.html (npm start).
+ *
+ * `node dist-test/run.js --json` prints the results as JSON instead, e.g. to
+ * compile each case's RST with docutils.
  */
-import { inlineCases } from './cases/inline';
+import { allCases } from './cases';
 import { run } from './runner';
 
-const results = run(inlineCases);
-let failed = 0;
+const results = run(allCases);
+let failed = results.filter((r) => !r.pass).length;
+
+if (process.argv.includes('--json')) {
+  console.log(JSON.stringify(results, null, 2));
+  process.exit(failed ? 1 : 0);
+}
+failed = 0;
 
 for (const r of results) {
   if (r.pass) {

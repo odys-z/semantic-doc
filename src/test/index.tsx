@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ParagraphEditor } from '../editor/components/ParagraphEditor';
-import '../editor/styles/theme-roles.css';
-import '../editor/styles/editor.css';
+import 'katex/dist/katex.min.css';
+import { ParagraphEditor } from '../editor';
 import './test.css';
-import { inlineCases } from './cases/inline';
+import { allCases } from './cases';
 import { run } from './runner';
 
-const results = run(inlineCases);
+const results = run(allCases);
 const passed = results.filter((r) => r.pass).length;
 
 // for headless runs (e.g. Playwright): read document.title or window.__results

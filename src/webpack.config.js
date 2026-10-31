@@ -8,6 +8,8 @@ module.exports = (env, argv) => {
   const rules = [
     { test: /\.[jt]sx?$/, exclude: /node_modules/, loader: 'babel-loader', options: { envName: argv.mode || 'production' } },
     { test: /\.css$/, use: ['style-loader', 'css-loader'] },
+    // KaTeX fonts (demo / test pages; host apps bring their own KaTeX CSS)
+    { test: /\.(woff2?|ttf)$/, type: 'asset/resource', generator: { filename: 'fonts/[name][ext]' } },
   ];
 
   // npm test: bundle the test runner for Node and run it
@@ -26,7 +28,7 @@ module.exports = (env, argv) => {
   // npm start / npm run build: browser pages
   const prod = argv.mode === 'production';
   const pages = [
-    { name: 'editor', entry: './editor/index.tsx', filename: 'index.html', title: 'semantic-doc editor' },
+    { name: 'demo', entry: './demo/index.tsx', filename: 'index.html', title: 'semantic-doc editor' },
     // the browser test page is served in development only
     ...(prod ? [] : [{ name: 'test', entry: './test/index.tsx', filename: 'test.html', title: 'semantic-doc tests' }]),
   ];
@@ -41,7 +43,7 @@ module.exports = (env, argv) => {
     plugins: pages.map(
       (p) =>
         new HtmlWebpackPlugin({
-          template: './editor/index.html',
+          template: './demo/index.html',
           filename: p.filename,
           title: p.title,
           chunks: [p.name],

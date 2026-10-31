@@ -2,8 +2,28 @@
  * RST role styles. Shared by the editor AND the Sphinx theme
  * (add to html_css_files in conf.py) so both render identically.
  * docutils renders :large:`x` as <span class="large">x</span>.
+ * Role names are listed in rst/marks.ts (ROLES).
  */
+
+/* size */
 .small   { font-size: 0.85em; }
 .large   { font-size: 1.25em; }
 .x-large { font-size: 1.5em; }
-.red     { color: #c0392b; }
+
+/* colour */
+.red    { color: #c0392b; }
+.orange { color: #d35400; }
+.green  { color: #1e8449; }
+.blue   { color: #1f5fbf; }
+.gray   { color: #707070; }
+
+/* background */
+.bg-yellow { background-color: #fff3a3; }
+.bg-green  { background-color: #d5f5dc; }
+.bg-blue   { background-color: #dbe9ff; }
+.bg-red    { background-color: #fde0dc; }
+.bg-gray   { background-color: #ececec; }
+
+/* decoration */
+.underline { text-decoration: underline; }
+.strike    { text-decoration: line-through; }

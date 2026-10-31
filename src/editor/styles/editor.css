@@ -1,15 +1,18 @@
-body { font-family: system-ui, sans-serif; margin: 2rem; color: #222; }
+/* paragraph editor widget; all selectors scoped under .sd-editor */
+.sd-editor { border: 1px solid #ccc; border-radius: 6px; background: #fff; }
+.sd-editor.sd-readonly { border-color: transparent; }
 
-.sd-editor { border: 1px solid #ccc; border-radius: 6px; max-width: 760px; }
-.sd-toolbar { display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid #ddd; background: #fafafa; }
-.sd-btn { min-width: 32px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; }
-.sd-btn.on { background: #dbe9ff; border-color: #7aa7f0; }
-.sd-btn:disabled { opacity: 0.4; cursor: default; }
-.sd-sep { width: 1px; margin: 0 4px; background: #ddd; }
-.sd-toolbar select { padding: 4px; border-radius: 4px; }
+.sd-editor .sd-toolbar { display: flex; flex-wrap: wrap; align-items: stretch; gap: 4px; padding: 6px; border-bottom: 1px solid #ddd; background: #fafafa; border-radius: 6px 6px 0 0; }
+.sd-editor .sd-btn { min-width: 32px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; font: inherit; line-height: 1.2; }
+.sd-editor .sd-btn.on, .sd-editor .sd-select.on { background: #dbe9ff; border-color: #7aa7f0; }
+.sd-editor .sd-btn:disabled, .sd-editor .sd-select:disabled { opacity: 0.4; cursor: default; }
+.sd-editor .sd-select { padding: 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font: inherit; }
+.sd-editor .sd-sep { width: 1px; margin: 0 2px; background: #ddd; }
 
-.sd-content .tiptap { padding: 12px; min-height: 3em; outline: none; line-height: 1.6; }
-.sd-content code { background: #f2f2f2; padding: 0 3px; border-radius: 3px; }
-
-.sd-out { max-width: 760px; }
-.sd-out pre { background: #f6f6f6; padding: 10px; border-radius: 6px; white-space: pre-wrap; }
+.sd-editor .sd-content .tiptap { padding: 12px; min-height: 3em; outline: none; line-height: 1.6; }
+.sd-editor .sd-content code { background: #f2f2f2; padding: 0 3px; border-radius: 3px; }
+.sd-editor .sd-content [data-type="inline-math"] { cursor: pointer; padding: 0 1px; border-radius: 3px; }
+.sd-editor .sd-content [data-type="block-math"] { cursor: pointer; padding: 8px 0; text-align: center; }
+.sd-editor .sd-content [data-type="inline-math"]:hover,
+.sd-editor .sd-content [data-type="block-math"]:hover { background: #eef4ff; }
+.sd-editor .sd-content .ProseMirror-selectednode { outline: 2px solid #7aa7f0; border-radius: 3px; }
