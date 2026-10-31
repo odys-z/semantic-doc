@@ -11,6 +11,8 @@ export function Toolbar({ editor }: { editor: Editor }) {
       literal: editor.isActive('literal'),
       link: editor.isActive('link'),
       role: (editor.getAttributes('role').name as string | undefined) ?? '',
+      canUndo: editor.can().undo(),
+      canRedo: editor.can().redo(),
     }),
   });
 
@@ -31,6 +33,9 @@ export function Toolbar({ editor }: { editor: Editor }) {
 
   return (
     <div className="sd-toolbar">
+      <button className="sd-btn" disabled={!s.canUndo} onClick={() => editor.chain().focus().undo().run()} title="Undo (Ctrl+Z)">↶</button>
+      <button className="sd-btn" disabled={!s.canRedo} onClick={() => editor.chain().focus().redo().run()} title="Redo (Ctrl+Shift+Z / Ctrl+Y)">↷</button>
+      <span className="sd-sep" />
       <button className={btn(s.strong)} onClick={() => toggle('strong')} title="Strong (Ctrl+B)"><b>B</b></button>
       <button className={btn(s.emphasis)} onClick={() => toggle('emphasis')} title="Emphasis (Ctrl+I)"><i>I</i></button>
       <button className={btn(s.literal)} onClick={() => toggle('literal')} title="Literal (Ctrl+E)"><code>{'<>'}</code></button>

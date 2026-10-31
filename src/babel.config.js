@@ -4,7 +4,8 @@ module.exports = (api) => {
   return {
     presets: [
       ['@babel/preset-env', { targets: target === 'node' ? { node: 'current' } : 'defaults' }],
-      ['@babel/preset-react', { runtime: 'automatic' }],
+      // development: jsxDEV (needs React's dev build); production: jsx
+      ['@babel/preset-react', { runtime: 'automatic', development: api.env('development') }],
       '@babel/preset-typescript',
     ],
   };

@@ -1,13 +1,15 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
-const rules = [
-  { test: /\.[jt]sx?$/, exclude: /node_modules/, loader: 'babel-loader' },
-  { test: /\.css$/, use: ['style-loader', 'css-loader'] },
-];
 const resolve = { extensions: ['.tsx', '.ts', '.jsx', '.js'] };
 
 module.exports = (env, argv) => {
+  // pass webpack's mode to Babel as its env, so JSX is compiled for prod / dev React
+  const rules = [
+    { test: /\.[jt]sx?$/, exclude: /node_modules/, loader: 'babel-loader', options: { envName: argv.mode || 'production' } },
+    { test: /\.css$/, use: ['style-loader', 'css-loader'] },
+  ];
+
   // npm test: bundle the test runner for Node and run it
   if (env.test) {
     return {

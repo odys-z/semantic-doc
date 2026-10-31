@@ -9,6 +9,7 @@ import { Mark } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
+import { UndoRedo } from '@tiptap/extensions';
 
 /** Role names offered in the toolbar. Each needs a CSS rule in styles/theme-roles.css. */
 export const ROLES = [
@@ -92,3 +93,9 @@ export const Role = Mark.create({
 
 /** Everything the paragraph editor is allowed to contain. */
 export const rstExtensions = [OneParagraph, Paragraph, Text, Strong, Emphasis, Literal, Link, Role];
+
+/**
+ * Editor-only behaviour (not part of the schema): Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y.
+ * Kept separate so rstExtensions stays a pure schema for getSchema() in tests.
+ */
+export const editorExtensions = [...rstExtensions, UndoRedo];
