@@ -1,0 +1,9 @@
+/*
+ * RST role styles. Shared by the editor AND the Sphinx theme
+ * (add to html_css_files in conf.py) so both render identically.
+ * docutils renders :large:`x` as <span class="large">x</span>.
+ */
+.small   { font-size: 0.85em; }
+.large   { font-size: 1.25em; }
+.x-large { font-size: 1.5em; }
+.red     { color: #c0392b; }

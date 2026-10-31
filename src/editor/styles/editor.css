@@ -1,0 +1,13 @@
+body { font-family: system-ui, sans-serif; margin: 2rem; color: #222; }
+
+.sd-editor { border: 1px solid #ccc; border-radius: 6px; max-width: 760px; }
+.sd-toolbar { display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid #ddd; background: #fafafa; }
+.sd-btn { min-width: 32px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; }
+.sd-btn.on { background: #dbe9ff; border-color: #7aa7f0; }
+.sd-toolbar select { padding: 4px; border-radius: 4px; }
+
+.sd-content .tiptap { padding: 12px; min-height: 3em; outline: none; line-height: 1.6; }
+.sd-content code { background: #f2f2f2; padding: 0 3px; border-radius: 3px; }
+
+.sd-out { max-width: 760px; }
+.sd-out pre { background: #f6f6f6; padding: 10px; border-radius: 6px; white-space: pre-wrap; }

@@ -1,0 +1,5 @@
+.results { border-collapse: collapse; margin-bottom: 2rem; font-size: 14px; }
+.results th, .results td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; }
+.results tr.pass td:first-child { color: #2e7d32; }
+.results tr.fail { background: #fdecea; }
+.results tr.fail td:first-child { color: #c62828; }
