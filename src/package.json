@@ -7,10 +7,12 @@
   "main": "./editor/index.ts",
   "types": "./editor/index.ts",
   "exports": {
-    ".": "./editor/index.ts"
+    ".": "./editor/index.ts",
+    "./doctree": "./doctree/index.ts"
   },
   "files": [
     "editor",
+    "doctree",
     "README.md"
   ],
   "engines": {
@@ -33,11 +35,15 @@
     "@tiptap/react": "^3.32.2"
   },
   "peerDependencies": {
+    "@anclient/anreact": "^0.8.0",
+    "@anclient/semantier": "^1.1.0",
     "katex": "^0.16.4 || ^0.17.0 || ^0.18.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@anclient/anreact": "file:../../anclient/js/anreact",
+    "@anclient/semantier": "file:../../anclient/js/semantier",
     "@babel/core": "^8.0.10",
     "@babel/preset-env": "^8.0.7",
     "@babel/preset-react": "^8.0.1",
@@ -57,5 +63,13 @@
     "webpack": "^5.112.2",
     "webpack-cli": "^7.3.1",
     "webpack-dev-server": "^6.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@anclient/anreact": {
+      "optional": true
+    },
+    "@anclient/semantier": {
+      "optional": true
+    }
   }
 }

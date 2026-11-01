@@ -204,7 +204,9 @@ export const Background = classMark('background');
 const blockAttr = (name: ClassMark) => ({
   default: null,
   parseHTML: (el: HTMLElement) => el.getAttribute(`data-${name}`),
-  renderHTML: (attrs: Record<string, unknown>) => (attrs[name] ? { [`data-${name}`]: attrs[name] } : {}),
+  // class too, for HTML generated without the node view (StaticBlock)
+  renderHTML: (attrs: Record<string, unknown>) =>
+    attrs[name] ? { [`data-${name}`]: attrs[name], class: attrs[name] } : {},
 });
 
 /** CSS classes of a block formula, also its `.. math::` :class: option */

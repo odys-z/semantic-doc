@@ -1,0 +1,14 @@
+/* doc tree editor; layout only, the tree itself is styled by anreact */
+.sd-doctree-bar { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.sd-doctree .sd-status { color: #666; }
+.sd-doctree .sd-error { color: #c0392b; cursor: pointer; }
+.sd-doctree .sd-row { display: flex; align-items: flex-start; gap: 8px; border-bottom: 1px solid #eef; }
+.sd-doctree .sd-row-content { flex: 1; min-width: 0; }
+.sd-doctree .sd-row-actions { white-space: nowrap; }
+.sd-doctree .sd-act { border: none; background: none; cursor: pointer; padding: 2px 4px; color: #1f5fbf; }
+.sd-doctree .sd-clickable { cursor: text; }
+.sd-doctree .sd-clickable:hover { background: #f6f9ff; }
+.sd-doctree .sd-title { display: inline-block; vertical-align: middle; min-width: 12em; font-weight: bold; }
+.sd-doctree .sd-title .sd-content .tiptap { padding: 2px 6px; min-height: 0; }
+.sd-doctree .sd-ref { padding: 8px 12px; color: #555; font-style: italic; }
+.sd-doctree .sd-media, .sd-doctree .sd-unavail { padding: 8px 12px; color: #888; }

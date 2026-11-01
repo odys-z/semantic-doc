@@ -11,6 +11,9 @@
 export { ParagraphEditor, editorExtensions } from './ParagraphEditor';
 export type { ParagraphEditorProps, EditMath, MathKind, EditorExtensionOptions } from './ParagraphEditor';
 
+export { StaticBlock } from './StaticBlock';
+export type { StaticBlockProps } from './StaticBlock';
+
 export { Toolbar } from './Toolbar';
 export type { ToolbarProps } from './Toolbar';
 
