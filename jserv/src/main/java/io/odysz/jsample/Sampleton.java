@@ -5,7 +5,6 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 
-import io.odysz.common.Configs;
 import io.odysz.common.Utils;
 import io.odysz.jsample.protocol.Samport;
 import io.odysz.semantic.jprotocol.JProtocol;
@@ -31,21 +30,14 @@ public class Sampleton extends JSingleton implements ServletContextListener {
 	 */
 	@Override
 	public void contextInitialized(ServletContextEvent sce) {
-		String relapath = null;
 		try {
 			super.onInitialized(sce);
 
 			JProtocol.setup("jserv-sample", Samport.menu);
 
-			relapath = Configs.getCfg("cheap", "config-path");
-
-			// meta must loaded by DATranscxt before initCheap()
-			// HashMap<String, ICheapChecker> checker = null; // To be tested
-			// CheapEnginv1.initCheap(getFileInfPath(relapath), checker);
 		} catch (IOException e) {
 			e.printStackTrace();
-			Utils.warn("%s: %s\nCheck Config.xml:\ntable=cheap\nk=config-path\nv=%s",
-					e.getClass().getName(), e.getMessage(), relapath);
+			Utils.warn("%s: %s", e.getClass().getName(), e.getMessage());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -53,7 +45,6 @@ public class Sampleton extends JSingleton implements ServletContextListener {
 
 	@Override
 	public void contextDestroyed(ServletContextEvent sce) {
-		// CheapEnginv1.stopCheap();
 		super.onDestroyed(sce);
 	}
 

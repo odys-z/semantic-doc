@@ -53,11 +53,4 @@
   	</c>
   </t>
 
-  <t id="cheap" pk="k" columns="k,v">
-	<c> <k>config-path</k>
-	<!-- change this also need to change connection source in connects/xml
-	 -->
-		<v>workflow-meta.xml</v>
-	</c>
-  </t>
 </configs>

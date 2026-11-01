@@ -22,11 +22,8 @@ public enum Samport implements IPort {
 	menu("menu.serv"),
 	example("example.serv11"),
 	file("file.serv11"),
-	/**workflow port, see {@link io.odysz.sworkflow.CheapEngin} */
-	cheapflow("cheapflow.samplev11"), 
 	/** sample servlet tools.serv */
 	tools("tools.serv"),
-	vec3("vec3.serv"),
 	/** test only, {@link io.odysz.jsample.servs.JsampleCtrl}, localhost only, no session */
 	ctrl("ctrl.less");
 
