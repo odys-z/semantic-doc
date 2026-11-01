@@ -1,4 +1,4 @@
-package io.odysz.jsample.protocol;
+package io.oz.semandoc.protocol;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -18,13 +18,13 @@ import io.odysz.semantics.x.SemanticException;
  */
 public enum Samport implements IPort {
 	heartbeat("ping.serv"), session("login.serv"),
-	/**port provided by {@link io.odysz.jsample.SysMenu} */
+	/**port provided by {@link io.oz.semandoc.SysMenu} */
 	menu("menu.serv"),
 	example("example.serv11"),
 	file("file.serv11"),
 	/** sample servlet tools.serv */
 	tools("tools.serv"),
-	/** test only, {@link io.odysz.jsample.servs.JsampleCtrl}, localhost only, no session */
+	/** test only, {@link io.oz.semandoc.servs.JsampleCtrl}, localhost only, no session */
 	ctrl("ctrl.less");
 
 	static {

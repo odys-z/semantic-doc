@@ -1,4 +1,4 @@
-package io.odysz.jsample;
+package io.oz.semandoc;
 
 import java.io.IOException;
 
@@ -9,7 +9,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import io.odysz.common.Utils;
-import io.odysz.jsample.utils.SampleFlags;
+import io.oz.semandoc.utils.SampleFlags;
 import io.odysz.semantic.jserv.helper.Html;
 
 @WebServlet(description = "Sample Case: echo", urlPatterns = { "/echo.sample" })

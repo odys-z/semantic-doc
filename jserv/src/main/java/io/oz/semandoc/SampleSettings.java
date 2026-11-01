@@ -1,4 +1,4 @@
-package io.odysz.jsample;
+package io.oz.semandoc;
 
 import static io.odysz.common.Utils.logi;
 

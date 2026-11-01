@@ -1,4 +1,4 @@
-package io.odysz.jsample;
+package io.oz.semandoc;
 
 import java.io.IOException;
 import javax.servlet.ServletContextEvent;
@@ -6,7 +6,7 @@ import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 
 import io.odysz.common.Utils;
-import io.odysz.jsample.protocol.Samport;
+import io.oz.semandoc.protocol.Samport;
 import io.odysz.semantic.jprotocol.JProtocol;
 import io.odysz.semantic.jserv.JSingleton;
 
@@ -33,7 +33,7 @@ public class Sampleton extends JSingleton implements ServletContextListener {
 		try {
 			super.onInitialized(sce);
 
-			JProtocol.setup("jserv-sample", Samport.menu);
+			JProtocol.setup("smandoc", Samport.menu);
 
 		} catch (IOException e) {
 			e.printStackTrace();

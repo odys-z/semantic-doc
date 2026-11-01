@@ -1,4 +1,4 @@
-package io.odysz.jsample;
+package io.oz.semandoc;
 
 import static io.odysz.common.LangExt._0;
 import static io.odysz.common.LangExt.f;
@@ -15,8 +15,8 @@ import org.eclipse.jetty.server.ServerConnector;
 
 import io.odysz.common.Configs;
 import io.odysz.common.Utils;
-import io.odysz.jsample.protocol.Samport;
-import io.odysz.jsample.servs.JsampleCtrl;
+import io.oz.semandoc.protocol.Samport;
+import io.oz.semandoc.servs.JsampleCtrl;
 import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.jprotocol.AnsonBody;
@@ -30,25 +30,25 @@ import io.odysz.semantic.jsession.AnSession;
 import io.odysz.semantic.jsession.HeartLink;
 
 /**
- * The jserv-sample application, an embedded Jetty server for tests, e.g. clients' tests of
- * anclient.py3 and anclient.cmake. Built and packaged by jserv-sample/tasks.py, started and stopped by the clients' tests.
+ * The semantic-doc demo server (demo only, copied from semantic-jserv/jserv-sample's JSampleApp), an embedded Jetty server.
+ * Built and packaged by semantic-doc/jserv/tasks.py.
  *
  * <p>Runs in a package folder the same way as a synode (jserv-album), with the provided db files:</p>
  * <pre>
- * bin/jserv-sample-[version].jar
+ * bin/semantic-doc.jserv-[version].jar
  * WEB-INF/config.xml, connects.xml, settings.json, ...
  * volume/system.sqlite, ...
  * </pre>
- * Started with {@code java -jar bin/jserv-sample-[version].jar [settings.json]}, and stopped by a post
+ * Started with {@code java -jar bin/semantic-doc.jserv-[version].jar [settings.json]}, and stopped by a post
  * to {@link JsampleCtrl} from localhost.
  *
  * <p>TODO refactor: registerPorts(), registerServlets(), instanserver(), start(), allowCors() and stop()
  * are copies of jserv-album's io.oz.syntier.serv.SynotierJettyApp, to be shared in a common Jetty app class.</p>
  *
- * @since 1.5.8, moved from src/test (io.oz.jservapp) to io.odysz.jsample since 1.5.9.
+ * Copied from jserv-sample 1.5.9 (io.odysz.jsample.JSampleApp).
  */
-public class JSampleApp {
-	private static final String servpath = "jserv-sample";
+public class SmandocServ {
+	private static final String servpath = "smandoc";
 
 	/**
 	 * Configuration folder, relative to the working folder, the package folder.
@@ -58,9 +58,9 @@ public class JSampleApp {
 	public static final String config_xml = "config.xml";
 	public static final String settings_json = "settings.json";
 
-	public static final String sample_name = "Semantic-jserv Sample APP";
+	public static final String sample_name = "Semantic-doc Demo Serv";
 
-	public static JSampleApp app;
+	public static SmandocServ app;
 
 	static public Sampleton sampleton() {
 		return app.syngleton;
@@ -74,7 +74,7 @@ public class JSampleApp {
 	public Sampleton syngleton() { return syngleton; }
 
 	public static void main(String[] args) {
-		JSampleApp app = _main(args);
+		SmandocServ app = _main(args);
 		if (app.server != null)
 			try {
 				// returns after stop(), e.g. requested by JsampleCtrl
@@ -88,16 +88,16 @@ public class JSampleApp {
 	/**
 	 * @param args [0] settings.json, default {@link #settings_json}
 	 */
-	public static JSampleApp _main(String[] args) {
+	public static SmandocServ _main(String[] args) {
 		try {
 			// Samport.valof() parses both AnsonMsg.Port and Samport names, e.g. "ctrl" for JsampleCtrl
 			JProtocol.setup(servpath, Samport.ctrl);
 
 			SampleSettings settings = SampleSettings.check(webinf, _0(args, settings_json));
 
-			JSampleApp app = boot(webinf, settings)
+			SmandocServ app = boot(webinf, settings)
 					.afterboot(settings)
-					.print("\n. . . . . . . . JSample Jetty Application is running . . . . . . . ");
+					.print("\n. . . . . . . . SmandocServ (Jetty) is running . . . . . . . ");
 
 			return app;
 		} catch (Exception e) {
@@ -109,7 +109,7 @@ public class JSampleApp {
 		}
 	}
 
-	JSampleApp afterboot(SampleSettings settings) {
+	SmandocServ afterboot(SampleSettings settings) {
 		return this;
 	}
 
@@ -121,7 +121,7 @@ public class JSampleApp {
 	 * @return the app
 	 * @throws Exception
 	 */
-	public static JSampleApp boot(String webinf, SampleSettings settings,
+	public static SmandocServ boot(String webinf, SampleSettings settings,
 			PrintstreamProvider ... oe) throws Exception {
 		Configs.init(webinf);
 		Connects.init(webinf);
@@ -133,7 +133,7 @@ public class JSampleApp {
 				;
 	}
 
-	public JSampleApp(SampleSettings settings) throws Exception {
+	public SmandocServ(SampleSettings settings) throws Exception {
 		syngleton = new Sampleton(settings);
 	}
 
@@ -141,10 +141,10 @@ public class JSampleApp {
 	 * Create an application instance working as the web service.
 	 * @throws Exception
 	 */
-	public static JSampleApp createSyndoctierApp(SampleSettings settings,
+	public static SmandocServ createSyndoctierApp(SampleSettings settings,
 			String webinf) throws Exception {
 
-		app = JSampleApp.instanserver(settings);
+		app = SmandocServ.instanserver(settings);
 
 		Utils.logi("------------ Starting %s ... --------------", sample_name);
 
@@ -160,7 +160,7 @@ public class JSampleApp {
     PrintstreamProvider printout;
 	PrintstreamProvider printerr;
 
-	public JSampleApp start(PrintstreamProvider out, PrintstreamProvider err) throws Exception {
+	public SmandocServ start(PrintstreamProvider out, PrintstreamProvider err) throws Exception {
 		printout = out;
 		printerr = err;
 
@@ -209,12 +209,12 @@ public class JSampleApp {
 	 * @param synapp
 	 * @param sysconn
 	 * @param servports
-	 * @return Jetty server, the {@link JSampleApp}
+	 * @return Jetty server, the {@link SmandocServ}
 	 * @throws Exception
 	 */
 	@SafeVarargs
-	static public <T extends ServPort<? extends AnsonBody>> JSampleApp registerPorts(
-			JSampleApp synapp, String sysconn, T ... servports) throws Exception {
+	static public <T extends ServPort<? extends AnsonBody>> SmandocServ registerPorts(
+			SmandocServ synapp, String sysconn, T ... servports) throws Exception {
 
         synapp.schandler = new ServletContextHandler(synapp.server, f("/%s", servpath));
         for (T t : servports) {
@@ -224,7 +224,7 @@ public class JSampleApp {
         return synapp;
 	}
 
-	<T extends ServPort<? extends AnsonBody>> JSampleApp registerServlets(
+	<T extends ServPort<? extends AnsonBody>> SmandocServ registerServlets(
 			ServletContextHandler context, T t) {
 		WebServlet info = t.getClass().getAnnotation(WebServlet.class);
 		for (String pattern : info.urlPatterns()) {
@@ -234,8 +234,8 @@ public class JSampleApp {
 		return this;
 	}
 
-	static JSampleApp instanserver(SampleSettings settings) throws Exception {
-	    JSampleApp synapp = new JSampleApp(settings);
+	static SmandocServ instanserver(SampleSettings settings) throws Exception {
+	    SmandocServ synapp = new SmandocServ(settings);
 		Sampleton.defltScxt = new DATranscxt(settings.conn);
 		synapp.server = new Server();
 
@@ -253,11 +253,11 @@ public class JSampleApp {
 	 * @param context
 	 * @return
 	 */
-	private JSampleApp allowCors(ServletContextHandler context) {
+	private SmandocServ allowCors(ServletContextHandler context) {
 		return this;
 	}
 
-	public JSampleApp print(String... msg) {
+	public SmandocServ print(String... msg) {
 		String qr = f("%s\n%s", sample_name, jserv());
 		Utils.logi("%s\nSynode %s", _0(msg, ""), qr);
 		return this;

@@ -1,4 +1,4 @@
-package io.odysz.jsample;
+package io.oz.semandoc;
 
 import io.odysz.semantic.jsession.JProfile;
 import io.odysz.semantic.jsession.JUser;

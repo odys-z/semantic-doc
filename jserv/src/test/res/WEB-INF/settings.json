@@ -1,4 +1,4 @@
-{"type": "io.odysz.jsample.SampleSettings",
+{"type": "io.oz.semandoc.SampleSettings",
  "conn": "sys-sqlite",
  "vol_name": "VOLUME_HOME",
  "volume": "../volume",

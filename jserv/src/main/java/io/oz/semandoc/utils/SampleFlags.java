@@ -1,4 +1,4 @@
-package io.odysz.jsample.utils;
+package io.oz.semandoc.utils;
 
 public class SampleFlags {
 

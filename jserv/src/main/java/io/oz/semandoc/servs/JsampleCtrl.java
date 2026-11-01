@@ -1,4 +1,4 @@
-package io.odysz.jsample.servs;
+package io.oz.semandoc.servs;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -8,8 +8,8 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletResponse;
 
 import io.odysz.common.Utils;
-import io.odysz.jsample.JSampleApp;
-import io.odysz.jsample.protocol.Samport;
+import io.oz.semandoc.SmandocServ;
+import io.oz.semandoc.protocol.Samport;
 import io.odysz.semantic.jprotocol.AnsonMsg;
 import io.odysz.semantic.jprotocol.AnsonMsg.MsgCode;
 import io.odysz.semantic.jprotocol.UserReq;
@@ -18,7 +18,7 @@ import io.odysz.semantic.jserv.ServPort;
 /**
  * JSample's control tier, for tests only, on port {@link Samport#ctrl}, url pattern /ctrl.less.
  *
- * <p>No session. Any post from localhost stops {@link JSampleApp} gracefully, see {@link JSampleApp#stop()};
+ * <p>No session. Any post from localhost stops {@link SmandocServ} gracefully, see {@link SmandocServ#stop()};
  * posts from other addresses are refused.</p>
  *
  * @since 1.5.9
@@ -50,11 +50,11 @@ public class JsampleCtrl extends ServPort<UserReq> {
 			return;
 		}
 
-		write(resp, ok("%s is stopping.", JSampleApp.sample_name));
+		write(resp, ok("%s is stopping.", SmandocServ.sample_name));
 		resp.flushBuffer();
 
 		// Not on Jetty's request thread: server.stop() waits for this request to complete.
-		new Thread(() -> JSampleApp.app.stop(), "jsample-stop").start();
+		new Thread(() -> SmandocServ.app.stop(), "smandoc-stop").start();
 	}
 
 	/**

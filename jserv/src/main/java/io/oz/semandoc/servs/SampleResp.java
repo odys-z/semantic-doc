@@ -1,4 +1,4 @@
-package io.odysz.jsample.servs;
+package io.oz.semandoc.servs;
 
 import io.odysz.semantic.jprotocol.AnsonResp;
 import io.odysz.semantic.jprotocol.IPort;

@@ -12,7 +12,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletResponse;
 
 import io.odysz.common.Utils;
-import io.odysz.jsample.utils.SampleFlags;
+import io.oz.semandoc.utils.SampleFlags;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.DA.DatasetCfg;
 import io.odysz.semantic.ext.AnDatasetReq;

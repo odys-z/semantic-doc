@@ -1,4 +1,4 @@
-package io.odysz.jsample.servs;
+package io.oz.semandoc.servs;
 
 import java.io.IOException;
 
@@ -7,7 +7,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletResponse;
 
 import io.odysz.anson.AnsonException;
-import io.odysz.jsample.protocol.Samport;
+import io.oz.semandoc.protocol.Samport;
 import io.odysz.semantic.jprotocol.AnsonMsg;
 import io.odysz.semantic.jserv.ServPort;
 import io.odysz.semantics.x.SemanticException;

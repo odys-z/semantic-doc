@@ -1,22 +1,22 @@
 '''
-Build and package the jsample test app (io.odysz.jsample.JSampleApp), for clients' tests,
-e.g. anclient.py3 (Anclient/py3/test/t_03_login.py), and later anclient.cmake.
+Build and package the demo server SmandocServ (io.oz.semandoc.SmandocServ), copied from jserv-sample's tasks.py,
+for the semantic-doc demo (src/demo).
 
 The package is laid out like a synode's (jserv-album), with the provided db files (no installation):
 
     <package>/
-        bin/jserv-sample-<version>.jar      shaded, main class io.odysz.jsample.JSampleApp
+        bin/semantic-doc.jserv-<version>.jar  shaded, main class io.oz.semandoc.SmandocServ
         WEB-INF/config.xml, connects.xml, settings.json, ...
         volume/system.sqlite, ...           connects.xml: $VOLUME_HOME = ../volume, relative to WEB-INF
 
-Usage, in jserv-sample (--target: the package folder, default tasks.json/package_dir):
+Usage, in semantic-doc/jserv (--target: the package folder, default tasks.json/package_dir):
     invoke build                                  mvn clean package -DskipTests
     invoke package [--target] [--require RANGE]   check the pom version in RANGE, e.g. "[1.5.9,)",
                                                   build if needed, then copy into the package folder
     invoke clean
 
 A failed task exits with code 1. Starting and stopping the app is the clients' (tests') job, in the package folder:
-    start: java -jar bin/jserv-sample-<version>.jar [settings.json]
+    start: java -jar bin/semantic-doc.jserv-<version>.jar [settings.json]
     stop:  post to JsampleCtrl (ctrl.less, port "ctrl") from localhost
 '''
 import glob
@@ -66,7 +66,7 @@ def build_jar(force: bool = False) -> Path:
     '''
     jar = app_jar()
     if force or not jar.is_file():
-        # AnSession.init(conn), used by JSampleApp, is since semantic.jserv 1.5.18.
+        # AnSession.init(conn), used by SmandocServ, is since semantic.jserv 1.5.18.
         if mvn.requir_installed('io.github.odys-z:semantic.jserv', '[1.5.18,)', tolerate=True) is None:
             raise RuntimeError('semantic.jserv [1.5.18,) is not installed. Install it first, e.g. '
                                'semantic-jserv/semantic.jserv$ mvn install, or jserv-album$ invoke install-maven-local.')
@@ -106,7 +106,7 @@ def package_app(target: Union[str, Path, None] = None, deploy: str = 'tasks.json
         for f in files:
             shutil.copy2(f, pkg / dst / Path(f).name)
 
-    print('JSample package:', pkg)
+    print('SmandocServ package:', pkg)
     return pkg
 
 

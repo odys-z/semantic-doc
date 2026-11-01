@@ -5,7 +5,7 @@
 	<c>
 		<!-- Class name of SUser Implementation -->
 		<k>class-IUser</k>
-		<v>io.odysz.jsample.SampleUser</v>
+		<v>io.oz.semandoc.SampleUser</v>
 	</c>
 
 	<!-- 

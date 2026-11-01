@@ -5,5 +5,5 @@ RemoteSystemsTempFiles
 .classpath
 /bin/
 uploads
-build-jsample
+build-smandoc
 __pycache__
