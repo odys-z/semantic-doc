@@ -1,0 +1,239 @@
+{
+ "doc": {
+  "docId": "doc-a",
+  "title": "Annual Report 2026",
+  "creator": "ody",
+  "htmlUri": null,
+  "builtAt": null,
+  "builtBy": null
+ },
+ "nodes": [
+  {
+   "nid": "a1",
+   "docId": "doc-a",
+   "parentId": null,
+   "sort": 1,
+   "fullpath": "01",
+   "kind": "section",
+   "json": {
+    "type": "doc",
+    "content": [
+     {
+      "type": "paragraph",
+      "content": [
+       {
+        "type": "text",
+        "text": "Overview"
+       }
+      ]
+     }
+    ]
+   },
+   "rst": null,
+   "rstver": 0,
+   "resId": null,
+   "refId": null,
+   "src": "body/1",
+   "style": "heading 1"
+  },
+  {
+   "nid": "a1.1",
+   "docId": "doc-a",
+   "parentId": "a1",
+   "sort": 1,
+   "fullpath": "01.01",
+   "kind": "p",
+   "json": {
+    "type": "doc",
+    "content": [
+     {
+      "type": "paragraph",
+      "content": [
+       {
+        "type": "text",
+        "text": "Revenue grew "
+       },
+       {
+        "type": "text",
+        "text": "12%",
+        "marks": [
+         {
+          "type": "strong"
+         },
+         {
+          "type": "color",
+          "attrs": {
+           "name": "green"
+          }
+         }
+        ]
+       },
+       {
+        "type": "text",
+        "text": " this year."
+       }
+      ]
+     }
+    ]
+   },
+   "rst": null,
+   "rstver": 0,
+   "resId": null,
+   "refId": null,
+   "src": "body/2",
+   "style": "Normal"
+  },
+  {
+   "nid": "a2",
+   "docId": "doc-a",
+   "parentId": null,
+   "sort": 2,
+   "fullpath": "02",
+   "kind": "section",
+   "json": {
+    "type": "doc",
+    "content": [
+     {
+      "type": "paragraph",
+      "content": [
+       {
+        "type": "text",
+        "text": "Operations"
+       }
+      ]
+     }
+    ]
+   },
+   "rst": null,
+   "rstver": 0,
+   "resId": null,
+   "refId": null,
+   "src": null,
+   "style": null
+  },
+  {
+   "nid": "a2.1",
+   "docId": "doc-a",
+   "parentId": "a2",
+   "sort": 1,
+   "fullpath": "02.01",
+   "kind": "p",
+   "json": {
+    "type": "doc",
+    "content": [
+     {
+      "type": "paragraph",
+      "content": [
+       {
+        "type": "text",
+        "text": "All sites follow the handbook's safety rules:"
+       }
+      ]
+     }
+    ]
+   },
+   "rst": null,
+   "rstver": 0,
+   "resId": null,
+   "refId": null,
+   "src": null,
+   "style": null
+  },
+  {
+   "nid": "a2.2",
+   "docId": "doc-a",
+   "parentId": "a2",
+   "sort": 2,
+   "fullpath": "02.02",
+   "kind": "ref",
+   "json": null,
+   "rst": null,
+   "rstver": 0,
+   "resId": null,
+   "refId": "b2",
+   "src": null,
+   "style": null
+  },
+  {
+   "nid": "a2.3",
+   "docId": "doc-a",
+   "parentId": "a2",
+   "sort": 3,
+   "fullpath": "02.03",
+   "kind": "p",
+   "json": {
+    "type": "doc",
+    "content": [
+     {
+      "type": "paragraph",
+      "content": [
+       {
+        "type": "text",
+        "text": "No incidents were reported."
+       }
+      ]
+     }
+    ]
+   },
+   "rst": null,
+   "rstver": 0,
+   "resId": null,
+   "refId": null,
+   "src": null,
+   "style": null
+  },
+  {
+   "nid": "a3",
+   "docId": "doc-a",
+   "parentId": null,
+   "sort": 3,
+   "fullpath": "03",
+   "kind": "section",
+   "json": {
+    "type": "doc",
+    "content": [
+     {
+      "type": "paragraph",
+      "content": [
+       {
+        "type": "text",
+        "text": "Finance"
+       }
+      ]
+     }
+    ]
+   },
+   "rst": null,
+   "rstver": 0,
+   "resId": null,
+   "refId": null,
+   "src": null,
+   "style": null
+  },
+  {
+   "nid": "a3.1",
+   "docId": "doc-a",
+   "parentId": "a3",
+   "sort": 1,
+   "fullpath": "03.01",
+   "kind": "math",
+   "json": {
+    "type": "doc",
+    "content": [
+     {
+      "type": "blockMath",
+      "attrs": {
+       "latex": "\\text{margin} = \\frac{\\text{profit}}{\\text{revenue}}"
+      }
+     }
+    ]
+   },
+   "rst": null,
+   "rstver": 0,
+   "resId": null,
+   "refId": null,
+   "src": null,
+   "style": null
+  }
+ ]
+}
