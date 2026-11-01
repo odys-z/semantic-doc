@@ -20,7 +20,6 @@ import { Mark } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
-import { UndoRedo } from '@tiptap/extensions';
 import { InlineMath, BlockMath } from '@tiptap/extension-mathematics';
 
 export interface RoleDef {
@@ -165,28 +164,10 @@ export const Role = Mark.create({
 /**
  * The schema: everything an RST block may contain.
  * Safe to use without an editor view, e.g. getSchema(rstExtensions) in tests.
+ * Editor-only behaviour (undo, click-to-edit formulas) is added in ParagraphEditor.tsx.
  */
 export const rstExtensions = [
   OneBlock, Paragraph, Text,
   Strong, Emphasis, Literal, Sup, Sub, Link, Role,
   InlineMath, BlockMath,
 ];
-
-export interface EditorExtensionOptions {
-  /** called when a formula is clicked, e.g. to open a LaTeX editor */
-  onMathClick?: (kind: 'inline' | 'block', latex: string, pos: number) => void;
-}
-
-/**
- * Schema + editor-only behaviour: undo / redo (Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y)
- * and click-to-edit formulas.
- */
-export function editorExtensions(opts: EditorExtensionOptions = {}) {
-  const { onMathClick } = opts;
-  return [
-    ...rstExtensions.filter((e) => e !== InlineMath && e !== BlockMath),
-    InlineMath.configure({ onClick: (node, pos) => onMathClick?.('inline', node.attrs.latex, pos) }),
-    BlockMath.configure({ onClick: (node, pos) => onMathClick?.('block', node.attrs.latex, pos) }),
-    UndoRedo,
-  ];
-}
