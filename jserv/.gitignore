@@ -1,0 +1,9 @@
+target
+/.metadata/
+RemoteSystemsTempFiles
+.settings
+.classpath
+/bin/
+uploads
+build-smandoc
+__pycache__
