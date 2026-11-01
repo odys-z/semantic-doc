@@ -54,6 +54,10 @@ function wrap(text: string, mark: PMMark, roles: Set<string>): string {
       return text.includes('``') || text.endsWith('`')
         ? `:literal:\`${escapeText(text)}\``
         : `\`\`${text}\`\``;
+    case 'sup':
+      return `:sup:\`${escapeText(text)}\``;
+    case 'sub':
+      return `:sub:\`${escapeText(text)}\``;
     case 'link':
       return `\`${escapeText(text).replace(/</g, '\\<')} <${mark.attrs.href}>\`__`;
     case 'role': {
@@ -67,18 +71,30 @@ function wrap(text: string, mark: PMMark, roles: Set<string>): string {
 }
 
 function tokenize(para: PMNode, roles: Set<string>): Token[] {
-  // merge adjacent text nodes carrying the same mark
-  const segs: { text: string; mark: PMMark | null }[] = [];
+  // merge adjacent text nodes carrying the same mark; inline formulas stay separate
+  type Seg = { kind: 'text'; text: string; mark: PMMark | null } | { kind: 'math'; latex: string };
+  const segs: Seg[] = [];
   para.forEach((child) => {
+    if (child.type.name === 'inlineMath') {
+      if (child.attrs.latex) segs.push({ kind: 'math', latex: child.attrs.latex });
+      return;
+    }
     if (!child.isText || !child.text) return;
     const mark = child.marks[0] ?? null; // marks are mutually exclusive
     const last = segs[segs.length - 1];
-    if (last && (last.mark === mark || (last.mark && mark && last.mark.eq(mark)))) last.text += child.text;
-    else segs.push({ text: child.text, mark });
+    if (last?.kind === 'text' && (last.mark === mark || (last.mark && mark && last.mark.eq(mark))))
+      last.text += child.text;
+    else segs.push({ kind: 'text', text: child.text, mark });
   });
 
   const tokens: Token[] = [];
-  for (const { text, mark } of segs) {
+  for (const seg of segs) {
+    if (seg.kind === 'math') {
+      // :math: content is raw: LaTeX backslashes are kept as written
+      tokens.push({ s: `:math:\`${seg.latex}\``, markup: true });
+      continue;
+    }
+    const { text, mark } = seg;
     if (!mark) {
       tokens.push({ s: escapeText(text), markup: false });
       continue;
@@ -115,13 +131,20 @@ export function serializeParagraph(para: PMNode, roles: Set<string> = new Set())
   return BLOCK_START.test(text) ? '\\' + text : text;
 }
 
+/** `.. math::` directive with the LaTeX indented as its content. */
+export function serializeBlockMath(latex: string): string {
+  const lines = latex.trim().split('\n').map((l) => (l.trim() ? '   ' + l : ''));
+  return '.. math::\n\n' + lines.join('\n');
+}
+
 export function serializeDoc(doc: PMNode): RstResult {
   const roles = new Set<string>();
-  const paras: string[] = [];
+  const blocks: string[] = [];
   doc.forEach((node) => {
-    if (node.type.name === 'paragraph') paras.push(serializeParagraph(node, roles));
+    if (node.type.name === 'paragraph') blocks.push(serializeParagraph(node, roles));
+    else if (node.type.name === 'blockMath') blocks.push(serializeBlockMath(node.attrs.latex ?? ''));
   });
-  const body = paras.join('\n\n');
+  const body = blocks.join('\n\n');
   const decl = [...roles].map((r) => `.. role:: ${r}`).join('\n');
   return { body, roles: [...roles], rst: decl ? `${decl}\n\n${body}` : body };
 }

@@ -8,16 +8,23 @@ export interface Case {
   roles?: string[];
 }
 
-type Run = [text: string, mark?: string, attrs?: Record<string, unknown>];
+export type Run = [text: string, mark?: string, attrs?: Record<string, unknown>];
 
-/** Build a one-paragraph doc from runs: ['plain'], ['bold', 'strong'], ['x', 'role', {name:'large'}] */
-const p = (...runs: Run[]): JSONContent => ({
+/**
+ * Build a one-paragraph doc from runs:
+ * ['plain'], ['bold', 'strong'], ['x', 'role', {name:'large'}], ['x^2', 'math'] (inline formula)
+ */
+export const p = (...runs: Run[]): JSONContent => ({
   type: 'doc',
   content: [
     {
       type: 'paragraph',
       content: runs.map(([text, mark, attrs]) =>
-        mark ? { type: 'text', text, marks: [{ type: mark, attrs }] } : { type: 'text', text },
+        mark === 'math'
+          ? { type: 'inlineMath', attrs: { latex: text } }
+          : mark
+            ? { type: 'text', text, marks: [{ type: mark, attrs }] }
+            : { type: 'text', text },
       ),
     },
   ],
