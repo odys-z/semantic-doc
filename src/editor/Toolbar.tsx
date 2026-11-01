@@ -1,6 +1,6 @@
 import React from 'react';
 import { type Editor, useEditorState } from '@tiptap/react';
-import { ROLES, type RoleDef } from './rst/marks';
+import { ROLES, CLASS_MARKS, type ClassMark, type RoleDef } from './rst/marks';
 import type { MathKind } from './ParagraphEditor';
 
 export interface ToolbarProps {
@@ -9,24 +9,57 @@ export interface ToolbarProps {
   onEditMath: (kind: MathKind, latex: string, pos: number) => void;
 }
 
-const MARKS = ['strong', 'emphasis', 'literal', 'sup', 'sub', 'link'] as const;
+const MARKS = ['strong', 'emphasis', 'underline', 'strike', 'literal', 'sup', 'sub', 'link'] as const;
+type ToggleMark = (typeof MARKS)[number];
 
 export function Toolbar({ editor, onEditMath }: ToolbarProps) {
   const s = useEditorState({
     editor,
-    selector: ({ editor }) => ({
-      ...Object.fromEntries(MARKS.map((m) => [m, editor.isActive(m)])) as Record<(typeof MARKS)[number], boolean>,
-      role: (editor.getAttributes('role').name as string | undefined) ?? '',
-      canUndo: editor.can().undo(),
-      canRedo: editor.can().redo(),
-      isBlockMath: editor.state.doc.firstChild?.type.name === 'blockMath',
-    }),
+    selector: ({ editor }) => {
+      const first = editor.state.doc.firstChild;
+      const isBlockMath = first?.type.name === 'blockMath';
+      return {
+        ...(Object.fromEntries(MARKS.map((m) => [m, editor.isActive(m)])) as Record<ToggleMark, boolean>),
+        // role name per class mark; for a block formula, its attributes
+        ...(Object.fromEntries(
+          CLASS_MARKS.map((k) => [
+            k,
+            ((isBlockMath ? first!.attrs[k] : editor.getAttributes(k).name) as string | null) ?? '',
+          ]),
+        ) as Record<ClassMark, string>),
+        canUndo: editor.can().undo(),
+        canRedo: editor.can().redo(),
+        isBlockMath,
+      };
+    },
   });
 
   const run = () => editor.chain().focus();
-  const toggle = (mark: string) => run().toggleMark(mark).run();
-  const setRole = (name: string) => (name ? run().setMark('role', { name }).run() : run().unsetMark('role').run());
-  const toggleRole = (name: string) => setRole(s.role === name ? '' : name);
+  const toggle = (mark: ToggleMark) => run().toggleMark(mark).run();
+
+  /** size / color / background: a mark on text and inline formulas, an attribute of a block formula */
+  const setClass = (k: ClassMark, name: string) => {
+    if (s.isBlockMath)
+      return run()
+        .command(({ tr }) => {
+          tr.setNodeMarkup(0, undefined, { ...tr.doc.firstChild!.attrs, [k]: name || null });
+          return true;
+        })
+        .run();
+    return name ? run().setMark(k, { name }).run() : run().unsetMark(k).run();
+  };
+
+  const clearFormatting = () =>
+    s.isBlockMath
+      ? run()
+          .command(({ tr }) => {
+            const attrs = { ...tr.doc.firstChild!.attrs };
+            CLASS_MARKS.forEach((k) => (attrs[k] = null));
+            tr.setNodeMarkup(0, undefined, attrs);
+            return true;
+          })
+          .run()
+      : run().unsetAllMarks().run();
 
   const setLink = () => {
     if (s.link) return run().unsetMark('link').run();
@@ -48,17 +81,17 @@ export function Toolbar({ editor, onEditMath }: ToolbarProps) {
         onEditMath('block', editor.state.doc.textContent, -1);
 
   const btn = (on: boolean) => 'sd-btn' + (on ? ' on' : '');
-  const off = s.isBlockMath; // inline formatting does not apply to a block formula
+  // a block formula takes only size / colour / background
+  const off = s.isBlockMath;
 
-  const roleSelect = (title: string, roles: RoleDef[]) => {
-    const value = roles.some((r) => r.name === s.role) ? s.role : '';
+  const classSelect = (k: ClassMark, title: string, roles: RoleDef[]) => {
+    const value = roles.some((r) => r.name === s[k]) ? s[k] : '';
     return (
       <select
         className={'sd-select' + (value ? ' on' : '')}
         value={value}
-        disabled={off}
         title={title}
-        onChange={(e) => setRole(e.target.value)}
+        onChange={(e) => setClass(k, e.target.value)}
       >
         <option value="">{title}</option>
         {roles.map((r) => (
@@ -75,23 +108,23 @@ export function Toolbar({ editor, onEditMath }: ToolbarProps) {
       <span className="sd-sep" />
       <button className={btn(s.strong)} disabled={off} onClick={() => toggle('strong')} title="Strong (Ctrl+B)"><b>B</b></button>
       <button className={btn(s.emphasis)} disabled={off} onClick={() => toggle('emphasis')} title="Emphasis (Ctrl+I)"><i>I</i></button>
-      <button className={btn(s.role === 'underline')} disabled={off} onClick={() => toggleRole('underline')} title="Underline (Ctrl+U)"><u>U</u></button>
-      <button className={btn(s.role === 'strike')} disabled={off} onClick={() => toggleRole('strike')} title="Strike (Ctrl+Shift+X)"><s>S</s></button>
+      <button className={btn(s.underline)} disabled={off} onClick={() => toggle('underline')} title="Underline (Ctrl+U)"><u>U</u></button>
+      <button className={btn(s.strike)} disabled={off} onClick={() => toggle('strike')} title="Strike (Ctrl+Shift+X)"><s>S</s></button>
       <button className={btn(s.literal)} disabled={off} onClick={() => toggle('literal')} title="Literal (Ctrl+E)"><code>{'<>'}</code></button>
       <button className={btn(s.sup)} disabled={off} onClick={() => toggle('sup')} title="Superscript (Ctrl+.)">x<sup>2</sup></button>
       <button className={btn(s.sub)} disabled={off} onClick={() => toggle('sub')} title="Subscript (Ctrl+,)">x<sub>2</sub></button>
       <button className={btn(s.link)} disabled={off} onClick={setLink} title="Link">🔗</button>
       <span className="sd-sep" />
-      {roleSelect('Size', ROLES.size)}
-      {roleSelect('Color', ROLES.color)}
-      {roleSelect('Background', ROLES.background)}
+      {classSelect('size', 'Size', ROLES.size)}
+      {classSelect('color', 'Color', ROLES.color)}
+      {classSelect('background', 'Background', ROLES.background)}
       <span className="sd-sep" />
       <button className="sd-btn" disabled={off} onClick={insertInlineMath} title="Inline formula (or type $$x^2$$)">∑</button>
       <button className={btn(s.isBlockMath)} onClick={toggleBlockMath} title={s.isBlockMath ? 'Back to paragraph' : 'Block formula'}>
         {s.isBlockMath ? '¶' : '∑▭'}
       </button>
       <span className="sd-sep" />
-      <button className="sd-btn" disabled={off} onClick={() => run().unsetAllMarks().run()} title="Clear formatting">⨯</button>
+      <button className="sd-btn" onClick={clearFormatting} title="Clear formatting">⨯</button>
     </div>
   );
 }

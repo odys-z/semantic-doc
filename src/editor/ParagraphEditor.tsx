@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent, type JSONContent } from '@tiptap/react';
 import { UndoRedo } from '@tiptap/extensions';
-import { InlineMath, BlockMath } from '@tiptap/extension-mathematics';
-import { rstExtensions } from './rst/marks';
+import { InlineMath } from '@tiptap/extension-mathematics';
+import { rstExtensions, StyledBlockMath, MathMarkFilter } from './rst/marks';
 import { serializeDoc, type RstResult } from './rst/serialize';
 import { Toolbar } from './Toolbar';
 import './styles/theme-roles.css';
@@ -16,15 +16,16 @@ export interface EditorExtensionOptions {
 }
 
 /**
- * Schema + editor-only behaviour: undo / redo (Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y)
- * and click-to-edit formulas.
+ * Schema + editor-only behaviour: undo / redo (Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y),
+ * click-to-edit formulas, and keeping B / I / U / S / code / link off formulas.
  */
 export function editorExtensions(opts: EditorExtensionOptions = {}) {
   const { onMathClick } = opts;
   return [
-    ...rstExtensions.filter((e) => e !== InlineMath && e !== BlockMath),
+    ...rstExtensions.filter((e) => e !== InlineMath && e !== StyledBlockMath),
     InlineMath.configure({ onClick: (node, pos) => onMathClick?.('inline', node.attrs.latex, pos) }),
-    BlockMath.configure({ onClick: (node, pos) => onMathClick?.('block', node.attrs.latex, pos) }),
+    StyledBlockMath.configure({ onClick: (node, pos) => onMathClick?.('block', node.attrs.latex, pos) }),
+    MathMarkFilter,
     UndoRedo,
   ];
 }

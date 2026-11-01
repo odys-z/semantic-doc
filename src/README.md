@@ -28,6 +28,27 @@ demo/              dev page using the widget through its public API
 test/cases/        serializer cases: inline, format, math
 ```
 
+## Combining styles
+
+Marks combine freely. RST cannot nest inline markup, so each run with several
+effects becomes one composite role (base role + classes from `theme-roles.css`):
+
+```rst
+.. role:: strong_strike_red(strong)
+   :class: strike red
+
+:strong_strike_red:`text`
+```
+
+- Formulas take only size / colour / background (inline: a `math`-based role;
+  block: `.. math::` with `:class:`). B, I, U, S, code, sup/sub and links are
+  stripped from them.
+- A styled link becomes `|sd-<hash>|__` + a substitution definition + an
+  anonymous target after the paragraph. To build a whole document from many
+  blocks, use `joinRst(results)`: it declares each role once and defines each
+  shared substitution once (docutils rejects duplicate substitutions).
+- Classes on formulas survive in Sphinx (MathJax), not in plain docutils MathML.
+
 ## Use as a widget
 
 ```tsx

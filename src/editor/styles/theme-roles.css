@@ -24,6 +24,25 @@
 .bg-red    { background-color: #fde0dc; }
 .bg-gray   { background-color: #ececec; }
 
-/* decoration */
-.underline { text-decoration: underline; }
-.strike    { text-decoration: line-through; }
+/* decoration (both on one element in a composite role) */
+.underline        { text-decoration: underline; }
+.strike           { text-decoration: line-through; }
+.underline.strike { text-decoration: underline line-through; }
+
+/*
+ * Composite roles: effects combined on one element, e.g.
+ *   .. role:: strong_em_red(strong)
+ *      :class: sd-em red
+ * The first of sup / sub / literal / strong / emphasis is the base role
+ * (<sup>, <code>, <strong>, …); the others become these classes.
+ */
+.sd-strong { font-weight: bold; }
+.sd-em     { font-style: italic; }
+.sd-code   { font-family: SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 0.9em; }
+
+/*
+ * Formulas take size / colour / background only. Sphinx keeps the classes on
+ * the formula: <span class="red math notranslate nohighlight"> (inline) and
+ * <div class="bg-yellow math …"> (.. math:: with :class:); MathJax and KaTeX
+ * draw in the inherited colour. Plain docutils MathML output drops them.
+ */
