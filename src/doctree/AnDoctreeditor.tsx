@@ -14,17 +14,28 @@
  *  - Autosave: text is sent SAVE_DELAY ms after typing stops, or at once when the
  *    user leaves the block. Commit marks the work as finished.
  *  - ref: one read-only line. avail === 'false': a placeholder, e.g. not on this synode.
+ *
+ * Layout (MUI): a fixed head (error banner, toolbar, column header), the rows in a
+ * scrolling body, and a snackbar for refused or failed changes. Work at risk (a failed
+ * load or save) shows in the banner with Retry; a refused change only in the snackbar.
  */
 import React from 'react';
 import type { AnTreeNode } from '@anclient/semantier';
 import {
-	AnTreeditorComp, type AnTreeditorProps, type AnTreegridCol, TreeNodeVisual,
-	treeditorStyles, withStyles, withWidth,
+	AnTreeditorComp, AnTreegridComp, CrudCompW, type AnTreeditorProps, type AnTreegridCol,
+	TreeNodeVisual, treeditorStyles, withStyles, withWidth,
 } from '@anclient/anreact';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Collapse from '@mui/material/Collapse';
+import Snackbar from '@mui/material/Snackbar';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
 
 import { ParagraphEditor, StaticBlock, type JSONContent, type RstResult } from '../editor';
 import {
-	DocKind, type DocCols, type DocTreeNode, type DoctreeResp, type DoctreeTier, type MoveTo,
+	DocKind, type DocCols, type DocInf, type DocTreeNode, type DoctreeResp, type DoctreeTier, type MoveTo,
 	fromTiptap, insertReq, isContainer, locate, moveReq, received, referencedIn, toTiptap,
 } from './doctree-tier';
 import './doctree.css';
@@ -38,6 +49,8 @@ export interface AnDoctreeditorProps extends Partial<Omit<AnTreeditorProps, 'col
 	docId: string;
 	/** requests to the doc-content tier */
 	doctier: DoctreeTier;
+	/** height of the editor; the rows scroll inside. Default 100% of the parent */
+	height?: number | string;
 }
 
 interface DoctreeState {
@@ -50,8 +63,12 @@ interface DoctreeState {
 	committedAt?: string | null;
 	/** a text change not yet confirmed by the server */
 	saving: boolean;
-	/** an error, or why the server refused a change */
-	error?: string;
+	/** header of the doc, from the last load */
+	doc?: DocInf;
+	/** banner: work at risk (load or save failed), with a retry */
+	alert?: { msg: string; retry: () => void };
+	/** snackbar: a change refused or failed; the tree is reloaded */
+	snack?: string;
 }
 
 /** an empty paragraph, stored form */
@@ -111,14 +128,15 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 		this.props.doctier.tree(this.props.docId, (resp) => {
 			const forest = received(resp.forest);
 			expandAll(forest);
-			this.setState({ forest, committed: !resp.doc?.dirty, committedAt: resp.doc?.committedAt });
-		}, this.failed);
+			this.setState({ forest, doc: resp.doc, alert: undefined,
+				committed: !resp.doc?.dirty, committedAt: resp.doc?.committedAt });
+		}, (msg) => this.setState({ alert: { msg: `Can't load the doc: ${msg}`, retry: () => this.load() } }));
 	}
 
 	/** apply a structural change: the server's subtree replaces ours */
 	applied = (resp: DoctreeResp) => {
 		if (resp.rejected) {
-			this.setState({ error: `Not changed: ${resp.rejected}` });
+			this.setState({ snack: `Not changed: ${resp.rejected}` });
 			return;
 		}
 		const sub = received(resp.forest);
@@ -134,12 +152,13 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 			old.sibs[old.ix] = sub[0];
 			forest = [...this.state.forest];
 		}
-		this.setState({ forest, error: undefined, committed: resp.doc ? !resp.doc.dirty : false });
+		this.setState({ forest, committed: resp.doc ? !resp.doc.dirty : false });
 	};
 
+	/** a change failed: tell, and reload, as the server is the truth */
 	failed = (msg: string) => {
-		this.setState({ error: msg, saving: false });
-		this.load(); // the server is the truth: reload instead of guessing
+		this.setState({ snack: msg });
+		this.load();
 	};
 
 	// ---- autosave ----------------------------------------------------------
@@ -164,9 +183,14 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 		const { node, timer } = this.pending;
 		clearTimeout(timer);
 		this.pending = undefined;
+		this.save(node);
+	}
+
+	/** send one node's text; on failure keep it and offer a retry (no reload: it would drop the text) */
+	save(node: DocCols) {
 		this.props.doctier.update(this.props.docId, node,
-			(resp) => this.setState({ saving: !!this.pending, committed: !resp.doc?.dirty }),
-			this.failed);
+			(resp) => this.setState({ saving: !!this.pending, committed: !resp.doc?.dirty, alert: undefined }),
+			(msg) => this.setState({ saving: false, alert: { msg: `Not saved: ${msg}`, retry: () => this.save(node) } }));
 	}
 
 	// ---- user actions ------------------------------------------------------
@@ -205,7 +229,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 		this.flush();
 		this.props.doctier.commit(this.props.docId,
 			(resp) => this.setState({ committed: !resp.doc?.dirty, committedAt: resp.doc?.committedAt }),
-			this.failed);
+			(msg) => this.setState({ snack: `Not committed: ${msg}` }));
 	}
 
 	// ---- anreact hooks -----------------------------------------------------
@@ -312,18 +336,43 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	}
 
 	render() {
-		const { committed, committedAt, saving, error } = this.state;
+		const { committed, committedAt, saving, doc, alert, snack } = this.state;
+		const classes = this.props.classes || {};
+		const media = CrudCompW.getMedia(this.props.width);
+		const status = saving ? 'Saving…' : committed ? `Committed ${committedAt ?? ''}` : 'Draft — not committed';
+
 		return (
-			<div className="sd-doctree">
-				<div className="sd-doctree-bar">
-					<button onClick={() => this.commit()} disabled={committed && !saving}>Commit</button>
-					<span className="sd-status">
-						{saving ? 'Saving…' : committed ? `Committed ${committedAt ?? ''}` : 'Draft — not committed'}
-					</span>
-					{error && <span className="sd-error" title="Dismiss" onClick={() => this.setState({ error: undefined })}>{error}</span>}
-				</div>
-				{super.render() /* the tree, from this.state.forest */}
-			</div>
+			<Box className="sd-doctree" sx={{
+				display: 'flex', flexDirection: 'column', position: 'relative',
+				height: this.props.height ?? '100%', minHeight: 0 }}>
+				<Box className="sd-head" sx={{ flex: 'none' }}>
+					<Collapse in={!!alert}>
+						<Alert severity="error"
+							action={<Button color="inherit" size="small" onClick={() => alert?.retry()}>Retry</Button>}
+							onClose={() => this.setState({ alert: undefined })}>
+							{alert?.msg}
+						</Alert>
+					</Collapse>
+					<Toolbar variant="dense" disableGutters sx={{ gap: 2, px: 1 }}>
+						<Typography variant="subtitle1" noWrap sx={{ flex: 1, fontWeight: 600 }}>{doc?.title}</Typography>
+						<Typography variant="body2" color="text.secondary" noWrap>{status}</Typography>
+						<Button variant="contained" size="small" disableElevation
+							disabled={committed && !saving} onClick={() => this.commit()}>Commit</Button>
+					</Toolbar>
+					{AnTreegridComp.th(this.props.columns, classes, media, { onThClick: this.toAddChild })}
+				</Box>
+
+				{/* the rows; AnTreeditor's render() would put the column header in here too */}
+				<Box className="sd-body" sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+					{this.treeNodes({ classes, media })}
+					{this.editForm}
+				</Box>
+
+				<Snackbar open={!!snack} message={snack} autoHideDuration={6000}
+					anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+					onClose={(_e, why) => why !== 'clickaway' && this.setState({ snack: undefined })}
+					sx={{ position: 'absolute' /* in the editor, not the window */ }} />
+			</Box>
 		);
 	}
 }

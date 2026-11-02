@@ -72,6 +72,8 @@ const stub = new StubDoctreeTier();
 function Doctree() {
   const [docId, setDocId] = useState('doc-a');
   const [log, setLog] = useState<TreeModify[]>([]);
+  const [failSaves, setFailSaves] = useState(false);
+  stub.failSaves = failSaves;
   stub.onLog = setLog;
   return (
     <section className="demo-block demo-doctree">
@@ -80,8 +82,11 @@ function Doctree() {
         <select value={docId} onChange={(e) => setDocId(e.target.value)}>
           {Object.keys(stubDocs).map((d) => <option key={d}>{d}</option>)}
         </select>
+        <label className="demo-toggle">
+          <input type="checkbox" checked={failSaves} onChange={(e) => setFailSaves(e.target.checked)} /> simulate save failure
+        </label>
       </h3>
-      <AnDoctreeditor key={docId} docId={docId} doctier={stub} />
+      <AnDoctreeditor key={docId} docId={docId} doctier={stub} height="70vh" />
       <details>
         <summary>Structure requests ({log.length})</summary>
         <pre data-testid="requests">{log.map(describe).join('\n')}</pre>

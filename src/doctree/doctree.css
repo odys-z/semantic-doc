@@ -1,7 +1,4 @@
 /* doc tree editor; rows and indents are styled by anreact */
-.sd-doctree-bar { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
-.sd-doctree .sd-status { color: #666; }
-.sd-doctree .sd-error { color: #c0392b; cursor: pointer; }
 .sd-doctree .sd-glyph { color: #889; margin-left: 4px; }
 .sd-doctree .sd-cell { padding: 2px 0; text-align: left; white-space: normal; }
 .sd-doctree .sd-doctitle { font-size: 1.15em; font-weight: bold; padding: 6px 4px; }

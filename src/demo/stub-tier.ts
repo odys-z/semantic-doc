@@ -28,6 +28,8 @@ export class StubDoctreeTier implements DoctreeTier {
 	docs = new Map<string, Promise<DoctreeResp>>();
 	/** answer delay, ms */
 	delay = 120;
+	/** demo: answer text saves with an error */
+	failSaves = false;
 	/** every structure request, for the demo page */
 	log: TreeModify[] = [];
 	onLog?: (log: TreeModify[]) => void;
@@ -54,6 +56,10 @@ export class StubDoctreeTier implements DoctreeTier {
 	}
 
 	update(docId: string, node: DocCols, ok: OnOk, err?: OnErr) {
+		if (this.failSaves) {
+			setTimeout(() => err?.('server unreachable (simulated)'), this.delay);
+			return;
+		}
 		this.answer(docId, ok, err, (d) => {
 			const n = locate(d.forest ?? [], node.nid)?.t.node;
 			if (n) Object.assign(n, { json: node.json, rst: node.rst, rstver: node.rstver });
