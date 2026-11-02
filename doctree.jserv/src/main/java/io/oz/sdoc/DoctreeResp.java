@@ -19,7 +19,7 @@ public class DoctreeResp extends AnsonResp {
 	public ArrayList<DocNode> nodes;
 
 	/** for {@link DoctreeReq.A#docs} */
-	@AnsonField(valType="io.oz.sdoc.DocRec")
+	@AnsonField(valType="io.oz.sdoc.DocInf")
 	public ArrayList<DocInf> docs;
 
 	public DoctreeResp() { }

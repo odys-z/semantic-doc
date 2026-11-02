@@ -6,7 +6,7 @@
   <artifactId>semantic-doc.jserv</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <name>semantic-doc demo jserv</name>
-  <description>Demo only: a copy of semantic-jserv/jserv-sample serving semantic-doc's doc content tier</description>
+  <description>Demo only: a copy of semantic-jserv/jserv-sample serving semantic-doc's doc-tree tier (doctree.jserv)</description>
   <url>https://github.com/odys-z/semantic-doc</url>
   <packaging>jar</packaging>
 
@@ -16,6 +16,7 @@
 	<maven.compiler.target>17</maven.compiler.target>
 	<jetty.version>12.0.36</jetty.version>
 	<jetty-ee8.version>12.0.32</jetty-ee8.version>
+	<doctree.jserv.version>0.1.0-SNAPSHOT</doctree.jserv.version>
 
 	<failOnMissingWebXml>false</failOnMissingWebXml>
   </properties>
@@ -58,6 +59,13 @@
 	    <groupId>io.github.odys-z</groupId>
 	    <artifactId>semantic.jserv</artifactId>
 	    <version>[1.5.17,)</version>
+   	</dependency>
+
+   	<dependency>
+		<!-- the doc-tree tier core, semantic-doc/doctree.jserv: mvn install it first -->
+	    <groupId>io.github.odys-z</groupId>
+	    <artifactId>doctree.jserv</artifactId>
+	    <version>${doctree.jserv.version}</version>
    	</dependency>
 
 	<!-- https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc -->

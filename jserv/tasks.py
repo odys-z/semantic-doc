@@ -10,7 +10,8 @@ The package is laid out like a synode's (jserv-album), with the provided db file
         volume/system.sqlite, ...           connects.xml: $VOLUME_HOME = ../volume, relative to WEB-INF
 
 Usage, in semantic-doc/jserv (--target: the package folder, default tasks.json/package_dir):
-    invoke build                                  mvn clean package -DskipTests
+    invoke build                                  mvn clean package -DskipTests, installing ../doctree.jserv
+                                                  first if it is not installed
     invoke package [--target] [--require RANGE]   check the pom version in RANGE, e.g. "[1.5.9,)",
                                                   build if needed, then copy into the package folder
     invoke clean
@@ -56,6 +57,17 @@ def pom_version() -> str:
     return m.group(1).strip()
 
 
+def doctree_version() -> str:
+    '''
+    The doc-tree tier's version required by the pom, property doctree.jserv.version.
+    '''
+    pom = (here / 'pom.xml').read_text(encoding='utf-8')
+    m = re.search(r'<doctree\.jserv\.version>([^<]+)</doctree\.jserv\.version>', pom)
+    if m is None:
+        raise ValueError(f'Cannot find doctree.jserv.version in {here / "pom.xml"}.')
+    return m.group(1).strip()
+
+
 def app_jar() -> Path:
     return here / 'target' / f'semantic-doc.jserv-{pom_version()}.jar'
 
@@ -73,6 +85,16 @@ def build_jar(force: bool = False) -> Path:
         exe = shutil.which('mvn')  # mvn.cmd on Windows
         if exe is None:
             raise RuntimeError('Cannot find mvn.')
+
+        # the doc-tree tier core, semantic-doc/doctree.jserv
+        dtv = doctree_version()
+        if mvn.requir_installed('io.github.odys-z:doctree.jserv', f'[{dtv},)', tolerate=True) is None:
+            doctree = here.parent / 'doctree.jserv'
+            print(f'Installing {doctree}: mvn clean install -DskipTests')
+            r = subprocess.run([exe, '-B', '-q', 'clean', 'install', '-DskipTests'], cwd=doctree)
+            if r.returncode != 0:
+                raise RuntimeError(f'Failed to install doctree.jserv {dtv} (mvn exit code {r.returncode}).')
+
         print(f'Building {here}: mvn clean package -DskipTests')
         r = subprocess.run([exe, '-B', '-q', 'clean', 'package', '-DskipTests'], cwd=here)
         if r.returncode != 0 or not jar.is_file():
