@@ -1,12 +1,17 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
-const resolve = { extensions: ['.tsx', '.ts', '.jsx', '.js'] };
+// symlinks: false: the linked @anclient packages (TS sources) resolve their imports
+// (react, MUI, ...) from this project's node_modules, so there is one React
+// csstype: types only, imported by @anclient sources
+const resolve = { extensions: ['.tsx', '.ts', '.jsx', '.js'], symlinks: false, alias: { csstype: false } };
+// Babel compiles our sources, the linked @anclient packages and TS-only packages they use
+const notOurs = /node_modules[\\/](?!(@anclient|mime-types-no-nodejs)[\\/])/;
 
 module.exports = (env, argv) => {
   // pass webpack's mode to Babel as its env, so JSX is compiled for prod / dev React
   const rules = [
-    { test: /\.[jt]sx?$/, exclude: /node_modules/, loader: 'babel-loader', options: { envName: argv.mode || 'production' } },
+    { test: /\.[jt]sx?$/, exclude: notOurs, loader: 'babel-loader', options: { envName: argv.mode || 'production' } },
     { test: /\.css$/, use: ['style-loader', 'css-loader'] },
     // KaTeX fonts (demo / test pages; host apps bring their own KaTeX CSS)
     { test: /\.(woff2?|ttf)$/, type: 'asset/resource', generator: { filename: 'fonts/[name][ext]' } },

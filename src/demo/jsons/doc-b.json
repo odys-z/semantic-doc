@@ -1,0 +1,306 @@
+{
+ "type": "io.oz.sdoc.DoctreeResp",
+ "//": "Server-shaped load response (r/tree), hand-made until SmandocServ serves it. forest: the doc root node with its subtree; node fields are s_docnodes columns as strings.",
+ "doc": {
+  "docId": "doc-b",
+  "title": "Company Handbook",
+  "creator": "ody",
+  "htmlUri": null,
+  "builtAt": null,
+  "builtBy": null,
+  "dirty": false,
+  "committedAt": null
+ },
+ "root": null,
+ "forest": [
+  {
+   "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
+   "id": "doc-b",
+   "parentId": null,
+   "level": 0,
+   "node": {
+    "nid": "doc-b",
+    "docId": "doc-b",
+    "sort": "2",
+    "fullpath": "02",
+    "kind": "doc",
+    "rstver": "0",
+    "text": "Company Handbook",
+    "children": [
+     {
+      "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
+      "id": "b1",
+      "parentId": "doc-b",
+      "level": 1,
+      "node": {
+       "nid": "b1",
+       "docId": "doc-b",
+       "parentId": "doc-b",
+       "sort": "1",
+       "fullpath": "02.01",
+       "kind": "section",
+       "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"General\"}]}]}",
+       "rstver": "0",
+       "text": "General",
+       "children": [
+        {
+         "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
+         "id": "b1.1",
+         "parentId": "b1",
+         "level": 2,
+         "node": {
+          "nid": "b1.1",
+          "docId": "doc-b",
+          "parentId": "b1",
+          "sort": "1",
+          "fullpath": "02.01.01",
+          "kind": "p",
+          "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"This handbook applies to \"},{\"type\":\"text\",\"text\":\"all staff\",\"marks\":[{\"type\":\"strong\"}]},{\"type\":\"text\",\"text\":\".\"}]}]}",
+          "rstver": "0",
+          "text": "This handbook applies to all staff."
+         },
+         "indents": [
+          "vlink",
+          "childx"
+         ],
+         "lastSibling": true
+        }
+       ]
+      },
+      "indents": [
+       "childi"
+      ]
+     },
+     {
+      "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
+      "id": "b2",
+      "parentId": "doc-b",
+      "level": 1,
+      "node": {
+       "nid": "b2",
+       "docId": "doc-b",
+       "parentId": "doc-b",
+       "sort": "2",
+       "fullpath": "02.02",
+       "kind": "section",
+       "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Safety Rules\"}]}]}",
+       "rstver": "0",
+       "text": "Safety Rules",
+       "referenced": "true",
+       "children": [
+        {
+         "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
+         "id": "b2.1",
+         "parentId": "b2",
+         "level": 2,
+         "node": {
+          "nid": "b2.1",
+          "docId": "doc-b",
+          "parentId": "b2",
+          "sort": "1",
+          "fullpath": "02.02.01",
+          "kind": "section",
+          "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Fire\"}]}]}",
+          "rstver": "0",
+          "text": "Fire",
+          "children": [
+           {
+            "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
+            "id": "b2.1.1",
+            "parentId": "b2.1",
+            "level": 3,
+            "node": {
+             "nid": "b2.1.1",
+             "docId": "doc-b",
+             "parentId": "b2.1",
+             "sort": "1",
+             "fullpath": "02.02.01.01",
+             "kind": "p",
+             "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Keep exits \"},{\"type\":\"text\",\"text\":\"clear at all times\",\"marks\":[{\"type\":\"strong\"},{\"type\":\"color\",\"attrs\":{\"name\":\"red\"}}]},{\"type\":\"text\",\"text\":\".\"}]}]}",
+             "rstver": "0",
+             "text": "Keep exits clear at all times."
+            },
+            "indents": [
+             "vlink",
+             "vlink",
+             "childi"
+            ]
+           },
+           {
+            "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
+            "id": "b2.1.2",
+            "parentId": "b2.1",
+            "level": 3,
+            "node": {
+             "nid": "b2.1.2",
+             "docId": "doc-b",
+             "parentId": "b2.1",
+             "sort": "2",
+             "fullpath": "02.02.01.02",
+             "kind": "p",
+             "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Old rule: \"},{\"type\":\"text\",\"text\":\"use the lift\",\"marks\":[{\"type\":\"strike\"}]},{\"type\":\"text\",\"text\":\" — never use the lift.\"}]}]}",
+             "rstver": "0",
+             "text": "Old rule: use the lift — never use the lift."
+            },
+            "indents": [
+             "vlink",
+             "vlink",
+             "childx"
+            ],
+            "lastSibling": true
+           }
+          ]
+         },
+         "indents": [
+          "vlink",
+          "childi"
+         ]
+        },
+        {
+         "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
+         "id": "b2.2",
+         "parentId": "b2",
+         "level": 2,
+         "node": {
+          "nid": "b2.2",
+          "docId": "doc-b",
+          "parentId": "b2",
+          "sort": "2",
+          "fullpath": "02.02.02",
+          "kind": "section",
+          "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Equipment\"}]}]}",
+          "rstver": "0",
+          "text": "Equipment",
+          "children": [
+           {
+            "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
+            "id": "b2.2.1",
+            "parentId": "b2.2",
+            "level": 3,
+            "node": {
+             "nid": "b2.2.1",
+             "docId": "doc-b",
+             "parentId": "b2.2",
+             "sort": "1",
+             "fullpath": "02.02.02.01",
+             "kind": "p",
+             "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Load limit per shelf is \"},{\"type\":\"inlineMath\",\"attrs\":{\"latex\":\"m \\\\le 50\\\\,kg\"},\"marks\":[{\"type\":\"color\",\"attrs\":{\"name\":\"red\"}},{\"type\":\"background\",\"attrs\":{\"name\":\"bg-yellow\"}}]},{\"type\":\"text\",\"text\":\".\"}]}]}",
+             "rstver": "0",
+             "text": "Load limit per shelf is ."
+            },
+            "indents": [
+             "vlink",
+             "space",
+             "childi"
+            ]
+           },
+           {
+            "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
+            "id": "b2.2.2",
+            "parentId": "b2.2",
+            "level": 3,
+            "node": {
+             "nid": "b2.2.2",
+             "docId": "doc-b",
+             "parentId": "b2.2",
+             "sort": "2",
+             "fullpath": "02.02.02.02",
+             "kind": "math",
+             "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"blockMath\",\"attrs\":{\"latex\":\"F = m \\\\cdot g\"}}]}",
+             "rstver": "0",
+             "text": ""
+            },
+            "indents": [
+             "vlink",
+             "space",
+             "childi"
+            ]
+           },
+           {
+            "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
+            "id": "b2.2.3",
+            "parentId": "b2.2",
+            "level": 3,
+            "node": {
+             "nid": "b2.2.3",
+             "docId": "doc-b",
+             "parentId": "b2.2",
+             "sort": "3",
+             "fullpath": "02.02.02.03",
+             "kind": "image",
+             "rstver": "0",
+             "resId": "res-0007",
+             "text": ""
+            },
+            "indents": [
+             "vlink",
+             "space",
+             "childx"
+            ],
+            "lastSibling": true
+           }
+          ]
+         },
+         "indents": [
+          "vlink",
+          "childx"
+         ],
+         "lastSibling": true
+        }
+       ]
+      },
+      "indents": [
+       "childi"
+      ]
+     },
+     {
+      "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
+      "id": "b3",
+      "parentId": "doc-b",
+      "level": 1,
+      "node": {
+       "nid": "b3",
+       "docId": "doc-b",
+       "parentId": "doc-b",
+       "sort": "3",
+       "fullpath": "02.03",
+       "kind": "section",
+       "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Contacts\"}]}]}",
+       "rstver": "0",
+       "text": "Contacts",
+       "children": [
+        {
+         "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
+         "id": "b3.1",
+         "parentId": "b3",
+         "level": 2,
+         "node": {
+          "nid": "b3.1",
+          "docId": "doc-b",
+          "parentId": "b3",
+          "sort": "1",
+          "fullpath": "02.03.01",
+          "kind": "p",
+          "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"See the \"},{\"type\":\"text\",\"text\":\"intranet\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"https://intranet.example\"}}]},{\"type\":\"text\",\"text\":\".\"}]}]}",
+          "rstver": "0",
+          "text": "See the intranet."
+         },
+         "indents": [
+          "space",
+          "childx"
+         ],
+         "lastSibling": true
+        }
+       ]
+      },
+      "indents": [
+       "childx"
+      ],
+      "lastSibling": true
+     }
+    ]
+   },
+   "indents": []
+  }
+ ]
+}

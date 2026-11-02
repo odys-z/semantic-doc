@@ -16,6 +16,11 @@ npm run typecheck   # tsc only — Babel strips types without checking them
 npm run build       # production bundle → dist/ (demo page only)
 ```
 
+The doc tree needs the anclient sources next to this repo (`../../anclient/js`,
+linked by `npm install`). Webpack compiles them with Babel and resolves their
+imports from this project's `node_modules`; `npm run typecheck` also checks them,
+and reports anclient's own errors under this project's strict settings.
+
 ## Layout
 
 ```
@@ -24,7 +29,11 @@ editor/            the widget (package entry: editor/index.ts)
   rst/marks.ts       Tiptap schema: marks, roles (ROLES), math nodes
   rst/serialize.ts   Tiptap doc → RST
   styles/            theme-roles.css (share with Sphinx), editor.css
-demo/              dev page using the widget through its public API
+doctree/           AnDoctreeditor (package entry: doctree/index.ts), on anreact's AnTreeditor
+  doctree-tier.ts    wire types (s-tree modification) + where a node goes (moveReq, insertReq)
+demo/              dev page using the widgets through their public API
+  stub-tier.ts       plays the server over demo/jsons (load, text saves, commit)
+  jsons/             server-shaped r/tree answers, until SmandocServ serves them
 test/cases/        serializer cases: inline, format, math
 ```
 
