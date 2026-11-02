@@ -1,8 +1,6 @@
 // Dev page. Uses the widget only through the public API, like a host app would.
 import React, { useState } from 'react';
 import { ParagraphEditor, type JSONContent, type RstResult } from '../editor';
-import { AnDoctreeditor, type TreeModify } from '../doctree';
-import { StubDoctreeTier, describe, stubDocs } from './stub-tier';
 
 type M = string | [string, Record<string, unknown>];
 /** text with any number of marks: t('x', 'strong', ['color', { name: 'red' }]) */
@@ -66,41 +64,11 @@ function Block({ title, content }: { title: string; content: JSONContent }) {
   );
 }
 
-const stub = new StubDoctreeTier();
-
-/** the doc tree editor over the stub tier (hard-coded json) */
-function Doctree() {
-  const [docId, setDocId] = useState('doc-a');
-  const [log, setLog] = useState<TreeModify[]>([]);
-  const [failSaves, setFailSaves] = useState(false);
-  stub.failSaves = failSaves;
-  stub.onLog = setLog;
-  return (
-    <section className="demo-block demo-doctree">
-      <h3>
-        Doc tree{' '}
-        <select value={docId} onChange={(e) => setDocId(e.target.value)}>
-          {Object.keys(stubDocs).map((d) => <option key={d}>{d}</option>)}
-        </select>
-        <label className="demo-toggle">
-          <input type="checkbox" checked={failSaves} onChange={(e) => setFailSaves(e.target.checked)} /> simulate save failure
-        </label>
-      </h3>
-      <AnDoctreeditor key={docId} docId={docId} doctier={stub} height="70vh" />
-      <details>
-        <summary>Structure requests ({log.length})</summary>
-        <pre data-testid="requests">{log.map(describe).join('\n')}</pre>
-      </details>
-    </section>
-  );
-}
-
 export function App() {
   return (
     <>
-      <h2>semantic-doc · doc tree</h2>
-      <Doctree />
       <h2>semantic-doc · paragraph editor</h2>
+      <nav className="demo-nav">Paragraph editor · <a href="doctree.html">Doc tree</a></nav>
       <Block title="Paragraph" content={paragraph} />
       <Block title="Block formula" content={formula} />
     </>

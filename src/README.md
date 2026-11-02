@@ -10,6 +10,7 @@ Requires Node ≥ 22.18 (Babel 8).
 ```bash
 npm install
 npm start           # http://localhost:8080/  demo page
+                    # http://localhost:8080/doctree.html  doc tree page
                     # http://localhost:8080/test.html  test page
 npm test            # bundle tests for Node and run them; exit 1 on failure
 npm run typecheck   # tsc only — Babel strips types without checking them
@@ -31,7 +32,9 @@ editor/            the widget (package entry: editor/index.ts)
   styles/            theme-roles.css (share with Sphinx), editor.css
 doctree/           AnDoctreeditor (package entry: doctree/index.ts), on anreact's AnTreeditor
   doctree-tier.ts    wire types (s-tree modification) + where a node goes (moveReq, insertReq)
-demo/              dev page using the widgets through their public API
+demo/              dev pages using the widgets through their public API
+  App.tsx            paragraph editor page (index.html)
+  doctree.tsx        doc tree page (doctree.html)
   stub-tier.ts       plays the server over demo/jsons (load, text saves, commit)
   jsons/             server-shaped r/tree answers, until SmandocServ serves them
 test/cases/        serializer cases: inline, format, math

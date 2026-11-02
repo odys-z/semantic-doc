@@ -47,6 +47,7 @@ module.exports = (env, argv) => {
   const prod = argv.mode === 'production';
   const pages = [
     { name: 'demo', entry: './demo/index.tsx', filename: 'index.html', title: 'semantic-doc editor' },
+    { name: 'doctree', entry: './demo/doctree.tsx', filename: 'doctree.html', title: 'semantic-doc doc tree' },
     // the browser test page is served in development only
     ...(prod ? [] : [{ name: 'test', entry: './test/index.tsx', filename: 'test.html', title: 'semantic-doc tests' }]),
   ];
