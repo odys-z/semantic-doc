@@ -39,7 +39,6 @@
        "sort": "1",
        "fullpath": "01.01",
        "kind": "section",
-       "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Overview\"}]}]}",
        "rstver": "0",
        "src": "body/1",
        "style": "heading 1",
@@ -57,11 +56,11 @@
           "sort": "1",
           "fullpath": "01.01.01",
           "kind": "p",
-          "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Revenue grew \"},{\"type\":\"text\",\"text\":\"12%\",\"marks\":[{\"type\":\"strong\"},{\"type\":\"color\",\"attrs\":{\"name\":\"green\"}}]},{\"type\":\"text\",\"text\":\" this year.\"}]}]}",
           "rstver": "0",
           "src": "body/2",
           "style": "Normal",
-          "text": "Revenue grew 12% this year."
+          "text": "Revenue grew 12% this year.",
+          "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"Revenue grew \"},{\"contype\":\"text\",\"text\":\"12%\",\"marks\":[{\"contype\":\"strong\"},{\"contype\":\"color\",\"attrs\":{\"name\":\"green\"}}]},{\"contype\":\"text\",\"text\":\" this year.\"}]}]}"
          },
          "indents": [
           "vlink",
@@ -69,7 +68,8 @@
          ],
          "lastSibling": true
         }
-       ]
+       ],
+       "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"Overview\"}]}]}"
       },
       "indents": [
        "childi"
@@ -87,7 +87,6 @@
        "sort": "2",
        "fullpath": "01.02",
        "kind": "section",
-       "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Operations\"}]}]}",
        "rstver": "0",
        "text": "Operations",
        "children": [
@@ -103,9 +102,9 @@
           "sort": "1",
           "fullpath": "01.02.01",
           "kind": "p",
-          "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"All sites follow the handbook's safety rules:\"}]}]}",
           "rstver": "0",
-          "text": "All sites follow the handbook's safety rules:"
+          "text": "All sites follow the handbook's safety rules:",
+          "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"All sites follow the handbook's safety rules:\"}]}]}"
          },
          "indents": [
           "vlink",
@@ -145,9 +144,9 @@
           "sort": "3",
           "fullpath": "01.02.03",
           "kind": "p",
-          "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"No incidents were reported.\"}]}]}",
           "rstver": "0",
-          "text": "No incidents were reported."
+          "text": "No incidents were reported.",
+          "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"No incidents were reported.\"}]}]}"
          },
          "indents": [
           "vlink",
@@ -155,7 +154,8 @@
          ],
          "lastSibling": true
         }
-       ]
+       ],
+       "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"Operations\"}]}]}"
       },
       "indents": [
        "childi"
@@ -173,7 +173,6 @@
        "sort": "3",
        "fullpath": "01.03",
        "kind": "section",
-       "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Finance\"}]}]}",
        "rstver": "0",
        "text": "Finance",
        "children": [
@@ -189,9 +188,9 @@
           "sort": "1",
           "fullpath": "01.03.01",
           "kind": "math",
-          "json": "{\"type\":\"doc\",\"content\":[{\"type\":\"blockMath\",\"attrs\":{\"latex\":\"\\\\text{margin} = \\\\frac{\\\\text{profit}}{\\\\text{revenue}}\"}}]}",
           "rstver": "0",
-          "text": ""
+          "text": "",
+          "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"blockMath\",\"attrs\":{\"latex\":\"\\\\text{margin} = \\\\frac{\\\\text{profit}}{\\\\text{revenue}}\"}}]}"
          },
          "indents": [
           "space",
@@ -199,7 +198,8 @@
          ],
          "lastSibling": true
         }
-       ]
+       ],
+       "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"Finance\"}]}]}"
       },
       "indents": [
        "childx"

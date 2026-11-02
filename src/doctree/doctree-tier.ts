@@ -53,7 +53,11 @@ export interface DocCols {
 	sort: string;
 	fullpath: string;
 	kind: DocKind | string;
-	/** Tiptap JSON, serialized */
+	/**
+	 * Tiptap JSON, kept serialized (escaped) on the wire and in the db, with every "type"
+	 * key stored as "contype": Anson reads "type" as a class name. Read with
+	 * {@link toTiptap}, write with {@link fromTiptap}.
+	 */
 	json?: string;
 	/** derived from json: { body, roleDecls, substitutions, targets }, serialized */
 	rst?: string;
@@ -116,6 +120,22 @@ export interface DoctreeTier {
 	/** TODO jserv c/commit: mark the doc's work as finished */
 	commit(docId: string, ok: OnOk, err?: OnErr): void;
 }
+
+// ---- stored json <-> Tiptap ---------------------------------------------------
+
+/** rename one key at every level of a json value */
+function rekey(v: unknown, from: string, to: string): unknown {
+	if (Array.isArray(v)) return v.map((x) => rekey(x, from, to));
+	if (v && typeof v === 'object')
+		return Object.fromEntries(Object.entries(v).map(([k, x]) => [k === from ? to : k, rekey(x, from, to)]));
+	return v;
+}
+
+/** stored DocCols.json ("contype") -> Tiptap JSON ("type") */
+export const toTiptap = <T = unknown>(json: string): T => rekey(JSON.parse(json), 'contype', 'type') as T;
+
+/** Tiptap JSON ("type") -> stored DocCols.json ("contype") */
+export const fromTiptap = (json: unknown): string => JSON.stringify(rekey(json, 'type', 'contype'));
 
 // ---- where a node goes ------------------------------------------------------
 

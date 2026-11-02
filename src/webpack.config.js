@@ -3,8 +3,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 // symlinks: false: the linked @anclient packages (TS sources) resolve their imports
 // (react, MUI, ...) from this project's node_modules, so there is one React
-// csstype: types only, imported by @anclient sources
-const resolve = { extensions: ['.tsx', '.ts', '.jsx', '.js'], symlinks: false, alias: { csstype: false } };
+const resolve = { extensions: ['.tsx', '.ts', '.jsx', '.js'], symlinks: false };
 // Babel compiles our sources, the linked @anclient packages and TS-only packages they use
 const notOurs = /node_modules[\\/](?!(@anclient|mime-types-no-nodejs)[\\/])/;
 

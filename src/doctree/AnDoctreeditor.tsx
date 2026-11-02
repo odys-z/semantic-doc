@@ -16,9 +16,6 @@
  *  - ref: one read-only line. avail === 'false': a placeholder, e.g. not on this synode.
  */
 import React from 'react';
-// load semantier through its entry before anreact: some anreact modules import
-// semantier/protocol directly, which then runs before the modules it cycles with
-import '@anclient/semantier';
 import type { AnTreeNode } from '@anclient/semantier';
 import {
 	AnTreeditorComp, type AnTreeditorProps, type AnTreegridCol, TreeNodeVisual,
@@ -28,7 +25,7 @@ import {
 import { ParagraphEditor, StaticBlock, type JSONContent, type RstResult } from '../editor';
 import {
 	DocKind, type DocCols, type DocTreeNode, type DoctreeResp, type DoctreeTier, type MoveTo,
-	insertReq, isContainer, locate, moveReq, received, referencedIn,
+	fromTiptap, insertReq, isContainer, locate, moveReq, received, referencedIn, toTiptap,
 } from './doctree-tier';
 import './doctree.css';
 
@@ -57,7 +54,8 @@ interface DoctreeState {
 	error?: string;
 }
 
-const EMPTY = '{"type":"doc","content":[{"type":"paragraph"}]}';
+/** an empty paragraph, stored form */
+const EMPTY = '{"contype":"doc","content":[{"contype":"paragraph"}]}';
 
 /** stored form of the serializer's result: the parts the builder merges */
 const rstOf = (r: RstResult) =>
@@ -65,6 +63,9 @@ const rstOf = (r: RstResult) =>
 
 /** keep a click in a cell from toggling the folder or selecting the row */
 const stop = (e: React.UIEvent) => e.stopPropagation();
+
+/** a row button; no run: disabled */
+type Act = { label: string; title: string; run?: () => void };
 
 /** the comp the columns of one AnDoctreeditor render with */
 type Owner = { ed?: AnDoctreeditorComp };
@@ -88,7 +89,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	/** a text change waiting for autosave */
 	pending: { node: DocCols; timer: ReturnType<typeof setTimeout> } | undefined;
 
-	/** parsed Tiptap JSON by its text, so static rows keep their content object */
+	/** Tiptap JSON by its stored text, so static rows keep their content object */
 	parsed = new Map<string, JSONContent>();
 
 	constructor(props: AnDoctreeditorProps & AnTreeditorProps & { owner: Owner }) {
@@ -145,7 +146,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 
 	/** ParagraphEditor reports every change; save after typing stops */
 	changed(node: DocCols, json: JSONContent, rst: RstResult) {
-		const s = JSON.stringify(json);
+		const s = fromTiptap(json);
 		if (s === (node.json ?? EMPTY)) return; // e.g. the editor's report on creation
 		node.json = s;
 		node.rst = rstOf(rst);
@@ -185,14 +186,6 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 		}, this.failed);
 	}
 
-	insert(at: DocTreeNode, kind: DocKind) {
-		this.modify(insertReq(this.state.forest, at.id, kind), true);
-	}
-
-	move(t: DocTreeNode, to: MoveTo) {
-		this.modify(moveReq(this.state.forest, t.id, to));
-	}
-
 	del(t: DocTreeNode) {
 		const question = referencedIn(t)
 			? 'Other documents reference this part. Deleting it removes it from them too. Delete anyway?'
@@ -230,7 +223,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	toAddChild(e: React.MouseEvent<HTMLElement>) {
 		e?.stopPropagation();
 		const root = this.state.forest[0];
-		if (root) this.insert(root, DocKind.section);
+		if (root) this.modify(insertReq(this.state.forest, root.id, DocKind.section), true);
 	}
 
 	/** AnTreeditor's own delete */
@@ -241,6 +234,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 
 	// ---- column formatters -------------------------------------------------
 
+	/** content cell: the one editor, a static block that opens it, or a read-only line */
 	content(t: DocTreeNode) {
 		const n = t.node;
 		let cell: React.ReactNode;
@@ -256,62 +250,65 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 			case DocKind.image:
 				cell = <div className="sd-media">[image {n.resId}]</div>;
 				break;
-			default:
-				cell = this.block(n);
+			default: // section title, paragraph, formula
+				cell = n.nid === this.state.editing
+					? <ParagraphEditor
+						content={this.parse(n.json)}
+						autofocus
+						onChange={(j, rst) => this.changed(n, j, rst)}
+						editMath={(kind, latex) => window.prompt(kind === 'block' ? 'Block formula (LaTeX)' : 'Formula (LaTeX)', latex)}
+					  />
+					: <StaticBlock json={this.parse(n.json)} className="sd-clickable" onClick={() => this.edit(n.nid)} />;
 		}
 		return <div className={'sd-cell sd-' + n.kind} onClick={stop}>{cell}</div>;
 	}
 
-	/** the single editor, or a static view that opens it on click */
-	block(n: DocCols) {
-		const json = this.json(n.json);
-		return n.nid === this.state.editing ? (
-			<ParagraphEditor
-				content={json}
-				autofocus
-				onChange={(j, rst) => this.changed(n, j, rst)}
-				editMath={(kind, latex) => window.prompt(kind === 'block' ? 'Block formula (LaTeX)' : 'Formula (LaTeX)', latex)}
-			/>
-		) : (
-			<StaticBlock json={json} className="sd-clickable" onClick={() => this.edit(n.nid)} />
-		);
-	}
-
-	json(s?: string): JSONContent {
+	/** Tiptap JSON of a stored json (contype -> type), parsed once per text */
+	parse(s?: string): JSONContent {
 		const k = s ?? EMPTY;
 		let j = this.parsed.get(k);
-		if (!j) this.parsed.set(k, (j = JSON.parse(k)));
+		if (!j) this.parsed.set(k, (j = toTiptap<JSONContent>(k)));
 		return j!;
 	}
 
+	/** actions cell: buttons from one list; a button without run is disabled */
 	actions(t: DocTreeNode) {
 		const f = this.state.forest;
-		const act = (label: string, title: string, f: () => void, enabled = true) => (
-			<button className="sd-act" title={title} disabled={!enabled} onClick={f}>{label}</button>
+
+		const add = (label: string, kind: DocKind, title: string): Act =>
+			({ label, title, run: () => this.modify(insertReq(f, t.id, kind), true) });
+
+		const mov = (label: string, to: MoveTo, title: string): Act => {
+			const req = moveReq(f, t.id, to);
+			return { label, title, run: req && (() => this.modify(req)) };
+		};
+
+		const del: Act = { label: '✕', title: 'Delete', run: () => this.del(t) };
+		const at = t.node.kind === DocKind.section ? ' at the start of this section' : ' after';
+
+		const btns: Act[] =
+			t.node.avail === 'false' ? [del]
+			: t.node.kind === DocKind.doc ? [
+				add('§+', DocKind.section, 'Add section at the end'),
+				add('¶+', DocKind.p, 'Add paragraph at the end'),
+			] : [
+				add('¶+', DocKind.p, 'Add paragraph' + at),
+				add('∑+', DocKind.math, 'Add formula' + at),
+				add('§+', DocKind.section, 'Add section after'),
+				mov('↑', 'up', 'Up'),
+				mov('↓', 'down', 'Down'),
+				mov('→', 'indent', 'Indent (into the section above)'),
+				mov('←', 'outdent', 'Outdent'),
+				del,
+			];
+
+		return (
+			<div className="sd-actions" onClick={stop}>
+				{btns.map((b) => (
+					<button key={b.label} className="sd-act" title={b.title} disabled={!b.run} onClick={b.run}>{b.label}</button>
+				))}
+			</div>
 		);
-		const kind = t.node.kind;
-		let btns: React.ReactNode;
-		if (t.node.avail === 'false')
-			btns = act('✕', 'Delete', () => this.del(t));
-		else if (kind === DocKind.doc)
-			btns = <>
-				{act('§+', 'Add section at the end', () => this.insert(t, DocKind.section))}
-				{act('¶+', 'Add paragraph at the end', () => this.insert(t, DocKind.p))}
-			</>;
-		else {
-			const inside = kind === DocKind.section ? ' at the start of this section' : ' after';
-			btns = <>
-				{act('¶+', 'Add paragraph' + inside, () => this.insert(t, DocKind.p))}
-				{act('∑+', 'Add formula' + inside, () => this.insert(t, DocKind.math))}
-				{act('§+', 'Add section after', () => this.insert(t, DocKind.section))}
-				{act('↑', 'Up', () => this.move(t, 'up'), !!moveReq(f, t.id, 'up'))}
-				{act('↓', 'Down', () => this.move(t, 'down'), !!moveReq(f, t.id, 'down'))}
-				{act('→', 'Indent (into the section above)', () => this.move(t, 'indent'), !!moveReq(f, t.id, 'indent'))}
-				{act('←', 'Outdent', () => this.move(t, 'outdent'), !!moveReq(f, t.id, 'outdent'))}
-				{act('✕', 'Delete', () => this.del(t))}
-			</>;
-		}
-		return <div className="sd-actions" onClick={stop}>{btns}</div>;
 	}
 
 	render() {
