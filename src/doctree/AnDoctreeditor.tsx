@@ -207,7 +207,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<AnDoctreeditorProps & AnTreedit
 			case DocKind.image:
 				return <div className="sd-media">[image {r.resId}]</div>;
 			default:
-				return this.block(r);
+				return this.contentRow(r);
 		}
 	}
 
@@ -215,13 +215,13 @@ class AnDoctreeditorComp extends AnTreeditorComp<AnDoctreeditorProps & AnTreedit
 	sectionTitle(t: AnTreeNode) {
 		return (
 			<span className="sd-title" onClick={(e) => e.stopPropagation()}>
-				{this.block(rec(t))}
+				{this.contentRow(rec(t))}
 			</span>
 		);
 	}
 
 	/** the single editor, or a static view that opens it on click */
-	block(r: DocNode) {
+	contentRow(r: DocNode) {
 		const json = JSON.parse(r.json ?? '{"type":"doc","content":[{"type":"paragraph"}]}');
 		return r.nid === this.state.editing ? (
 			<ParagraphEditor
