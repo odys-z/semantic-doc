@@ -14,7 +14,8 @@ npm start           # http://localhost:8080/  demo page
                     # http://localhost:8080/test.html  test page
 npm test            # bundle tests for Node and run them; exit 1 on failure
 npm run typecheck   # tsc only — Babel strips types without checking them
-npm run build       # production bundle → dist/ (demo page only)
+npm run build       # production bundle → dist/ (demo page only), then npm run pack
+npm run pack        # the package tarball → dist-pack/semantic-doc-<version>.tgz
 ```
 
 The doc tree needs the anclient sources next to this repo (`../../anclient/js`,
@@ -60,6 +61,18 @@ effects becomes one composite role (base role + classes from `theme-roles.css`):
   blocks, use `joinRst(results)`: it declares each role once and defines each
   shared substitution once (docutils rejects duplicate substitutions).
 - Classes on formulas survive in Sphinx (MathJax), not in plain docutils MathML.
+
+## Package tarball
+
+Hosts install semantic-doc from its tarball, as a regular package, e.g. Anclient's album-web:
+
+```bash
+npm run pack                    # dist-pack/semantic-doc-0.1.0.tgz
+cd <host> && npm install <path>/semantic-doc/src/dist-pack/semantic-doc-0.1.0.tgz
+```
+
+The tarball has `editor/`, `doctree/` and this README (`files` in package.json); npm installs
+its dependencies (Tiptap) with it. Re-pack and re-install after changing semantic-doc.
 
 ## Use as a widget
 
