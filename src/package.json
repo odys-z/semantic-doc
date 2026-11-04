@@ -20,7 +20,8 @@
   },
   "scripts": {
     "start": "webpack serve --mode development",
-    "build": "webpack --mode production",
+    "build": "webpack --mode production && npm run pack",
+    "pack": "node -e \"require('fs').mkdirSync('dist-pack', {recursive: true})\" && npm pack --pack-destination dist-pack",
     "test": "webpack --mode development --env test && node dist-test/run.js",
     "typecheck": "tsc --noEmit"
   },
