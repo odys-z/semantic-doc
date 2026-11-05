@@ -4,3 +4,4 @@ RemoteSystemsTempFiles
 .settings
 .classpath
 /bin/
+/src/test/res/doctree-test.db

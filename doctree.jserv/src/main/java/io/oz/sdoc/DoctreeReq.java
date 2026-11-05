@@ -9,7 +9,7 @@ import io.odysz.semantic.jprotocol.UserReq;
 /**
  * Request body of the doc-content tier (no ServPort yet).
  *
- * @author odys-z@github.com
+ * @author ody
  */
 public class DoctreeReq extends UserReq {
 
@@ -25,6 +25,11 @@ public class DoctreeReq extends UserReq {
 
 		/** create a doc header */
 		public static final String createDoc = "c/doc";
+		/**
+		 * import a docx, {@link DoctreeReq#srcId}: answers the header (state parsing) at once,
+		 * nodes are parsed in the background
+		 */
+		public static final String importDocx = "c/import";
 		/** insert {@link DoctreeReq#node} */
 		public static final String insert = "c/node";
 		/** save a node's content: json + rst (+ style) */
@@ -37,6 +42,9 @@ public class DoctreeReq extends UserReq {
 
 	public String docId;
 	public DocInf doc;
+
+	/** for {@link A#importDocx}: the docx's record id in the doc table (h_photos) */
+	public String srcId;
 
 	public String nid;
 	public DocNode node;
@@ -63,6 +71,13 @@ public class DoctreeReq extends UserReq {
 
 	public DoctreeReq docId(String docId) {
 		this.docId = docId;
+		return this;
+	}
+
+	/** for {@link A#importDocx} */
+	public DoctreeReq importDocx(String srcId, String title) {
+		this.srcId = srcId;
+		this.doc = new DocInf(null, title, null);
 		return this;
 	}
 

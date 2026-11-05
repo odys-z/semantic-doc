@@ -44,8 +44,17 @@
 		<!-- No servlet container or jdbc driver here: those are the app's (demo jserv, synode) choices. -->
 	    <groupId>io.github.odys-z</groupId>
 	    <artifactId>semantic.jserv</artifactId>
-	    <version>[1.5.17,)</version>
+	    <!-- 1.5.20: SemanticTree.sortDigits(tabl, digits) -->
+	    <version>[1.5.19,)</version>
    	</dependency>
+
+    <dependency>
+      <!-- the docx importer's walker (io.oz.sdoc.docx), verified in hello/docx4j.
+           docx4j 11.x = Jakarta XML Binding; pulls in docx4j-core and the Glassfish JAXB RI. -->
+      <groupId>org.docx4j</groupId>
+      <artifactId>docx4j-JAXB-ReferenceImpl</artifactId>
+      <version>11.5.4</version>
+    </dependency>
 
    	<dependency>
 		<!-- DoctreeTier is a servlet; the container (Jetty in the synodes) provides the api -->

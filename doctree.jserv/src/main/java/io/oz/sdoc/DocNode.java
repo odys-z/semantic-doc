@@ -11,7 +11,7 @@ import io.odysz.anson.Anson;
  * ("doc", "paragraph", ...) which collides with Anson's "type" (class name) key.
  * The client stringifies / parses it.</p>
  *
- * @author odys-z@github.com
+ * @author ody
  */
 public class DocNode extends Anson {
 
@@ -19,6 +19,8 @@ public class DocNode extends Anson {
 
 	/** Values of {@link DocNode#kind}. */
 	public static class Kind {
+		/** the doc root, nid = docId */
+		public static final String doc = "doc";
 		public static final String section = "section";
 		public static final String p = "p";
 		public static final String math = "math";
@@ -26,6 +28,8 @@ public class DocNode extends Anson {
 		public static final String image = "image";
 		/** live, read-only reference to another doc's subtree, root is {@link DocNode#refId} */
 		public static final String ref = "ref";
+		/** docx table, only its text (cells joined) for now */
+		public static final String table = "tabl";
 	}
 
 	public String nid;
@@ -55,6 +59,12 @@ public class DocNode extends Anson {
 	public String src;
 	/** docx paragraph style, e.g. "heading 1", "Normal" */
 	public String style;
+
+	/**
+	 * Plain text, from the importer (a heading's title, a paragraph's text);
+	 * the client builds {@link #json} from it while json is null.
+	 */
+	public String ptext;
 
 	public DocNode() { }
 

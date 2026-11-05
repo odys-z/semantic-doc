@@ -9,7 +9,7 @@ import io.odysz.semantic.jprotocol.AnsonResp;
  * Response of the doc-content tier; for {@link DoctreeReq.A#tree}
  * it has the same shape as semantic-doc's doc-a.json: { doc, nodes }.
  *
- * @author odys-z@github.com
+ * @author ody
  */
 public class DoctreeResp extends AnsonResp {
 

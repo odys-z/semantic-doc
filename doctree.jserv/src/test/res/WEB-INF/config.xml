@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xml>
+<!-- Configs of doctree.jserv's tests: auto keys (doc ids), the same as the synodes'. -->
+<configs>
+  <t id="default" pk="k" columns="k,v">
+    <c>
+    	<!-- windows: auto keys in Radix32 -->
+    	<k>file-sys</k>
+    	<v>windows</v>
+    </c>
+    <c>
+    	<k>id-len</k>
+    	<v>4</v>
+    </c>
+  </t>
+</configs>

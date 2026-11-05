@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xml>
+<!-- Connections of doctree.jserv's tests. The db file is created on first connection,
+	the tables by DoctreeDB.setup(). -->
+<conns>
+  <t id="drvmnger" pk="id" columns="id,type,isdef,src,usr,pswd,dbg,smtcs">
+  	<c>
+  		<id>doctree-test</id>
+  		<type>sqlite</type>
+  		<isdef>true</isdef>
+  		<src>../doctree-test.db</src>
+  		<usr>test</usr>
+  		<pswd>test</pswd>
+  		<dbg>false</dbg>
+  		<smtcs>semantics-doctree.xml</smtcs>
+  	</c>
+  </t>
+
+  <t id="dbcp" pk="id" columns="id,type,src,usr,pswd,isdef,dbg,smtcs">
+  </t>
+
+  <t id="conn-uri" pk='uri' columns="uri, conn">
+   	<c>
+  		<uri>/sdoc</uri>
+  		<conn>doctree-test</conn>
+  	</c>
+  </t>
+</conns>
