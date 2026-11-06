@@ -7,7 +7,7 @@
  * server's reshaping, so they are answered with an error naming the request.
  */
 import {
-	locate, type DocCols, type DoctreeResp, type DoctreeTier, type OnErr, type OnOk, type TreeModify,
+	DoctreeReq, locate, type DocCols, type DoctreeResp, type DoctreeTier, type OnErr, type OnOk, type TreeModify,
 } from '../doctree';
 
 /** urls of the json files; webpack emits them as assets */
@@ -20,7 +20,7 @@ const clone = <T,>(o: T): T => JSON.parse(JSON.stringify(o));
 
 /** a request as one line, e.g. "u/move a2.3 → a2[0]" */
 export const describe = (q: TreeModify) =>
-	q.a === 'd' ? `d ${q.rootId}`
+	q.a === DoctreeReq.A.del ? `d ${q.rootId}`
 	: `${q.a} ${q.rootId ?? q.nvs?.find((nv) => nv[0] === 'kind')?.[1] ?? ''} → ${q.toParent ?? '(top)'}[${q.toIndex}]`;
 
 export class StubDoctreeTier implements DoctreeTier {

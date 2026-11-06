@@ -35,7 +35,22 @@ class DoctreeTierTest {
 
 		AnsonMsg<? extends AnsonResp> msg = tier.handle(req);
 
-		assertEquals(MsgCode.exGeneral, msg.code());
+		assertEquals(MsgCode.exSemantic, msg.code());
 		assertTrue(msg.body(0).msg().contains(DoctreeReq.A.tree));
+	}
+
+	/** the actions not implemented yet: each has its handler, answering an error naming it */
+	@Test
+	void notImplementedYet() throws Exception {
+		for (String a : new String[] { DoctreeReq.A.tree, DoctreeReq.A.update, DoctreeReq.A.move,
+				DoctreeReq.A.insert, DoctreeReq.A.del, DoctreeReq.A.commit, DoctreeReq.A.createDoc }) {
+			DoctreeReq req = new DoctreeReq("/sdoc").docId("doc-a");
+			req.a(a);
+
+			AnsonMsg<? extends AnsonResp> msg = tier.handle(req);
+
+			assertEquals(MsgCode.exSemantic, msg.code(), a);
+			assertTrue(msg.body(0).msg().contains(a + " is not implemented yet"), msg.body(0).msg());
+		}
 	}
 }

@@ -1,6 +1,7 @@
 package io.oz.sdoc;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
 import javax.servlet.ServletException;
@@ -12,6 +13,8 @@ import io.odysz.semantic.jprotocol.AnsonMsg.MsgCode;
 import io.odysz.semantic.jprotocol.AnsonResp;
 import io.odysz.semantic.jprotocol.IPort;
 import io.odysz.semantic.jserv.ServPort;
+import io.odysz.semantics.x.SemanticException;
+import io.odysz.transact.x.TransException;
 import io.oz.sdoc.imports.DocxSource;
 import io.oz.sdoc.imports.IBlockParser;
 import io.oz.sdoc.imports.Importer;
@@ -25,7 +28,8 @@ import io.oz.sdoc.imports.Importer;
  * <p>The working copy is in its own db ({@link DoctreeDBHelper}), connection {@link #conn(String, String)},
  * set up at the first request.
  * Served: {@link DoctreeReq.A#docs}, {@link DoctreeReq.A#importDocx}
- * (with {@link #importer(DocxSource, IBlockParser)}); other requests are answered with an error.</p>
+ * (with {@link #importer(DocxSource, IBlockParser)}); the other actions of {@link DoctreeReq.A}
+ * have their handlers, not implemented yet: they answer exSemantic, naming the action.</p>
  *
  * TODO: verify sessions; no session check for now.
  *
@@ -101,39 +105,116 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	@Override
 	protected void onGet(AnsonMsg<DoctreeReq> msg, HttpServletResponse resp)
 			throws ServletException, IOException {
-		write(resp, handle(msg.body(0)));
+		onPost(msg, resp);
 	}
 
 	@Override
 	protected void onPost(AnsonMsg<DoctreeReq> msg, HttpServletResponse resp)
 			throws ServletException, IOException {
-		write(resp, handle(msg.body(0)));
+		try {
+			write(resp, handle(msg.body(0)));
+		} finally {
+			resp.flushBuffer();
+		}
 	}
 
 	/**
-	 * Serve a request.
+	 * Serve a request: the handler of its a() answers a {@link DoctreeResp}, or throws.
+	 * Exceptions are answered as in docsync's ExpDoctier, for the client to report:
+	 * SemanticException → exSemantic (a request that can't be served, the message for users),
+	 * SQLException, TransException → exTransct, anything else → exGeneral.
 	 *
 	 * @param req
 	 * @return response message
 	 */
 	public AnsonMsg<? extends AnsonResp> handle(DoctreeReq req) {
-		String a = req == null ? null : req.a();
-
 		try {
+			String a = req == null ? null : req.a();
+			DoctreeResp rsp;
+
 			if (DoctreeReq.A.docs.equals(a))
-				return ok(new DoctreeResp().docs(db() == null ? new ArrayList<DocInf>() : db.docs()));
+				rsp = docs(req);
+			else if (DoctreeReq.A.importDocx.equals(a))
+				rsp = importDocx(req);
+			else if (DoctreeReq.A.tree.equals(a))
+				rsp = tree(req);
+			else if (DoctreeReq.A.update.equals(a))
+				rsp = update(req);
+			else if (DoctreeReq.A.move.equals(a))
+				rsp = move(req);
+			else if (DoctreeReq.A.insert.equals(a))
+				rsp = insert(req);
+			else if (DoctreeReq.A.del.equals(a))
+				rsp = del(req);
+			else if (DoctreeReq.A.commit.equals(a))
+				rsp = commit(req);
+			else if (DoctreeReq.A.createDoc.equals(a))
+				rsp = createDoc(req);
+			else
+				throw new SemanticException("Doc-tree tier: request.a, %s, can not be handled.", a);
 
-			if (DoctreeReq.A.importDocx.equals(a)) {
-				if (db() == null || importer == null)
-					return err(MsgCode.exGeneral, "Doc-tree tier: importing isn't configured.");
-				String title = req.doc == null ? null : req.doc.title;
-				return ok(new DoctreeResp().doc(importer.start(synode, req.srcId, title, null)));
-			}
-		} catch (Exception e) {
+			return ok(rsp);
+		} catch (SemanticException e) {
+			return err(MsgCode.exSemantic, e.getMessage());
+		} catch (SQLException | TransException e) {
 			e.printStackTrace();
-			return err(MsgCode.exGeneral, "Doc-tree tier: %s", e.getMessage());
+			return err(MsgCode.exTransct, e.getMessage());
+		} catch (Throwable e) {
+			e.printStackTrace();
+			return err(MsgCode.exGeneral, "%s\n%s", e.getClass().getName(), e.getMessage());
 		}
+	}
 
-		return err(MsgCode.exGeneral, "Doc-tree tier: request %s is not served yet.", a);
+	/** r/docs: the docs' headers → docs (empty if the working copy isn't configured) */
+	DoctreeResp docs(DoctreeReq req) throws Exception {
+		return new DoctreeResp().docs(db() == null ? new ArrayList<DocInf>() : db.docs());
+	}
+
+	/** c/import: the doc header (state parsing) at once; the nodes are parsed in the background → doc */
+	DoctreeResp importDocx(DoctreeReq req) throws Exception {
+		if (db() == null || importer == null)
+			throw new SemanticException("Doc-tree tier: importing isn't configured.");
+		String title = req.doc == null ? null : req.doc.title;
+		return new DoctreeResp().doc(importer.start(synode, req.srcId, title, null));
+	}
+
+	/** r/tree: the doc root {@link DoctreeReq#docId} with its subtree → doc, forest */
+	DoctreeResp tree(DoctreeReq req) throws Exception {
+		throw notyet(req);
+	}
+
+	/** u/node: save {@link DoctreeReq#node}'s json, rst, rstver; the doc gets dirty → doc */
+	DoctreeResp update(DoctreeReq req) throws Exception {
+		throw notyet(req);
+	}
+
+	/** u/move: rootId under toParent at toIndex → root, forest, rejected */
+	DoctreeResp move(DoctreeReq req) throws Exception {
+		throw notyet(req);
+	}
+
+	/** i: a new node under toParent at toIndex, columns nvs → newId, root, forest */
+	DoctreeResp insert(DoctreeReq req) throws Exception {
+		throw notyet(req);
+	}
+
+	/** d: rootId with its subtree → root, forest */
+	DoctreeResp del(DoctreeReq req) throws Exception {
+		throw notyet(req);
+	}
+
+	/** c/commit: the doc isn't dirty, committedAt = now → doc */
+	DoctreeResp commit(DoctreeReq req) throws Exception {
+		throw notyet(req);
+	}
+
+	/** c/doc: a new doc header with its root node → doc */
+	DoctreeResp createDoc(DoctreeReq req) throws Exception {
+		throw notyet(req);
+	}
+
+	/** the error of a handler not implemented yet, naming the request's a() */
+	static SemanticException notyet(DoctreeReq req) {
+		return new SemanticException("Doc-tree tier: %s is not implemented yet.", req.a());
 	}
 }

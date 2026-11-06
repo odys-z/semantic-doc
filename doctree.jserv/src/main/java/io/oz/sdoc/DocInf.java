@@ -38,6 +38,11 @@ public class DocInf extends Anson {
 	/** Who triggered the last build. */
 	public String builtBy;
 
+	/** true if changed since the last commit */
+	public boolean dirty;
+	/** time of the last commit, null if never committed */
+	public String committedAt;
+
 	public DocInf() { }
 
 	public DocInf(String docId, String title, String creator) {

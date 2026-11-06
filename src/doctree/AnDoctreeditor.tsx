@@ -38,7 +38,7 @@ import Typography from '@mui/material/Typography';
 import { ParagraphEditor, StaticBlock, type JSONContent, type RstResult } from '../editor';
 import {
 	DocKind, type DocCols, type DocInf, type DocTreeNode, type DoctreeResp, type DoctreeTier, type MoveTo,
-	fromTiptap, insertReq, isContainer, locate, moveReq, received, referencedIn, toTiptap,
+	DoctreeReq, fromTiptap, insertReq, isContainer, locate, moveReq, received, referencedIn, toTiptap,
 } from './doctree-tier';
 import './doctree.css';
 import { assemble, type RstFile } from './rst-assembler';
@@ -243,7 +243,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 			this.pending = undefined;
 			this.setState({ editing: null, saving: false });
 		}
-		this.modify({ a: 'd', rootId: t.id });
+		this.modify({ a: DoctreeReq.A.del, rootId: t.id });
 	}
 
 	commit() {

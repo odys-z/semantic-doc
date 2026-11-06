@@ -1,12 +1,12 @@
 /**
  * The doc-content tier, client side.
  *
- * Wire shapes follow semantic-jserv's s-tree modification (SemanticTree.onMoveTree,
- * onInsertTree, onDelTree; test data: semantic.jserv/src/test/res/stree/stree-cases.json),
- * assuming jserv's io.oz.sdoc.DoctreeReq / DoctreeResp extend AnDatasetReq / AnDatasetResp:
+ * Wire shapes are doctree.jserv's io.oz.sdoc.DoctreeReq / DoctreeResp, which extend
+ * AnDatasetReq / AnDatasetResp for semantic-jserv's s-tree modification (SemanticTree.onMoveTree,
+ * onInsertTree, onDelTree; test data: semantic.jserv/src/test/res/stree/stree-cases.json):
  *
- *   request   {a, rootId, toParent, toIndex, nvs}     a: u/move | i | d (structure), r/tree, u/node, c/commit
- *   response  {doc, root, forest, rejected, newId}    root: reload root, null for the whole forest
+ *   request   {a, docId, node, rootId, toParent, toIndex, nvs}   a: one of DoctreeReq.A
+ *   response  {doc, docs, root, forest, rejected, newId}        root: reload root, null for the whole forest
  *
  * The server owns the tree: it sends forests (built by DatasetHelper.buildForest) and
  * reshapes on every change. The client only works out *where* a node goes
@@ -27,18 +27,57 @@ export enum DocKind {
 	ref = 'ref',
 }
 
+/**
+ * Requests of the doc-tree tier, io.oz.sdoc.DoctreeReq (extending AnDatasetReq).
+ * A: the values of a(), the same as the Java DoctreeReq.A.
+ */
+export class DoctreeReq {
+	static __type__ = 'io.oz.sdoc.DoctreeReq';
+
+	static A = {
+		/** list docs (headers only) → docs */
+		docs: 'r/docs',
+		/** load a doc: the doc root with its subtree → doc, forest */
+		tree: 'r/tree',
+		/** save a node's content (node: json + rst) → doc */
+		update: 'u/node',
+		/** move rootId under toParent at toIndex (AnDatasetReq.A.umove) → root, forest, rejected */
+		move: 'u/move',
+		/** a new node under toParent at toIndex, columns nvs (AnDatasetReq.A.insrt) → newId, root, forest */
+		insert: 'i',
+		/** delete rootId with its subtree (AnDatasetReq.A.del) → root, forest */
+		del: 'd',
+		/** mark the doc's work as finished → doc */
+		commit: 'c/commit',
+		/** create a doc header with its root node → doc */
+		createDoc: 'c/doc',
+		/** import a docx (srcId: its record id): answers the header (state parsing) at once */
+		importDocx: 'c/import',
+	} as const;
+}
+
+/** a value of {@link DoctreeReq.A} */
+export type DoctreeA = (typeof DoctreeReq.A)[keyof typeof DoctreeReq.A];
+
 /** io.oz.sdoc.DocInf: doc header */
 export interface DocInf {
 	docId: string;
 	title: string;
 	creator: string;
+	/** importing: 'parsing' | 'ready' | 'failed' */
+	state?: string | null;
+	/** why the import failed */
+	msg?: string | null;
+	/** the source docx's record id (h_photos); null if created in the editor */
+	srcId?: string | null;
+	nextNid?: number;
 	/** compiled html uri; null if never built */
 	htmlUri?: string | null;
 	builtAt?: string | null;
 	builtBy?: string | null;
-	/** TODO jserv: true if changed since the last commit */
+	/** true if changed since the last commit */
 	dirty?: boolean;
-	/** TODO jserv: time of the last commit */
+	/** time of the last commit */
 	committedAt?: string | null;
 }
 
@@ -79,8 +118,7 @@ export type DocTreeNode = AnTreeNode & { node: AnTreeNode['node'] & DocCols & { 
 
 /** structure modification, AnDatasetReq fields */
 export interface TreeModify {
-	/** AnDatasetReq.A: umove, insrt, del */
-	a: 'u/move' | 'i' | 'd';
+	a: typeof DoctreeReq.A.move | typeof DoctreeReq.A.insert | typeof DoctreeReq.A.del;
 	/** the node moved / deleted; none for insert (auto key, TODO jserv) */
 	rootId?: string;
 	/** null: top level */
@@ -94,12 +132,14 @@ export interface TreeModify {
 /** io.oz.sdoc.DoctreeResp, extending AnDatasetResp */
 export interface DoctreeResp {
 	doc?: DocInf;
+	/** r/docs: the docs' headers */
+	docs?: DocInf[];
 	/** root of the reloaded subtree in forest; null: forest is the whole tree */
 	root?: string | null;
 	forest?: DocTreeNode[];
 	/** the change is refused, the table unchanged: 'no-op', 'cycle' */
 	rejected?: string | null;
-	/** TODO jserv, insert: the generated key of the new node */
+	/** insert: the generated key of the new node */
 	newId?: string;
 }
 
@@ -177,7 +217,7 @@ export function moveReq(forest: DocTreeNode[], id: string, to: MoveTo): TreeModi
 	if (!at || !at.parent) return undefined; // doc roots stay
 	const { parent, sibs, ix } = at;
 	const move = (toParent: DocTreeNode, toIndex: number): TreeModify =>
-		({ a: 'u/move', rootId: id, toParent: toParent.id, toIndex });
+		({ a: DoctreeReq.A.move, rootId: id, toParent: toParent.id, toIndex });
 
 	switch (to) {
 		case 'up':
@@ -207,10 +247,10 @@ export function insertReq(forest: DocTreeNode[], at: string, kind: DocKind): Tre
 	if (!l) return undefined;
 	const nvs: [string, string | null][] = [['kind', kind], ['docId', l.t.node.docId]];
 	if (l.t.node.kind === DocKind.doc)
-		return { a: 'i', toParent: l.t.id, toIndex: l.t.node.children?.length ?? 0, nvs };
+		return { a: DoctreeReq.A.insert, toParent: l.t.id, toIndex: l.t.node.children?.length ?? 0, nvs };
 	if (l.t.node.kind === DocKind.section && kind !== DocKind.section)
-		return { a: 'i', toParent: l.t.id, toIndex: 0, nvs };
-	return l.parent ? { a: 'i', toParent: l.parent.id, toIndex: l.ix + 1, nvs } : undefined;
+		return { a: DoctreeReq.A.insert, toParent: l.t.id, toIndex: 0, nvs };
+	return l.parent ? { a: DoctreeReq.A.insert, toParent: l.parent.id, toIndex: l.ix + 1, nvs } : undefined;
 }
 
 /** true if the node or one in its subtree is referenced by other docs */
