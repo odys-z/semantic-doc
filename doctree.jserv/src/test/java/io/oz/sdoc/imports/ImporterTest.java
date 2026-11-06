@@ -25,7 +25,7 @@ import io.odysz.semantic.jprotocol.AnsonMsg.Port;
 import io.odysz.semantic.jprotocol.AnsonResp;
 import io.oz.sdoc.DocInf;
 import io.oz.sdoc.S_DocNodeMeta;
-import io.oz.sdoc.DoctreeDB;
+import io.oz.sdoc.DoctreeDBHelper;
 import io.oz.sdoc.DoctreeReq;
 import io.oz.sdoc.DoctreeResp;
 import io.oz.sdoc.DoctreeTier;
@@ -44,7 +44,7 @@ class ImporterTest {
 	@BeforeAll
 	static void init() throws Exception {
 		new File("src/test/res/doctree-test.db").delete();
-		DoctreeDB.touch(webinf, "../doctree-test.db");
+		DoctreeDBHelper.touch(webinf, "../doctree-test.db");
 		Configs.init(webinf);
 		Connects.init(webinf);
 		DatasetCfg.init(webinf);
@@ -85,13 +85,13 @@ class ImporterTest {
 		tier.importer().await();
 		assertEquals("T.0002", doc2.docId);
 		assertArrayEquals(Tricky.tree(doc2.docId), lines(doc2.docId));
-		S_DocNodeMeta m = DoctreeDB.setup(conn).nodem;
+		S_DocNodeMeta m = DoctreeDBHelper.setup(conn).nodem;
 		assertEquals(Tricky.tree(docId).length, Connects.select(conn, String.format(
 				"select %2$s from %3$s where %4$s = '%1$s' or %4$s like '%1$s.%%'",
 				docId, m.pk, m.tbl, m.fullpath)).total());
 
 		// loads as one tree, the doc root
-		List<AnTreeNode> forest = DatasetHelper.buildForest(DoctreeDB.setup(conn).nodes(docId), sm);
+		List<AnTreeNode> forest = DatasetHelper.buildForest(DoctreeDBHelper.setup(conn).nodes(docId), sm);
 		assertEquals(1, forest.size());
 		assertEquals(docId, forest.get(0).id());
 		assertEquals(2, forest.get(0).children().size());
@@ -130,13 +130,13 @@ class ImporterTest {
 		DocInf doc = ((DoctreeResp) t.handle(importReq("x")).body(0)).doc;
 		t.importer().await();
 
-		doc = DoctreeDB.setup(conn).doc(doc.docId);
+		doc = DoctreeDBHelper.setup(conn).doc(doc.docId);
 		assertEquals(DocInf.State.failed, doc.state);
 		assertEquals("not a docx", doc.msg);
 	}
 
 	static String[] lines(String docId) throws Exception {
-		DoctreeDB db = DoctreeDB.setup(conn);
+		DoctreeDBHelper db = DoctreeDBHelper.setup(conn);
 		S_DocNodeMeta m = db.nodem;
 		AnResultset rs = db.nodes(docId);
 		ArrayList<String> lines = new ArrayList<String>();

@@ -19,7 +19,7 @@ import io.oz.sdoc.DocInf;
 import io.oz.sdoc.DocNode;
 import io.oz.sdoc.S_DocNodeMeta;
 import io.oz.sdoc.S_DocsMeta;
-import io.oz.sdoc.DoctreeDB;
+import io.oz.sdoc.DoctreeDBHelper;
 import io.oz.sdoc.imports.Outliner.Outline;
 
 /**
@@ -37,7 +37,7 @@ import io.oz.sdoc.imports.Outliner.Outline;
  */
 public class Importer {
 
-	final DoctreeDB db;
+	final DoctreeDBHelper db;
 	final String conn;
 	final DocxSource source;
 	final IBlockParser parser;
@@ -47,7 +47,7 @@ public class Importer {
 	/** last submitted import, for tests */
 	Future<?> last;
 
-	public Importer(String conn, DoctreeDB db, DocxSource source, IBlockParser parser) {
+	public Importer(String conn, DoctreeDBHelper db, DocxSource source, IBlockParser parser) {
 		this.conn = conn;
 		this.db = db;
 		this.source = source;

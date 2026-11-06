@@ -22,7 +22,7 @@ import io.oz.sdoc.imports.Importer;
  * <p>The port is the app's, e.g. jserv-album's AlbumPort.doctree, so this lib
  * doesn't depend on the app's port enum. Its url must be {@link #url}.</p>
  *
- * <p>The working copy is in its own db ({@link DoctreeDB}), connection {@link #conn(String, String)},
+ * <p>The working copy is in its own db ({@link DoctreeDBHelper}), connection {@link #conn(String, String)},
  * set up at the first request.
  * Served: {@link DoctreeReq.A#docs}, {@link DoctreeReq.A#importDocx}
  * (with {@link #importer(DocxSource, IBlockParser)}); other requests are answered with an error.</p>
@@ -46,7 +46,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	IBlockParser parser;
 
 	/** created by {@link #db()} at the first request needing it */
-	DoctreeDB db;
+	DoctreeDBHelper db;
 	Importer importer;
 
 	public DoctreeTier(IPort port) {
@@ -59,7 +59,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 * and a failure here never stops the synode.
 	 * 
 	 * @param conn connection of the doc-tree db, e.g. "doctree.VOLUME_HOME";
-	 * its file must exist before Connects.init(), see {@link DoctreeDB#touch(String, String)}
+	 * its file must exist before Connects.init(), see {@link DoctreeDBHelper#touch(String, String)}
 	 * @param synode id of this synode, the prefix of doc ids
 	 * @return this
 	 */
@@ -88,9 +88,9 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 * @return null if not configured
 	 * @throws Exception
 	 */
-	synchronized DoctreeDB db() throws Exception {
+	synchronized DoctreeDBHelper db() throws Exception {
 		if (db == null && conn != null) {
-			db = DoctreeDB.setup(conn);
+			db = DoctreeDBHelper.setup(conn);
 			if (parser != null)
 				importer = new Importer(conn, db, source, parser);
 		}

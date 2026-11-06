@@ -28,7 +28,7 @@ public class DocInf extends Anson {
 	public String msg;
 	/** the source docx, its record id in the doc table (h_photos); null if created in the editor */
 	public String srcId;
-	/** next node id of this doc, see {@link DoctreeDB#nid(String, int)} */
+	/** next node id of this doc, see {@link DoctreeDBHelper#nid(String, int)} */
 	public int nextNid;
 
 	/** Compiled html (RST -&gt; html) uri, null if never built. */

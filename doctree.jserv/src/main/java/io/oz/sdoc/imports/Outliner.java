@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import io.oz.sdoc.DocNode;
-import io.oz.sdoc.DoctreeDB;
+import io.oz.sdoc.DoctreeDBHelper;
 
 /**
  * Builds a doc tree from {@link Block}s, in node records instead of json.
@@ -81,7 +81,7 @@ public class Outliner {
 			DocNode parent = stack.peek();
 			int sort = sorts.merge(parent.nid, 1, Integer::sum);
 
-			DocNode node = new DocNode(docId, DoctreeDB.nid(docId, n++), kind).parent(parent.nid, sort);
+			DocNode node = new DocNode(docId, DoctreeDBHelper.nid(docId, n++), kind).parent(parent.nid, sort);
 			node.fullpath = parent.fullpath + "." + leftPad(String.valueOf(sort), siblingWidth, '0');
 			node.ptext = isblank(b.numLabel) ? b.text : b.numLabel + " " + b.text;
 			node.src = b.src;

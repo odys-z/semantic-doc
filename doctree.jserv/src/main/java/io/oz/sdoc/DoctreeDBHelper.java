@@ -38,7 +38,7 @@ import io.odysz.transact.x.TransException;
  *
  * @author ody
  */
-public class DoctreeDB {
+public class DoctreeDBHelper {
 
 	final String conn;
 	final DATranscxt st;
@@ -47,7 +47,7 @@ public class DoctreeDB {
 	public final S_DocsMeta docm;
 	public final S_DocNodeMeta nodem;
 
-	DoctreeDB(String conn, S_DocsMeta docm, S_DocNodeMeta nodem) throws Exception {
+	DoctreeDBHelper(String conn, S_DocsMeta docm, S_DocNodeMeta nodem) throws Exception {
 		this.conn = conn;
 		this.docm = docm;
 		this.nodem = nodem;
@@ -81,7 +81,7 @@ public class DoctreeDB {
 	 * @return the db
 	 * @throws Exception
 	 */
-	public static DoctreeDB setup(String conn) throws Exception {
+	public static DoctreeDBHelper setup(String conn) throws Exception {
 		S_DocsMeta docm = new S_DocsMeta(conn);
 		S_DocNodeMeta nodem = new S_DocNodeMeta(conn);
 
@@ -89,7 +89,7 @@ public class DoctreeDB {
 		setupSqliTables(conn, false, new AutoSeqMeta(conn), docm, nodem);
 		Connects.commit(conn, new JRobot(), nodem.ddlIndex);
 
-		return new DoctreeDB(conn, docm, nodem);
+		return new DoctreeDBHelper(conn, docm, nodem);
 	}
 
 	/**

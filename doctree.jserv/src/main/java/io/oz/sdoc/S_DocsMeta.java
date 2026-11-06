@@ -23,7 +23,7 @@ public class S_DocsMeta extends SemanticTableMeta {
 	public final String msg;
 	/** the source docx's record id in the doc table (h_photos) */
 	public final String refId;
-	/** next node number of the doc, see {@link DoctreeDB#nid(String, int)} */
+	/** next node number of the doc, see {@link DoctreeDBHelper#nid(String, int)} */
 	public final String nextNid;
 	public final String htmlUri;
 	public final String builtAt;
