@@ -90,7 +90,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 */
 	synchronized DoctreeDBHelper db() throws Exception {
 		if (db == null && conn != null) {
-			db = DoctreeDBHelper.setup(conn);
+			db = DoctreeDBHelper.setup(conn, false);
 			if (parser != null)
 				importer = new Importer(conn, db, source, parser);
 		}

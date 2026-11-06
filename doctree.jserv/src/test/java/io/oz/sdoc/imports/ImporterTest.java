@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,6 +11,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import io.odysz.common.Configs;
+import io.odysz.common.Utils;
 import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.DASemantext;
 import io.odysz.semantic.DA.Connects;
@@ -40,15 +40,18 @@ class ImporterTest {
 
 	static DoctreeTier tier;
 	static TreeSemantics sm;
+	/** set up once, with fresh tables; don't set up again, the docs imported by the tests would be dropped */
+	static DoctreeDBHelper db;
 
 	@BeforeAll
 	static void init() throws Exception {
-		new File("src/test/res/doctree-test.db").delete();
 		DoctreeDBHelper.touch(webinf, "../doctree-test.db");
 		Configs.init(webinf);
 		Connects.init(webinf);
 		DatasetCfg.init(webinf);
 		sm = DatasetCfg.getTreeSemtcs("sdoc.tree");
+
+		db = DoctreeDBHelper.setup(conn, true);
 
 		// any file: the parser is the fake one
 		tier = new DoctreeTier(Port.echo)
@@ -85,13 +88,13 @@ class ImporterTest {
 		tier.importer().await();
 		assertEquals("T.0002", doc2.docId);
 		assertArrayEquals(Tricky.tree(doc2.docId), lines(doc2.docId));
-		S_DocNodeMeta m = DoctreeDBHelper.setup(conn).nodem;
+		S_DocNodeMeta m = db.nodem;
 		assertEquals(Tricky.tree(docId).length, Connects.select(conn, String.format(
 				"select %2$s from %3$s where %4$s = '%1$s' or %4$s like '%1$s.%%'",
 				docId, m.pk, m.tbl, m.fullpath)).total());
 
 		// loads as one tree, the doc root
-		List<AnTreeNode> forest = DatasetHelper.buildForest(DoctreeDBHelper.setup(conn).nodes(docId), sm);
+		List<AnTreeNode> forest = DatasetHelper.buildForest(db.nodes(docId), sm);
 		assertEquals(1, forest.size());
 		assertEquals(docId, forest.get(0).id());
 		assertEquals(2, forest.get(0).children().size());
@@ -116,6 +119,7 @@ class ImporterTest {
 
 	@Test
 	void docxNotFound() throws Exception {
+		expectTrace("docxNotFound", "IllegalArgumentException: Docx not found: no-such");
 		AnsonMsg<? extends AnsonResp> msg = tier.handle(importReq("no-such"));
 		assertEquals(MsgCode.exGeneral, msg.code());
 		assertTrue(msg.body(0).msg().contains("no-such"));
@@ -127,16 +131,17 @@ class ImporterTest {
 				.conn(conn, "F")
 				.importer((srcId) -> "pom.xml", (path) -> { throw new Exception("not a docx"); });
 
+		expectTrace("parseFails", "Exception: not a docx");
+
 		DocInf doc = ((DoctreeResp) t.handle(importReq("x")).body(0)).doc;
 		t.importer().await();
 
-		doc = DoctreeDBHelper.setup(conn).doc(doc.docId);
+		doc = db.doc(doc.docId);
 		assertEquals(DocInf.State.failed, doc.state);
 		assertEquals("not a docx", doc.msg);
 	}
 
 	static String[] lines(String docId) throws Exception {
-		DoctreeDBHelper db = DoctreeDBHelper.setup(conn);
 		S_DocNodeMeta m = db.nodem;
 		AnResultset rs = db.nodes(docId);
 		ArrayList<String> lines = new ArrayList<String>();
@@ -144,6 +149,15 @@ class ImporterTest {
 			lines.add(String.join(" ", rs.getString(m.pk), String.valueOf(rs.getString(m.parentId)),
 				rs.getString(m.sort), rs.getString(m.fullpath), rs.getString(m.kind), rs.getString(m.ptext)));
 		return lines.toArray(new String[0]);
+	}
+
+	/** Tell the reader the stack trace printed next is the test's own. */
+	static void expectTrace(String test, String trace) {
+		Utils.warn("\n**************************************************************\n"
+				 + "* [ImporterTest.%s] A stack trace is expected next:\n"
+				 + "*   %s\n"
+				 + "* IGNORE it: the test makes the import fail on purpose.\n"
+				 + "**************************************************************", test, trace);
 	}
 
 	static DoctreeReq importReq(String srcId) {

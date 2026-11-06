@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xml>
 <!-- Connections of doctree.jserv's tests. The db file is created on first connection,
-	the tables by DoctreeDB.setup(). -->
+	the tables by DoctreeDBHelper.setup(). -->
 <conns>
   <t id="drvmnger" pk="id" columns="id,type,isdef,src,usr,pswd,dbg,smtcs">
   	<c>

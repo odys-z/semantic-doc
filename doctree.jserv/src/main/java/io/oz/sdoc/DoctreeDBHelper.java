@@ -20,7 +20,7 @@ import io.odysz.transact.x.TransException;
 
 /**
  * The working copy of doc trees: its own db file (a connection of the app's connects.xml),
- * its tables created by {@link #setup(String)} at the tier's first request.
+ * its tables created by {@link #setup(String, boolean)} at the tier's first request.
  *
  * <p>Tables, DDL by the metas, semantics in the connection's semantics xml:</p>
  * <ul>
@@ -78,15 +78,16 @@ public class DoctreeDBHelper {
 	 * Syngleton.setupSyntables(), but at any time, e.g. a volume upgraded from a version without doc trees.
 	 *
 	 * @param conn
+	 * @param forceDrop drop the tables first (tests only): all docs are lost
 	 * @return the db
 	 * @throws Exception
 	 */
-	public static DoctreeDBHelper setup(String conn) throws Exception {
+	public static DoctreeDBHelper setup(String conn, boolean forceDrop) throws Exception {
 		S_DocsMeta docm = new S_DocsMeta(conn);
 		S_DocNodeMeta nodem = new S_DocNodeMeta(conn);
 
 		// before the connection's first DATranscxt: loading the autopk semantics needs oz_autoseq
-		setupSqliTables(conn, false, new AutoSeqMeta(conn), docm, nodem);
+		setupSqliTables(conn, forceDrop, new AutoSeqMeta(conn), docm, nodem);
 		Connects.commit(conn, new JRobot(), nodem.ddlIndex);
 
 		return new DoctreeDBHelper(conn, docm, nodem);
