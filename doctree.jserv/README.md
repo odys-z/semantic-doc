@@ -21,7 +21,7 @@ committed with `SemanticTableMeta.setupSqliTables()` like a synode's tables, all
 
 - `DocsMeta`, `s_docs`: doc headers (`DocInf`), with the import state (parsing, ready, failed)
 - `DocNodeMeta`, `s_docnodes`: nodes (`DocNode`), fullpath semantics in `semantics-doctree.xml`
-- `AutoSeqMeta`, `oz_autoseq`: auto keys
+- `oz_autoseq`: auto keys on sqlite, created by semantic-DA's autopk handler (1.5.27), not here
 
 Queries use the metas' column fields, not literals.
 

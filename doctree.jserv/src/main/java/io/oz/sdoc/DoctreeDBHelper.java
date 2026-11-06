@@ -14,7 +14,6 @@ import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.jserv.JRobot;
-import io.odysz.semantic.meta.AutoSeqMeta;
 import io.odysz.semantics.IUser;
 import io.odysz.transact.x.TransException;
 
@@ -28,7 +27,7 @@ import io.odysz.transact.x.TransException;
  *     its radix and length are the synode's config.xml file-sys (radix 32) and id-len</li>
  * <li>{@link S_DocNodeMeta}: nodes of all docs, fullpath; the doc root's nid and fullpath are the docId,
  *     so a subtree, selected by fullpath prefix, never reaches into another doc</li>
- * <li>{@link AutoSeqMeta}: oz_autoseq, the auto keys</li>
+ * <li>oz_autoseq, the auto keys on sqlite: created by semantic-DA's autopk handler (1.5.27)</li>
  * </ul>
  *
  * <p>Not a syntity: nothing here is synchronized.</p>
@@ -86,8 +85,8 @@ public class DoctreeDBHelper {
 		S_DocsMeta docm = new S_DocsMeta(conn);
 		S_DocNodeMeta nodem = new S_DocNodeMeta(conn);
 
-		// before the connection's first DATranscxt: loading the autopk semantics needs oz_autoseq
-		setupSqliTables(conn, forceDrop, new AutoSeqMeta(conn), docm, nodem);
+		// oz_autoseq, for the autopk of docId, is created by semantic-DA (1.5.27) when the semantics is loaded
+		setupSqliTables(conn, forceDrop, docm, nodem);
 		Connects.commit(conn, new JRobot(), nodem.ddlIndex);
 
 		return new DoctreeDBHelper(conn, docm, nodem);

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,6 +46,8 @@ class ImporterTest {
 
 	@BeforeAll
 	static void init() throws Exception {
+		// a fresh db: force-drop doesn't reach oz_autoseq (semantic-DA's), whose sequence would go on
+		new File("src/test/res/doctree-test.db").delete();
 		DoctreeDBHelper.touch(webinf, "../doctree-test.db");
 		Configs.init(webinf);
 		Connects.init(webinf);

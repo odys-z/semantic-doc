@@ -58,10 +58,11 @@
    	</dependency>
 
    	<dependency>
-	    <!-- 1.5.26: the sibling width configured only by fullpath semantics (ShFullpath.siblinSize()) -->
+	    <!-- 1.5.26: the sibling width configured only by fullpath semantics (ShFullpath.siblinSize());
+	         1.5.27: the autopk handler creates oz_autoseq (sqlite only) -->
 	    <groupId>io.github.odys-z</groupId>
 	    <artifactId>semantic.DA</artifactId>
-	    <version>[1.5.26,)</version>
+	    <version>[1.5.27,)</version>
    	</dependency>
 
     <dependency>
