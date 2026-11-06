@@ -28,7 +28,8 @@ function Doctree() {
             <input type="checkbox" checked={failSaves} onChange={(e) => setFailSaves(e.target.checked)} /> simulate save failure
           </label>
         </h3>
-        <AnDoctreeditor key={docId} docId={docId} doctier={stub} height="70vh" />
+        {/* preview: the template in web-dist/, served by the dev server (make-template.py) */}
+        <AnDoctreeditor key={docId} docId={docId} doctier={stub} height="70vh" preview="sdoc-template/" />
         <details>
           <summary>Structure requests ({log.length})</summary>
           <pre data-testid="requests">{log.map(describe).join('\n')}</pre>

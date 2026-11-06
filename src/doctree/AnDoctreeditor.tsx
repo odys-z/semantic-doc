@@ -16,7 +16,9 @@
  *  - ref: one read-only line. avail === 'false': a placeholder, e.g. not on this synode.
  *
  * Layout (MUI): a fixed head (error banner, toolbar, column header), the rows in a
- * scrolling body, and a snackbar for refused or failed changes. Work at risk (a failed
+ * scrolling body, and a snackbar for refused or failed changes. With props.preview (a Sphinx
+ * template url), the doc's html preview is beside the rows (below them on narrow screens),
+ * rebuilt after every load, structural change and saved text. Work at risk (a failed
  * load or save) shows in the banner with Retry; a refused change only in the snackbar.
  */
 import React from 'react';
@@ -39,6 +41,8 @@ import {
 	fromTiptap, insertReq, isContainer, locate, moveReq, received, referencedIn, toTiptap,
 } from './doctree-tier';
 import './doctree.css';
+import { assemble, type RstFile } from './rst-assembler';
+import { DocPreview } from '../preview/DocPreview';
 
 /** version of the json -> rst serializer, stored in DocNode.rstver */
 export const RSTVER = 1;
@@ -51,10 +55,19 @@ export interface AnDoctreeditorProps extends Partial<Omit<AnTreeditorProps, 'col
 	doctier: DoctreeTier;
 	/** height of the editor; the rows scroll inside. Default 100% of the parent */
 	height?: number | string;
+	/**
+	 * Url of the Sphinx template folder for the html preview, relative to the page,
+	 * e.g. "sdoc-template/" (see make-template.py). No preview if not set.
+	 */
+	preview?: string;
 }
 
 interface DoctreeState {
 	forest: DocTreeNode[];
+	/** the doc as RST files, for the preview; reassembled after each change the server took */
+	rstFiles: RstFile[];
+	/** the preview pane is shown (with props.preview) */
+	previewing: boolean;
 	tobeLoad: boolean;
 	/** id of the block being edited; at most one */
 	editing: string | null;
@@ -101,7 +114,13 @@ function docColumns(owner: Owner): AnTreegridCol[] {
 class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	declare props: AnDoctreeditorProps & AnTreeditorProps & { owner: Owner };
 
-	state: DoctreeState = { forest: [], tobeLoad: false, editing: null, committed: true, saving: false };
+	state: DoctreeState = { forest: [], rstFiles: [], previewing: true,
+		tobeLoad: false, editing: null, committed: true, saving: false };
+
+	/** the doc's RST files, if previewing */
+	rstOf(forest: DocTreeNode[]): RstFile[] {
+		return this.props.preview && forest[0] ? assemble(forest[0]) : [];
+	}
 
 	/** a text change waiting for autosave */
 	pending: { node: DocCols; timer: ReturnType<typeof setTimeout> } | undefined;
@@ -127,8 +146,9 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	load() {
 		this.props.doctier.tree(this.props.docId, (resp) => {
 			const forest = received(resp.forest);
+			console.debug('rst files', assemble(forest[0]));
 			expandAll(forest);
-			this.setState({ forest, doc: resp.doc, alert: undefined,
+			this.setState({ forest, rstFiles: this.rstOf(forest), doc: resp.doc, alert: undefined,
 				committed: !resp.doc?.dirty, committedAt: resp.doc?.committedAt });
 		}, (msg) => this.setState({ alert: { msg: `Can't load the doc: ${msg}`, retry: () => this.load() } }));
 	}
@@ -152,7 +172,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 			old.sibs[old.ix] = sub[0];
 			forest = [...this.state.forest];
 		}
-		this.setState({ forest, committed: resp.doc ? !resp.doc.dirty : false });
+		this.setState({ forest, rstFiles: this.rstOf(forest), committed: resp.doc ? !resp.doc.dirty : false });
 	};
 
 	/** a change failed: tell, and reload, as the server is the truth */
@@ -189,7 +209,8 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	/** send one node's text; on failure keep it and offer a retry (no reload: it would drop the text) */
 	save(node: DocCols) {
 		this.props.doctier.update(this.props.docId, node,
-			(resp) => this.setState({ saving: !!this.pending, committed: !resp.doc?.dirty, alert: undefined }),
+			(resp) => this.setState({ saving: !!this.pending, committed: !resp.doc?.dirty, alert: undefined,
+				rstFiles: this.rstOf(this.state.forest) }),
 			(msg) => this.setState({ saving: false, alert: { msg: `Not saved: ${msg}`, retry: () => this.save(node) } }));
 	}
 
@@ -336,7 +357,8 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	}
 
 	render() {
-		const { committed, committedAt, saving, doc, alert, snack } = this.state;
+		const { committed, committedAt, saving, doc, alert, snack, previewing, rstFiles } = this.state;
+		const preview = this.props.preview && previewing;
 		const classes = this.props.classes || {};
 		const media = CrudCompW.getMedia(this.props.width);
 		const status = saving ? 'Saving…' : committed ? `Committed ${committedAt ?? ''}` : 'Draft — not committed';
@@ -356,16 +378,27 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 					<Toolbar variant="dense" disableGutters sx={{ gap: 2, px: 1 }}>
 						<Typography variant="subtitle1" noWrap sx={{ flex: 1, fontWeight: 600 }}>{doc?.title}</Typography>
 						<Typography variant="body2" color="text.secondary" noWrap>{status}</Typography>
+						{this.props.preview &&
+							<Button size="small" onClick={() => this.setState({ previewing: !previewing })}>
+								{previewing ? 'Hide preview' : 'Preview'}</Button>}
 						<Button variant="contained" size="small" disableElevation
 							disabled={committed && !saving} onClick={() => this.commit()}>Commit</Button>
 					</Toolbar>
-					{AnTreegridComp.th(this.props.columns, classes, media, { onThClick: this.toAddChild })}
 				</Box>
 
-				{/* the rows; AnTreeditor's render() would put the column header in here too */}
-				<Box className="sd-body" sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-					{this.treeNodes({ classes, media })}
-					{this.editForm}
+				{/* the tree (column header + rows), and the preview beside it, or below on narrow screens */}
+				<Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1 }}>
+					<Box sx={{ flex: 1, minHeight: 0, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+						<Box sx={{ flex: 'none' }}>
+							{AnTreegridComp.th(this.props.columns, classes, media, { onThClick: this.toAddChild })}
+						</Box>
+						{/* the rows; AnTreeditor's render() would put the column header in here too */}
+						<Box className="sd-body" sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+							{this.treeNodes({ classes, media })}
+							{this.editForm}
+						</Box>
+					</Box>
+					{preview && <DocPreview template={this.props.preview!} files={rstFiles} style={{ flex: 1 }} />}
 				</Box>
 
 				<Snackbar open={!!snack} message={snack} autoHideDuration={6000}

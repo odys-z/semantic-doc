@@ -218,6 +218,12 @@ function paragraph(para: PMNode, ctx: Ctx): string {
   return BLOCK_START.test(text) ? '\\' + text : text;
 }
 
+/** Plain text as one paragraph's body: escaped, and not read as a list item etc. */
+export function textRst(text: string): string {
+  const t = escapeText(text.replace(/\s*\n\s*/g, ' ').trim());
+  return BLOCK_START.test(t) ? '\\' + t : t;
+}
+
 /** One paragraph's body; declarations it needs are dropped (use serializeDoc for those). */
 export function serializeParagraph(para: PMNode): string {
   return paragraph(para, new Ctx());

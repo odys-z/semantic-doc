@@ -7,8 +7,9 @@
  */
 import { allCases } from './cases';
 import { run } from './runner';
+import { runAssemble } from './cases/rst-assembler';
 
-const results = run(allCases);
+const results = [...run(allCases), ...runAssemble()];
 let failed = results.filter((r) => !r.pass).length;
 
 if (process.argv.includes('--json')) {

@@ -1,6 +1,6 @@
 {
   "name": "semantic-doc",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Paragraph editor for semantic content trees; paragraphs stored as RST",
   "license": "Apache-2.0",
@@ -8,11 +8,13 @@
   "types": "./editor/index.ts",
   "exports": {
     ".": "./editor/index.ts",
-    "./doctree": "./doctree/index.ts"
+    "./doctree": "./doctree/index.ts",
+    "./preview": "./preview/index.ts"
   },
   "files": [
     "editor",
     "doctree",
+    "preview",
     "README.md"
   ],
   "engines": {

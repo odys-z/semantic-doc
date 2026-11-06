@@ -20,7 +20,7 @@ export type { ToolbarProps } from './Toolbar';
 export { rstExtensions, ROLES, CLASS_MARKS, MATH_MARKS, MathMarkFilter } from './rst/marks';
 export type { RoleDef, RoleGroup, ClassMark } from './rst/marks';
 
-export { serializeDoc, serializeParagraph, serializeBlockMath, joinRst, escapeText } from './rst/serialize';
+export { serializeDoc, serializeParagraph, serializeBlockMath, joinRst, escapeText, textRst } from './rst/serialize';
 export type { RstResult } from './rst/serialize';
 
 export type { JSONContent } from '@tiptap/core';

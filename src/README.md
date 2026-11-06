@@ -33,6 +33,12 @@ editor/            the widget (package entry: editor/index.ts)
   styles/            theme-roles.css (share with Sphinx), editor.css
 doctree/           AnDoctreeditor (package entry: doctree/index.ts), on anreact's AnTreeditor
   doctree-tier.ts    wire types (s-tree modification) + where a node goes (moveReq, insertReq)
+  rst-assembler.ts   doc tree → RST files, one per section (index.rst, <nid>.rst)
+preview/           html preview (package entry: preview/index.ts): Sphinx in Pyodide, in a Web Worker
+  RstPreviewer.ts    the worker's page side, one per template; sphinx-worker.ts the worker
+  DocPreview.tsx     iframe showing the built pages
+web-dist/          static resources of the demo pages (served by npm start)
+  sdoc-template/     the demo's Sphinx template, made by make-template.py
 demo/              dev pages using the widgets through their public API
   App.tsx            paragraph editor page (index.html)
   doctree.tsx        doc tree page (doctree.html)
@@ -40,6 +46,27 @@ demo/              dev pages using the widgets through their public API
   jsons/             server-shaped r/tree answers, until SmandocServ serves them
 test/cases/        serializer cases: inline, format, math
 ```
+
+## Html preview
+
+`<AnDoctreeditor preview="sdoc-template/" …>` shows the doc as html beside the tree: the
+doc is assembled into RST files (`rst-assembler.ts`), built by Sphinx running in the browser
+(Pyodide, in a Web Worker), and shown in an iframe. Rebuilt after every load, structural
+change and saved text; the first build waits for Pyodide and Sphinx (seconds).
+
+The template folder is a resource of the host app, served at the given url:
+
+```
+sdoc-template/
+  manifest.json    source files to load, pinned packages (sphinx, theme, docutils), Pyodide url
+  source/conf.py   Sphinx configuration
+  source/static/theme-roles.css   the editor's role styles
+  _static/         the theme's static files, from a native build; built pages load them via <base>
+```
+
+Make or refresh one with `python3 make-template.py [folder]` (needs the pinned packages
+installed natively). The demo's is `web-dist/sdoc-template`; the synode release's is
+jserv-album's `sdoc-template-0.8`.
 
 ## Combining styles
 

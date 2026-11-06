@@ -68,7 +68,8 @@ module.exports = (env, argv) => {
           chunks: [p.name],
           minify: false
         })), new BeautifyHtml()],
-    devServer: { port: 8080 },
+    // web-dist/: static resources of the demo pages, e.g. the preview's Sphinx template
+    devServer: { port: 8080, static: { directory: path.resolve(__dirname, 'web-dist') } },
     performance: { hints: false },
     optimization: { minimizeOptions: { html: false } }
   };

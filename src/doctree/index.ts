@@ -6,3 +6,5 @@
 export { AnDoctreeditor, AnDoctreeditorComp, RSTVER, SAVE_DELAY } from './AnDoctreeditor';
 export type { AnDoctreeditorProps } from './AnDoctreeditor';
 export * from './doctree-tier';
+export { assemble, blockPart, docname } from './rst-assembler';
+export type { RstFile } from './rst-assembler';
