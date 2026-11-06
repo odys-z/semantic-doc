@@ -62,7 +62,7 @@
 	         1.5.27: the autopk handler creates oz_autoseq (sqlite only) -->
 	    <groupId>io.github.odys-z</groupId>
 	    <artifactId>semantic.DA</artifactId>
-	    <version>[1.5.27,)</version>
+	    <version>[1.5.28,)</version>
    	</dependency>
 
     <dependency>

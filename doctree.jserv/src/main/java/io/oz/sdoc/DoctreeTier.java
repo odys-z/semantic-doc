@@ -58,8 +58,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 * needing them ({@link #db()}), so a synode never editing doc trees keeps an empty db file,
 	 * and a failure here never stops the synode.
 	 * 
-	 * @param conn connection of the doc-tree db, e.g. "doctree.VOLUME_HOME";
-	 * its file must exist before Connects.init(), see {@link DoctreeDBHelper#touch(String, String)}
+	 * @param conn connection of the doc-tree db, see {@link DoctreeDBHelper#connect(String, String, String)}
 	 * @param synode id of this synode, the prefix of doc ids
 	 * @return this
 	 */

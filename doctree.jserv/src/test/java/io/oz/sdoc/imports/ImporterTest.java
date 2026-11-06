@@ -32,10 +32,11 @@ import io.oz.sdoc.DoctreeResp;
 import io.oz.sdoc.DoctreeTier;
 
 /**
- * c/import through the tier, on a fresh doctree-test.db, with the tricky blocks as the parser.
+ * c/import through the tier, on a fresh src/test/res/doctree.db, with the tricky blocks as the parser.
  */
 class ImporterTest {
-	static final String conn = "doctree-test";
+	/** connected by {@link DoctreeDBHelper#connect(String, String, String)}, volume: src/test/res */
+	static String conn;
 	static final String webinf = "src/test/res/WEB-INF";
 	static final String docx = "src/test/res/tricky.docx";
 
@@ -47,10 +48,10 @@ class ImporterTest {
 	@BeforeAll
 	static void init() throws Exception {
 		// a fresh db: force-drop doesn't reach oz_autoseq (semantic-DA's), whose sequence would go on
-		new File("src/test/res/doctree-test.db").delete();
-		DoctreeDBHelper.touch(webinf, "../doctree-test.db");
+		new File("src/test/res", DoctreeDBHelper.dbfile).delete();
 		Configs.init(webinf);
 		Connects.init(webinf);
+		conn = DoctreeDBHelper.connect(webinf, "..", "T");
 		DatasetCfg.init(webinf);
 		sm = DatasetCfg.getTreeSemtcs("sdoc.tree");
 

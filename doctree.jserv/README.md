@@ -30,7 +30,9 @@ with the synode's config.xml `file-sys = windows` (case-insensitive file names o
 digits; node `<docId>.<n>`. The doc root is a node too: its nid and fullpath are the
 docId, so a subtree, selected by fullpath prefix, stays in its doc.
 
-Connects requires the db file to exist: call `DoctreeDB.touch()` before `Connects.init()`.
+The db is `<volume>/doctree.db`, beside the synode's `doc-jserv.db`, with the semantics
+`semantics-doctree.xml` in the app's WEB-INF, connected by `DoctreeDBHelper.connect(webinf, volume, synode)`
+after `Connects.init()` (semantic-DA's `Connects.addSqlite()`); not configured in connects.xml.
 
 ## Importing a docx
 
@@ -70,7 +72,7 @@ Package `io.oz.sdoc`:
 
 ## Build & test
 
-Tests use `src/test/res/WEB-INF` and create `src/test/res/doctree-test.db`.
+Tests use `src/test/res/WEB-INF` and create `src/test/res/doctree.db`.
 Install it before building the apps depending on it:
 
 ```

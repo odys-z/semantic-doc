@@ -3,13 +3,11 @@ package io.oz.sdoc;
 import static io.odysz.semantic.meta.SemanticTableMeta.setupSqliTables;
 
 import java.io.File;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
 import org.apache.commons.io.FilenameUtils;
 
-import io.odysz.common.EnvPath;
 import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.DA.Connects;
@@ -18,8 +16,8 @@ import io.odysz.semantics.IUser;
 import io.odysz.transact.x.TransException;
 
 /**
- * The working copy of doc trees: its own db file (a connection of the app's connects.xml),
- * its tables created by {@link #setup(String, boolean)} at the tier's first request.
+ * The working copy of doc trees: its own db file in the synode's volume ({@link #connect(String, String, String)},
+ * not configured in connects.xml), its tables created by {@link #setup(String, boolean)} at the tier's first request.
  *
  * <p>Tables, DDL by the metas, semantics in the connection's semantics xml:</p>
  * <ul>
@@ -32,8 +30,8 @@ import io.odysz.transact.x.TransException;
  *
  * <p>Not a syntity: nothing here is synchronized.</p>
  *
- * <p>Connects requires a sqlite file to exist, so call {@link #touch(String, String)}
- * before Connects.init(), e.g. for a volume upgraded from a version without doc trees.</p>
+ * <p>{@link #connect(String, String, String)} creates the db file, e.g. for a volume upgraded
+ * from a version without doc trees.</p>
  *
  * @author ody
  */
@@ -54,22 +52,28 @@ public class DoctreeDBHelper {
 		this.robot = new JRobot();
 	}
 
+	/** semantics of the doc-tree db, in the app's WEB-INF */
+	public static final String smtcs = "semantics-doctree.xml";
+	/** the doc-tree db in a synode's volume, beside its doc-jserv.db */
+	public static final String dbfile = "doctree.db";
+
 	/**
-	 * Create an empty db file if there is none, resolving the path as Connects does for sqlite.
-	 * 
+	 * Connect the doc-tree db of a synode, &lt;volume&gt;/{@link #dbfile}, with the semantics
+	 * {@link #smtcs}; the db file is created if there is none. Not configured in connects.xml.
+	 * Call after Connects.init().
+	 *
 	 * @param webinf
-	 * @param src the connection's src, e.g. "$VOLUME_HUB/doctree.db", relative to webinf
-	 * @return the db file's path
-	 * @throws IOException
+	 * @param volume settings.json's volume, relative to webinf or absolute
+	 * @param synode makes the conn id unique when several synodes share a JVM (tests)
+	 * @return conn id, "doctree." + synode
+	 * @throws Exception
 	 */
-	public static String touch(String webinf, String src) throws IOException {
-		String dbpath = FilenameUtils.concat(new File(webinf).getAbsolutePath(), EnvPath.replaceEnv(src));
-		File f = new File(dbpath);
-		if (!f.exists()) {
-			f.getParentFile().mkdirs();
-			f.createNewFile();
-		}
-		return dbpath;
+	public static String connect(String webinf, String volume, String synode) throws Exception {
+		String dbpath = FilenameUtils.concat(
+				FilenameUtils.concat(new File(webinf).getAbsolutePath(), volume), dbfile);
+		String conn = "doctree." + synode;
+		Connects.addSqlite(conn, dbpath, smtcs);
+		return conn;
 	}
 
 	/**
