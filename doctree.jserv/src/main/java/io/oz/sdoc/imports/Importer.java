@@ -125,6 +125,7 @@ public class Importer {
 					.nv(nodem.fullpath, n.fullpath)
 					.nv(nodem.kind, n.kind)
 					.nv(nodem.ptext, n.ptext)
+					.nv(nodem.facts, n.facts)
 					.nv(nodem.src, n.src)
 					.nv(nodem.style, n.style));
 

@@ -64,6 +64,12 @@ public class DocNode extends Anson {
 	 */
 	public String ptext;
 
+	/**
+	 * The importer's facts of a paragraph's runs, {"v":1,"runs":[...]}, see {@link io.oz.sdoc.imports.Run};
+	 * the client builds {@link #json} from them.
+	 */
+	public String facts;
+
 	public DocNode() { }
 
 	public DocNode(String docId, String nid, String kind) {

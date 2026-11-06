@@ -102,6 +102,23 @@ class ImporterTest {
 		assertEquals(1, forest.size());
 		assertEquals(docId, forest.get(0).id());
 		assertEquals(2, forest.get(0).children().size());
+
+		// r/tree: the doc and its forest; ptext is sent as text, facts as they are
+		DoctreeReq t = new DoctreeReq("/sdoc").docId(docId);
+		t.a(DoctreeReq.A.tree);
+		AnsonMsg<? extends AnsonResp> tmsg = tier.handle(t);
+		assertEquals(MsgCode.ok, tmsg.code(), tmsg.body(0).msg());
+		DoctreeResp tree = (DoctreeResp) tmsg.body(0);
+		assertEquals("Annual Report", tree.doc.title);
+		assertEquals(1, tree.forest().size());
+		AnTreeNode root = (AnTreeNode) tree.forest().get(0);
+		assertEquals(docId, root.id());
+		assertEquals("Annual Report", root.get("text"));
+		AnTreeNode ch1 = (AnTreeNode) root.children().get(0);
+		AnTreeNode p1 = (AnTreeNode) ch1.children().get(0);
+		assertEquals("Body text under chapter one.", p1.get("text"));
+		assertEquals("{\"v\":1,\"runs\":[{\"t\":\"Body text \"},{\"t\":\"under\",\"b\":1,\"color\":\"1E8449\"},{\"t\":\" chapter one.\"}]}",
+				p1.get("facts"));
 	}
 
 	/**

@@ -25,7 +25,8 @@ import io.oz.sdoc.DoctreeDBHelper;
  * <li>The first Title-styled block (outline -1) is the doc's title, not a node.</li>
  * <li>Empty paragraphs (spacing) are dropped; empty headings are kept.</li>
  * <li>A numbering label is put in front of the text, e.g. "1. First".</li>
- * <li>Nodes carry structure, text, src and style only: no json / rst, the client builds them.</li>
+ * <li>Nodes carry structure, text, src, style and the paragraphs' run facts ({@link Run}):
+ *     no json / rst, the client builds them.</li>
  * </ul>
  *
  * @author ody
@@ -85,6 +86,12 @@ public class Outliner {
 			node.fullpath = parent.fullpath + "." + leftPad(String.valueOf(sort), siblingWidth, '0');
 			node.ptext = isblank(b.numLabel) ? b.text : b.numLabel + " " + b.text;
 			node.src = b.src;
+			if (!b.isHeading() && !b.runs.isEmpty()) {
+				ArrayList<Run> runs = new ArrayList<Run>(b.runs);
+				if (!isblank(b.numLabel))
+					runs.add(0, new Run(b.numLabel + " "));
+				node.facts = Run.json(runs);
+			}
 			node.style = b.styleName;
 			o.nodes.add(node);
 

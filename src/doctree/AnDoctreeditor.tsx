@@ -42,6 +42,7 @@ import {
 } from './doctree-tier';
 import './doctree.css';
 import { assemble, type RstFile } from './rst-assembler';
+import { fillJson } from './facts';
 import { DocPreview } from '../preview/DocPreview';
 
 /** version of the json -> rst serializer, stored in DocNode.rstver */
@@ -145,7 +146,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 
 	load() {
 		this.props.doctier.tree(this.props.docId, (resp) => {
-			const forest = received(resp.forest);
+			const forest = fillJson(received(resp.forest));
 			console.debug('rst files', assemble(forest[0]));
 			expandAll(forest);
 			this.setState({ forest, rstFiles: this.rstOf(forest), doc: resp.doc, alert: undefined,
@@ -159,7 +160,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 			this.setState({ snack: `Not changed: ${resp.rejected}` });
 			return;
 		}
-		const sub = received(resp.forest);
+		const sub = fillJson(received(resp.forest));
 		let forest: DocTreeNode[];
 		if (resp.root == null) {
 			keepExpanded(this.state.forest, sub);

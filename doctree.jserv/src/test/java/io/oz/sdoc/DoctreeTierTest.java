@@ -29,20 +29,20 @@ class DoctreeTierTest {
 	}
 
 	@Test
-	void otherRequestsAreRefused() throws Exception {
+	void treeWithoutWorkingCopy() throws Exception {
 		DoctreeReq req = new DoctreeReq("/sdoc").docId("doc-a");
 		req.a(DoctreeReq.A.tree);
 
 		AnsonMsg<? extends AnsonResp> msg = tier.handle(req);
 
 		assertEquals(MsgCode.exSemantic, msg.code());
-		assertTrue(msg.body(0).msg().contains(DoctreeReq.A.tree));
+		assertTrue(msg.body(0).msg().contains("isn't configured"), msg.body(0).msg());
 	}
 
 	/** the actions not implemented yet: each has its handler, answering an error naming it */
 	@Test
 	void notImplementedYet() throws Exception {
-		for (String a : new String[] { DoctreeReq.A.tree, DoctreeReq.A.update, DoctreeReq.A.move,
+		for (String a : new String[] { DoctreeReq.A.update, DoctreeReq.A.move,
 				DoctreeReq.A.insert, DoctreeReq.A.del, DoctreeReq.A.commit, DoctreeReq.A.createDoc }) {
 			DoctreeReq req = new DoctreeReq("/sdoc").docId("doc-a");
 			req.a(a);

@@ -100,6 +100,8 @@ export interface DocCols {
 	json?: string;
 	/** derived from json: { body, roleDecls, substitutions, targets }, serialized */
 	rst?: string;
+	/** the importer's run facts of a paragraph, json is built from them (facts.ts) while it's null */
+	facts?: string;
 	rstver?: string;
 	resId?: string;
 	refId?: string;

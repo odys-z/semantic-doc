@@ -3,6 +3,7 @@
  * Not serializer cases (no Tiptap doc), so they have their own runner, runAssemble().
  */
 import { assemble } from '../../doctree/rst-assembler';
+import { fillJson } from '../../doctree/facts';
 import type { DocTreeNode } from '../../doctree/doctree-tier';
 import type { Result } from '../runner';
 import docA from '../../demo/jsons/doc-a.json';
@@ -67,6 +68,19 @@ const cases: ACase[] = [
 		name: 'assemble: block formula from json (doc-a, a3)',
 		actual: () => assemble((docA as unknown as { forest: DocTreeNode[] }).forest[0]).find((f) => f.nid === 'a3')!.rst,
 		expected: 'Finance\n=======\n\n.. math::\n\n   \\text{margin} = \\frac{\\text{profit}}{\\text{revenue}}\n',
+	},
+	{
+		name: 'facts: an imported paragraph (facts, no json) → json → rst',
+		actual: () => {
+			const facts = JSON.stringify({ v: 1, runs: [
+				{ t: '1. ' }, { t: 'Revenue grew ' }, { t: '12%', b: 1, color: '1E8449' },
+				{ t: ' see ' }, { t: 'report', href: 'https://example.com/r', hl: 'yellow' }, { t: '.' }] });
+			const d = fillJson([t('f', 'doc', { text: 'F' }, [t('f.1', 'p', { text: 'plain', facts })])]);
+			return assemble(d[0])[0].rst;
+		},
+		expected: '.. role:: strong_green(strong)\n   :class: green\n.. role:: bg-yellow\n\nF\n===\n\n'
+			+ '\\1. Revenue grew :strong_green:`12%` see |sd-1271e62b|__.\n\n'
+			+ '.. |sd-1271e62b| replace:: :bg-yellow:`report`\n.. __: https://example.com/r\n',
 	},
 	{
 		name: 'assemble: demo doc-a',

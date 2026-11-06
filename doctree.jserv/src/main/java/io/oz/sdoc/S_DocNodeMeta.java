@@ -31,6 +31,8 @@ public class S_DocNodeMeta extends SemanticTableMeta {
 	public final String rstver;
 	/** plain text, from the importer */
 	public final String ptext;
+	/** the importer's run facts, {"v":1,"runs":[...]}, see imports.Run */
+	public final String facts;
 	public final String src;
 	public final String style;
 	public final String resId;
@@ -52,6 +54,7 @@ public class S_DocNodeMeta extends SemanticTableMeta {
 		rst      = "rst";
 		rstver   = "rstver";
 		ptext    = "ptext";
+		facts    = "facts";
 		src      = "src";
 		style    = "style";
 		resId    = "resId";
@@ -68,6 +71,7 @@ public class S_DocNodeMeta extends SemanticTableMeta {
 			+ "  " + rst      + " text,\n"
 			+ "  " + rstver   + " integer DEFAULT 0,\n"
 			+ "  " + ptext    + " text,\n"
+			+ "  " + facts    + " text,                 -- run facts, the client builds json from them\n"
 			+ "  " + src      + " varchar(64),          -- docx origin, e.g. body/2\n"
 			+ "  " + style    + " varchar(64),\n"
 			+ "  " + resId    + " varchar(64),\n"

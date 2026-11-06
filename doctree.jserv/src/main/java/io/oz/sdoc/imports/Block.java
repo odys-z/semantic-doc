@@ -32,6 +32,9 @@ public class Block {
 	/** table only: has merged cells (layout table) */
 	public boolean hasSpans;
 
+	/** paragraph only: the runs, text with direct formatting; empty if not collected */
+	public final java.util.List<Run> runs = new java.util.ArrayList<Run>();
+
 	public Block(String kind, String src) {
 		this.kind = kind;
 		this.src = src;

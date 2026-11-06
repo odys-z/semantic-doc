@@ -12,11 +12,17 @@ import org.docx4j.model.PropertyResolver;
 import org.docx4j.model.listnumbering.Emulator;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
+import org.docx4j.openpackaging.parts.relationships.RelationshipsPart;
+import org.docx4j.relationships.Relationship;
+import org.docx4j.wml.BooleanDefaultTrue;
 import org.docx4j.wml.ContentAccessor;
 import org.docx4j.wml.P;
 import org.docx4j.wml.PPr;
 import org.docx4j.wml.PPrBase;
 import org.docx4j.wml.R;
+import org.docx4j.wml.RPr;
+import org.docx4j.wml.STVerticalAlignRun;
+import org.docx4j.wml.SdtRun;
 import org.docx4j.wml.SdtBlock;
 import org.docx4j.wml.SdtElement;
 import org.docx4j.wml.Style;
@@ -25,12 +31,15 @@ import org.docx4j.wml.Tc;
 import org.docx4j.wml.TcPr;
 import org.docx4j.wml.Text;
 import org.docx4j.wml.Tr;
+import org.docx4j.wml.UnderlineEnumeration;
 
 import io.oz.sdoc.imports.Block;
+import io.oz.sdoc.imports.Run;
 
 /**
  * The "facts first" walker of hello/docx4j (FactsDemo), producing doctree.jserv's {@link Block}s:
- * per block, the source path, style, effective outline level and numbering label.
+ * per block, the source path, style, effective outline level and numbering label;
+ * per paragraph, its runs: text with direct formatting ({@link Run}).
  *
  * <p>Usage: {@code tier.importer(source, DocxWalker::blocks)}.</p>
  *
@@ -90,6 +99,7 @@ public class DocxWalker {
 		Block b = new Block(Block.p, src)
 				.style(styleId, (st != null && st.getName() != null) ? st.getName().getVal() : styleId)
 				.text(text(p));
+		runs(p.getContent(), null, b.runs);
 
 		// explicit resolution: direct pPr, then the style's basedOn chain;
 		// docx4j's resolver (doc defaults + styles + direct) where that finds nothing
@@ -117,6 +127,76 @@ public class DocxWalker {
 			} catch (Exception e) { b.num("?"); }
 		}
 		return b;
+	}
+
+	/**
+	 * Collect the runs of a paragraph's content, in order: runs, runs in hyperlinks
+	 * and inline content controls. Bookmarks, proofing marks etc. are skipped.
+	 *
+	 * @param content
+	 * @param href the target of the hyperlink the content is in, or null
+	 * @param runs output
+	 */
+	void runs(List<Object> content, String href, List<Run> runs) {
+		for (Object c : content) {
+			Object o = XmlUtils.unwrap(c);
+			if (o instanceof R r) {
+				Run f = facts(r);
+				if (f != null) {
+					f.href = href;
+					runs.add(f);
+				}
+			}
+			else if (o instanceof P.Hyperlink h)
+				runs(h.getContent(), target(h), runs);
+			else if (o instanceof SdtRun sdt && sdt.getSdtContent() != null)
+				runs(sdt.getSdtContent().getContent(), href, runs);
+		}
+	}
+
+	/** a run's text and direct formatting (rPr only: style formatting isn't the author's emphasis) */
+	static Run facts(R r) {
+		StringBuilder sb = new StringBuilder();
+		collect(r, sb); // not trimmed: the spaces between runs are text
+		String t = sb.toString();
+		if (t.isEmpty()) return null;
+
+		Run f = new Run(t);
+		RPr pr = r.getRPr();
+		if (pr == null) return f;
+
+		f.b = on(pr.getB());
+		f.i = on(pr.getI());
+		f.u = pr.getU() != null && pr.getU().getVal() != null && pr.getU().getVal() != UnderlineEnumeration.NONE;
+		f.s = on(pr.getStrike()) || on(pr.getDstrike());
+		if (pr.getVertAlign() != null && pr.getVertAlign().getVal() != null)
+			f.va = pr.getVertAlign().getVal() == STVerticalAlignRun.SUPERSCRIPT ? "sup"
+				 : pr.getVertAlign().getVal() == STVerticalAlignRun.SUBSCRIPT ? "sub" : null;
+		if (pr.getColor() != null && pr.getColor().getVal() != null && !"auto".equalsIgnoreCase(pr.getColor().getVal()))
+			f.color = pr.getColor().getVal();
+		if (pr.getHighlight() != null && !"none".equalsIgnoreCase(pr.getHighlight().getVal()))
+			f.hl = pr.getHighlight().getVal();
+		if (pr.getShd() != null && pr.getShd().getFill() != null && !"auto".equalsIgnoreCase(pr.getShd().getFill()))
+			f.shd = pr.getShd().getFill();
+		if (pr.getSz() != null && pr.getSz().getVal() != null)
+			f.sz = pr.getSz().getVal().intValue();
+		return f;
+	}
+
+	static boolean on(BooleanDefaultTrue v) {
+		return v != null && v.isVal();
+	}
+
+	/** a hyperlink's target: the relationship's url, or "#anchor" inside the docx */
+	String target(P.Hyperlink h) {
+		try {
+			if (h.getId() != null) {
+				RelationshipsPart rels = pkg.getMainDocumentPart().getRelationshipsPart();
+				Relationship rel = rels == null ? null : rels.getRelationshipByID(h.getId());
+				if (rel != null) return rel.getTarget();
+			}
+		} catch (Exception e) { }
+		return h.getAnchor() != null ? "#" + h.getAnchor() : null;
 	}
 
 	static Integer outline(PPr ppr) {
