@@ -40,12 +40,28 @@
 		<scope>test</scope>
     </dependency>
 
+  	<dependency>
+		<!-- The launcher of the same platform version as the engine. Without it, an IDE's runner
+			(Eclipse's JUnit 6 runner) supplies its own, possibly older, launcher:
+			NoSuchMethodError Launcher.execute(LauncherExecutionRequest). -->
+		<groupId>org.junit.platform</groupId>
+		<artifactId>junit-platform-launcher</artifactId>
+		<version>6.1.0</version>
+		<scope>test</scope>
+    </dependency>
+
    	<dependency>
 		<!-- No servlet container or jdbc driver here: those are the app's (demo jserv, synode) choices. -->
 	    <groupId>io.github.odys-z</groupId>
 	    <artifactId>semantic.jserv</artifactId>
-	    <!-- 1.5.20: SemanticTree.sortDigits(tabl, digits) -->
 	    <version>[1.5.19,)</version>
+   	</dependency>
+
+   	<dependency>
+	    <!-- 1.5.26: the sibling width configured only by fullpath semantics (ShFullpath.siblinSize()) -->
+	    <groupId>io.github.odys-z</groupId>
+	    <artifactId>semantic.DA</artifactId>
+	    <version>[1.5.26,)</version>
    	</dependency>
 
     <dependency>

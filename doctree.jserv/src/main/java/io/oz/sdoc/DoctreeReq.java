@@ -74,12 +74,15 @@ public class DoctreeReq extends UserReq {
 		return this;
 	}
 
-	/** for {@link A#importDocx} */
+	/**
+	 * For {@link A#importDocx}, import a doc (load doc-inf).
+	 * Only for test
 	public DoctreeReq importDocx(String srcId, String title) {
 		this.srcId = srcId;
 		this.doc = new DocInf(null, title, null);
 		return this;
 	}
+	 * */
 
 	public DoctreeReq node(DocNode n) {
 		this.node = n;

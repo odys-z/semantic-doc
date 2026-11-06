@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * Parses a docx into {@link Block}s, in document order.
- * The docx4j implementation is {@link io.oz.sdoc.docx.DocxWalker#blocks(String)};
+ * The docx4j implementation is {@link io.oz.sdoc.imports.DocxWalker#blocks(String)};
  * tests can use their own.
  *
  * @author ody

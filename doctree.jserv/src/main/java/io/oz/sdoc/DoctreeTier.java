@@ -73,7 +73,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 * Enable {@link DoctreeReq.A#importDocx}.
 	 * 
 	 * @param source where the docx files are, e.g. {@link DocxSource#extfiles(String, String)}
-	 * @param parser e.g. {@link io.oz.sdoc.docx.DocxWalker#blocks(String)}
+	 * @param parser e.g. {@link io.oz.sdoc.imports.DocxWalker#blocks(String)}
 	 * @return this
 	 */
 	public DoctreeTier importer(DocxSource source, IBlockParser parser) {

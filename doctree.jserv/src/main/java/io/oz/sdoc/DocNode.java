@@ -15,8 +15,6 @@ import io.odysz.anson.Anson;
  */
 public class DocNode extends Anson {
 
-	public static final String tabl = "s_docnodes";
-
 	/** Values of {@link DocNode#kind}. */
 	public static class Kind {
 		/** the doc root, nid = docId */

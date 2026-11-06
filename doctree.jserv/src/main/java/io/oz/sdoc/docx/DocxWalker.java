@@ -27,7 +27,6 @@ import org.docx4j.wml.Text;
 import org.docx4j.wml.Tr;
 
 import io.oz.sdoc.imports.Block;
-import io.oz.sdoc.imports.IBlockParser;
 
 /**
  * The "facts first" walker of hello/docx4j (FactsDemo), producing doctree.jserv's {@link Block}s:

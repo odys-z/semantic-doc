@@ -1,6 +1,7 @@
 package io.oz.sdoc.imports;
 
 import static io.odysz.common.LangExt.isblank;
+import static io.odysz.common.LangExt.leftPad;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -12,8 +13,7 @@ import io.oz.sdoc.DocNode;
 import io.oz.sdoc.DoctreeDB;
 
 /**
- * Builds a doc tree from {@link Block}s: the step-stone design of hello/docx4j (FactsDemo.buildTree),
- * ending in node records instead of json.
+ * Builds a doc tree from {@link Block}s, in node records instead of json.
  *
  * <pre>
  * doc root (nid = fullpath = docId, text = title)
@@ -42,10 +42,12 @@ public class Outliner {
 
 	/**
 	 * @param docId
+	 * @param siblingWidth digits of a sibling sort in fullpath, the fullpath semantics' args[3],
+	 * see {@link io.oz.sdoc.S_DocNodeMeta#siblingWidth()}
 	 * @param blocks in document order
 	 * @return the tree, nodes[0] is the doc root
 	 */
-	public static Outline outline(String docId, List<Block> blocks) {
+	public static Outline outline(String docId, int siblingWidth, List<Block> blocks) {
 		Outline o = new Outline();
 
 		DocNode root = new DocNode(docId, docId, DocNode.Kind.doc);
@@ -80,7 +82,7 @@ public class Outliner {
 			int sort = sorts.merge(parent.nid, 1, Integer::sum);
 
 			DocNode node = new DocNode(docId, DoctreeDB.nid(docId, n++), kind).parent(parent.nid, sort);
-			node.fullpath = parent.fullpath + "." + DoctreeDB.sortStr(sort);
+			node.fullpath = parent.fullpath + "." + leftPad(String.valueOf(sort), siblingWidth, '0');
 			node.ptext = isblank(b.numLabel) ? b.text : b.numLabel + " " + b.text;
 			node.src = b.src;
 			node.style = b.styleName;

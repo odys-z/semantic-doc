@@ -24,6 +24,7 @@ import io.odysz.semantic.jprotocol.AnsonMsg.MsgCode;
 import io.odysz.semantic.jprotocol.AnsonMsg.Port;
 import io.odysz.semantic.jprotocol.AnsonResp;
 import io.oz.sdoc.DocInf;
+import io.oz.sdoc.S_DocNodeMeta;
 import io.oz.sdoc.DoctreeDB;
 import io.oz.sdoc.DoctreeReq;
 import io.oz.sdoc.DoctreeResp;
@@ -58,7 +59,7 @@ class ImporterTest {
 
 	@Test
 	void importTricky() throws Exception {
-		AnsonMsg<? extends AnsonResp> msg = tier.handle(req("doc-a"));
+		AnsonMsg<? extends AnsonResp> msg = tier.handle(importReq("doc-a"));
 
 		assertEquals(MsgCode.ok, msg.code(), msg.body(0).msg());
 		DocInf doc = ((DoctreeResp) msg.body(0)).doc;
@@ -80,15 +81,17 @@ class ImporterTest {
 		assertArrayEquals(Tricky.tree(docId), lines(docId));
 
 		// a second doc: a new id; a subtree selected by fullpath prefix stays in its doc
-		DocInf doc2 = ((DoctreeResp) tier.handle(req("doc-a")).body(0)).doc;
+		DocInf doc2 = ((DoctreeResp) tier.handle(importReq("doc-a")).body(0)).doc;
 		tier.importer().await();
 		assertEquals("T.0002", doc2.docId);
 		assertArrayEquals(Tricky.tree(doc2.docId), lines(doc2.docId));
+		S_DocNodeMeta m = DoctreeDB.setup(conn).nodem;
 		assertEquals(Tricky.tree(docId).length, Connects.select(conn, String.format(
-				"select nid from s_docnodes where fullpath = '%1$s' or fullpath like '%1$s.%%'", docId)).total());
+				"select %2$s from %3$s where %4$s = '%1$s' or %4$s like '%1$s.%%'",
+				docId, m.pk, m.tbl, m.fullpath)).total());
 
 		// loads as one tree, the doc root
-		List<AnTreeNode> forest = DatasetHelper.buildForest(new DoctreeDB(conn).nodes(docId), sm);
+		List<AnTreeNode> forest = DatasetHelper.buildForest(DoctreeDB.setup(conn).nodes(docId), sm);
 		assertEquals(1, forest.size());
 		assertEquals(docId, forest.get(0).id());
 		assertEquals(2, forest.get(0).children().size());
@@ -113,7 +116,7 @@ class ImporterTest {
 
 	@Test
 	void docxNotFound() throws Exception {
-		AnsonMsg<? extends AnsonResp> msg = tier.handle(req("no-such"));
+		AnsonMsg<? extends AnsonResp> msg = tier.handle(importReq("no-such"));
 		assertEquals(MsgCode.exGeneral, msg.code());
 		assertTrue(msg.body(0).msg().contains("no-such"));
 	}
@@ -124,25 +127,29 @@ class ImporterTest {
 				.conn(conn, "F")
 				.importer((srcId) -> "pom.xml", (path) -> { throw new Exception("not a docx"); });
 
-		DocInf doc = ((DoctreeResp) t.handle(req("x")).body(0)).doc;
+		DocInf doc = ((DoctreeResp) t.handle(importReq("x")).body(0)).doc;
 		t.importer().await();
 
-		doc = new DoctreeDB(conn).doc(doc.docId);
+		doc = DoctreeDB.setup(conn).doc(doc.docId);
 		assertEquals(DocInf.State.failed, doc.state);
 		assertEquals("not a docx", doc.msg);
 	}
 
 	static String[] lines(String docId) throws Exception {
-		AnResultset rs = new DoctreeDB(conn).nodes(docId);
+		DoctreeDB db = DoctreeDB.setup(conn);
+		S_DocNodeMeta m = db.nodem;
+		AnResultset rs = db.nodes(docId);
 		ArrayList<String> lines = new ArrayList<String>();
 		while (rs.next())
-			lines.add(String.join(" ", rs.getString("nid"), String.valueOf(rs.getString("parentId")),
-				rs.getString("sort"), rs.getString("fullpath"), rs.getString("kind"), rs.getString("text")));
+			lines.add(String.join(" ", rs.getString(m.pk), String.valueOf(rs.getString(m.parentId)),
+				rs.getString(m.sort), rs.getString(m.fullpath), rs.getString(m.kind), rs.getString(m.ptext)));
 		return lines.toArray(new String[0]);
 	}
 
-	static DoctreeReq req(String srcId) {
-		DoctreeReq req = new DoctreeReq("/sdoc").importDocx(srcId, null);
+	static DoctreeReq importReq(String srcId) {
+		DoctreeReq req = new DoctreeReq("/sdoc");
+		req.srcId = srcId;
+		req.doc = new DocInf(null, null, null);
 		req.a(DoctreeReq.A.importDocx);
 		return req;
 	}

@@ -13,12 +13,17 @@ No servlet container or jdbc driver is included; those belong to the apps.
 ## Working copy
 
 `DoctreeDB`: the doc trees being edited, in their own sqlite db (e.g. `$VOLUME_HOME/doctree.db`,
-connection `doctree.VOLUME_HOME` in jserv-album). Its tables are created / migrated at the first
+connection `doctree.VOLUME_HOME` in jserv-album). Its missing tables are created at the first
 doc-tree request, so a synode never editing doc trees keeps an empty file. Not synchronized.
 
-- `s_docs`: doc headers (`DocInf`), with the import state (parsing, ready, failed)
-- `s_docnodes`: nodes (`DocNode`), fullpath semantics in `semantics-doctree.xml`
-- `s_doctree_meta`: schema version; `oz_autoseq`: auto keys
+Tables, the DDL built by the table metas from their column fields (as jserv-album's `PhotoMeta`),
+committed with `SemanticTableMeta.setupSqliTables()` like a synode's tables, all `if not exists`:
+
+- `DocsMeta`, `s_docs`: doc headers (`DocInf`), with the import state (parsing, ready, failed)
+- `DocNodeMeta`, `s_docnodes`: nodes (`DocNode`), fullpath semantics in `semantics-doctree.xml`
+- `AutoSeqMeta`, `oz_autoseq`: auto keys
+
+Queries use the metas' column fields, not literals.
 
 Ids: doc: the synode + an auto key (autopk semantics, `oz_autoseq` in the db), e.g. `X.000A`, in Radix32
 with the synode's config.xml `file-sys = windows` (case-insensitive file names on every synode), `id-len`
@@ -36,10 +41,10 @@ a worker parses the docx and inserts the nodes (state ready, or failed with a me
 
 The parser is `io.oz.sdoc.docx.DocxWalker` (docx4j), the "facts first" walker verified in
 hello/docx4j (FactsDemo); `src/test/res/tricky.docx` is its sample. New nodes carry structure,
-text, src and style only; the client fills Tiptap json and rst.
+text (column `ptext`), src and style only; the client fills Tiptap json and rst.
 
-Fullpath: 4 digits per level (`DoctreeDB.sortDigits`, the fullpath semantics' args[3], registered to
-`SemanticTree.sortDigits()`); a fullpath starts with its docId.
+Fullpath: 4 digits per level, configured only by the fullpath semantics' args[3] (semantic.DA 1.5.26),
+read by SemanticTree and the importer (`DocNodeMeta.siblingWidth()`); a fullpath starts with its docId.
 
 ```java
     new DoctreeTier(port)

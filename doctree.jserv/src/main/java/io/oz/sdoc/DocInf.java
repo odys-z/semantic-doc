@@ -9,8 +9,6 @@ import io.odysz.anson.Anson;
  */
 public class DocInf extends Anson {
 
-	public static final String tabl = "s_docs";
-
 	/** Values of {@link DocInf#state}. */
 	public static class State {
 		/** importing: the header is there, nodes are being parsed */

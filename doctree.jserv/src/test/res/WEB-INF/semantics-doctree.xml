@@ -2,7 +2,7 @@
 <!DOCTYPE xml>
 <!-- Semantics of the doc-tree db (DoctreeDB). The same as jserv-album's semantics-doctree.xml.
 	fullpath args: parent field, sibling sort field, fullpath field, sort size
-		(sort size: DoctreeDB.sortDigits, registered to SemanticTree.sortDigits(tabl, digits))
+		(sort size: the only place configuring it; SemanticTree and the importer read it, DocNodeMeta.siblingWidth())
  -->
 <semantics>
   <t id="semantics" pk="id" columns="id,smtc,tabl,pk,args">

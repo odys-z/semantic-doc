@@ -6,7 +6,7 @@
 	<c>
 		<sk>sdoc.tree</sk>
 		<sqlit>select * from s_docnodes where docId = '%s' order by fullpath</sqlit>
-		<s-tree>,s_docnodes,nid,parentId,fullpath,sort,text,kind,false</s-tree>
+		<s-tree>,s_docnodes,nid,parentId,fullpath,sort,ptext,kind,false</s-tree>
 	</c>
 </t>
 </dataset>

@@ -38,7 +38,7 @@ class Tricky {
 			String.format("%1$s.5 %1$s.4 1 %1$s.0001.0003.0001 section Clause 7: confidentiality", docId),
 			String.format("%1$s.6 %1$s.5 1 %1$s.0001.0003.0001.0001 p 1. First bullet", docId),
 			String.format("%1$s.7 %1$s.5 2 %1$s.0001.0003.0001.0002 p 2. Second bullet, Ody's", docId),
-			String.format("%1$s.8 %1$s.5 3 %1$s.0001.0003.0001.0003 table merged header {colspan=2} | r0c2 // r1c0 | r1c1 | vertical merge {vmerge-start} // r2c0 | r2c1 |  {vmerge-cont}", docId),
+			String.format("%1$s.8 %1$s.5 3 %1$s.0001.0003.0001.0003 tabl merged header {colspan=2} | r0c2 // r1c0 | r1c1 | vertical merge {vmerge-start} // r2c0 | r2c1 |  {vmerge-cont}", docId),
 			String.format("%1$s.9 %1$s 2 %1$s.0002 section 第二章 Inside a content control", docId),
 			String.format("%1$s.a %1$s.9 1 %1$s.0002.0001 p Body text under chapter two.", docId),
 		};

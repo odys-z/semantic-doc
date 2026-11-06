@@ -12,7 +12,7 @@ class OutlinerTest {
 
 	@Test
 	void tricky() {
-		Outline o = Outliner.outline("X.00000A", Tricky.blocks());
+		Outline o = Outliner.outline("X.00000A", 4, Tricky.blocks());
 
 		assertEquals("Annual Report", o.title);
 		assertEquals(11, o.nextNid);
@@ -25,7 +25,7 @@ class OutlinerTest {
 
 	@Test
 	void noTitle() {
-		Outline o = Outliner.outline("X.00000B", Tricky.blocks().subList(1, 4));
+		Outline o = Outliner.outline("X.00000B", 4, Tricky.blocks().subList(1, 4));
 		assertEquals(null, o.title);
 		assertEquals(4, o.nodes.size());
 		assertEquals("X.00000B", o.nodes.get(0).fullpath);
@@ -33,6 +33,6 @@ class OutlinerTest {
 	}
 
 	static String line(DocNode n) {
-		return String.join(" ", n.nid, String.valueOf(n.parentId), String.valueOf(n.sort), n.fullpath, n.kind, n.text);
+		return String.join(" ", n.nid, String.valueOf(n.parentId), String.valueOf(n.sort), n.fullpath, n.kind, n.ptext);
 	}
 }
