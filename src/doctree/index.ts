@@ -5,9 +5,8 @@
  */
 export { AnDoctreeditor, AnDoctreeditorComp, RSTVER, SAVE_DELAY } from './AnDoctreeditor';
 export type { AnDoctreeditorProps } from './AnDoctreeditor';
-export * from './doctree-tier';
+export * from './doc-stree';
 export { assemble, blockPart, docname } from './rst-assembler';
 export type { RstFile } from './rst-assembler';
-export { JservDoctier, DoctreeReqBody, DoctreeRespBody } from './jserv-tier';
-export { factsToTiptap, factsToJson, fillJson } from './facts';
+export { factsToTiptap, factsToJson, fillTipjson } from './facts';
 export type { RunFacts } from './facts';

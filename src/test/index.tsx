@@ -6,8 +6,9 @@ import './test.css';
 import { allCases } from './cases';
 import { run } from './runner';
 import { runAssemble } from './cases/rst-assembler';
+import { runDocstree } from './cases/doc-stree';
 
-const results = [...run(allCases), ...runAssemble()];
+const results = [...run(allCases), ...runAssemble(), ...runDocstree()];
 const passed = results.filter((r) => r.pass).length;
 
 // for headless runs (e.g. Playwright): read document.title or window.__results

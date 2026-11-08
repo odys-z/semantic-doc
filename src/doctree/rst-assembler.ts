@@ -3,8 +3,8 @@
  *
  *   doc root  → index.rst:   title, its own blocks, toctree of its sections
  *   section   → <nid>.rst:   heading, its blocks, toctree of its sub-sections
- *   p / math  → the block's stored rst (DocCols.rst), else its Tiptap json serialized,
- *               else its text (a new, imported block)
+ *   p / math  → the block's stored rstext, else its tipjson serialized,
+ *               else its ptext (a new, imported block)
  *
  * Blocks and sections keep their order: consecutive sections share one toctree.
  * Each file declares the roles and defines the substitutions its own blocks use (joinRst).
@@ -15,7 +15,10 @@ import { getSchema } from '@tiptap/core';
 import { Node } from '@tiptap/pm/model';
 import { rstExtensions } from '../editor/rst/marks';
 import { joinRst, serializeBlockMath, serializeDoc, textRst, type RstResult } from '../editor/rst/serialize';
-import { DocKind, toTiptap, type DocCols, type DocTreeNode } from './doctree-tier';
+import { DocNode, toTiptap, type DocTreeNode } from './doc-stree';
+
+/** a node's columns, as the tree carries them */
+type Cols = DocTreeNode['node'];
 
 /** one file of the Sphinx source */
 export interface RstFile {
@@ -33,7 +36,7 @@ type Part = Omit<RstResult, 'rst'>;
 
 /** docname of a section: its nid, with characters Sphinx paths don't like replaced */
 export const docname = (t: DocTreeNode) =>
-	t.node.kind === DocKind.doc ? 'index' : t.node.nid.replace(/[^\w.-]/g, '_');
+	t.node.kind === DocNode.Kind.doc ? 'index' : (t.node.nid ?? t.id).replace(/[^\w.-]/g, '_');
 
 /**
  * Display width as docutils measures a title: East Asian wide characters count 2.
@@ -75,19 +78,19 @@ function serialized(json: string): Part | undefined {
 }
 
 /** one block (not a section) as joinRst parts */
-export function blockPart(n: DocCols): Part {
-	const part = (n.rst ? stored(n.rst) : undefined) ?? (n.json ? serialized(n.json) : undefined);
+export function blockPart(n: Cols): Part {
+	const part = (n.rstext ? stored(n.rstext) : undefined) ?? (n.tipjson ? serialized(n.tipjson) : undefined);
 	if (part) return part;
 
 	switch (n.kind) {
-		case DocKind.math: // an empty math directive is an error in Sphinx
-			return plain(n.text?.trim() ? serializeBlockMath(n.text) : textRst('[formula]'));
-		case DocKind.image:
-			return plain(textRst(`[image: ${n.resId ?? n.text ?? ''}]`));
-		case DocKind.ref:
-			return plain(textRst(`[ref: ${n.text ?? n.refId ?? ''}]`));
+		case DocNode.Kind.math: // an empty math directive is an error in Sphinx
+			return plain(n.ptext?.trim() ? serializeBlockMath(n.ptext) : textRst('[formula]'));
+		case DocNode.Kind.image:
+			return plain(textRst(`[image: ${n.resId ?? n.ptext ?? ''}]`));
+		case DocNode.Kind.docref:
+			return plain(textRst(`[ref: ${n.ptext ?? n.refId ?? ''}]`));
 		default: // p, table (text only for now)
-			return plain(textRst(n.text ?? ''));
+			return plain(textRst(n.ptext ?? ''));
 	}
 }
 
@@ -104,7 +107,7 @@ export function assemble(root: DocTreeNode): RstFile[] {
 	const files: RstFile[] = [];
 
 	const build = (sec: DocTreeNode) => {
-		const parts: Part[] = [plain(heading(sec.node.text ?? ''))];
+		const parts: Part[] = [plain(heading(sec.node.ptext ?? ''))];
 		const subs: DocTreeNode[] = [];
 		let toc: string[] = [];
 
@@ -114,7 +117,7 @@ export function assemble(root: DocTreeNode): RstFile[] {
 		};
 
 		for (const t of sec.node.children ?? []) {
-			if (t.node.kind === DocKind.section) {
+			if (t.node.kind === DocNode.Kind.section) {
 				toc.push(docname(t));
 				subs.push(t);
 			} else {
@@ -125,7 +128,7 @@ export function assemble(root: DocTreeNode): RstFile[] {
 		flush();
 
 		const name = docname(sec);
-		files.push({ nid: sec.node.nid, path: name + '.rst', name, rst: joinRst(parts) + '\n' });
+		files.push({ nid: sec.node.nid ?? sec.id, path: name + '.rst', name, rst: joinRst(parts) + '\n' });
 		subs.forEach(build);
 	};
 

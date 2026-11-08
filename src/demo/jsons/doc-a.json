@@ -25,7 +25,7 @@
     "fullpath": "01",
     "kind": "doc",
     "rstver": "0",
-    "text": "Annual Report 2026",
+    "ptext": "Annual Report 2026",
     "children": [
      {
       "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
@@ -41,8 +41,8 @@
        "kind": "section",
        "rstver": "0",
        "src": "body/1",
-       "style": "heading 1",
-       "text": "Overview",
+       "docxstyle": "heading 1",
+       "ptext": "Overview",
        "children": [
         {
          "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
@@ -58,9 +58,9 @@
           "kind": "p",
           "rstver": "0",
           "src": "body/2",
-          "style": "Normal",
-          "text": "Revenue grew 12% this year.",
-          "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"Revenue grew \"},{\"contype\":\"text\",\"text\":\"12%\",\"marks\":[{\"contype\":\"strong\"},{\"contype\":\"color\",\"attrs\":{\"name\":\"green\"}}]},{\"contype\":\"text\",\"text\":\" this year.\"}]}]}"
+          "docxstyle": "Normal",
+          "ptext": "Revenue grew 12% this year.",
+          "tipjson": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"Revenue grew \"},{\"contype\":\"text\",\"text\":\"12%\",\"marks\":[{\"contype\":\"strong\"},{\"contype\":\"color\",\"attrs\":{\"name\":\"green\"}}]},{\"contype\":\"text\",\"text\":\" this year.\"}]}]}"
          },
          "indents": [
           "vlink",
@@ -69,7 +69,7 @@
          "lastSibling": true
         }
        ],
-       "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"Overview\"}]}]}"
+       "tipjson": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"Overview\"}]}]}"
       },
       "indents": [
        "childi"
@@ -88,7 +88,7 @@
        "fullpath": "01.02",
        "kind": "section",
        "rstver": "0",
-       "text": "Operations",
+       "ptext": "Operations",
        "children": [
         {
          "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
@@ -103,8 +103,8 @@
           "fullpath": "01.02.01",
           "kind": "p",
           "rstver": "0",
-          "text": "All sites follow the handbook's safety rules:",
-          "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"All sites follow the handbook's safety rules:\"}]}]}"
+          "ptext": "All sites follow the handbook's safety rules:",
+          "tipjson": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"All sites follow the handbook's safety rules:\"}]}]}"
          },
          "indents": [
           "vlink",
@@ -122,10 +122,10 @@
           "parentId": "a2",
           "sort": "2",
           "fullpath": "01.02.02",
-          "kind": "ref",
+          "kind": "docref",
           "rstver": "0",
           "refId": "b2",
-          "text": "Safety Rules (Company Handbook)"
+          "ptext": "Safety Rules (Company Handbook)"
          },
          "indents": [
           "vlink",
@@ -145,8 +145,8 @@
           "fullpath": "01.02.03",
           "kind": "p",
           "rstver": "0",
-          "text": "No incidents were reported.",
-          "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"No incidents were reported.\"}]}]}"
+          "ptext": "No incidents were reported.",
+          "tipjson": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"No incidents were reported.\"}]}]}"
          },
          "indents": [
           "vlink",
@@ -155,7 +155,7 @@
          "lastSibling": true
         }
        ],
-       "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"Operations\"}]}]}"
+       "tipjson": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"Operations\"}]}]}"
       },
       "indents": [
        "childi"
@@ -174,7 +174,7 @@
        "fullpath": "01.03",
        "kind": "section",
        "rstver": "0",
-       "text": "Finance",
+       "ptext": "Finance",
        "children": [
         {
          "type": "io.odysz.semantic.DA.DatasetCfg$AnTreeNode",
@@ -189,8 +189,8 @@
           "fullpath": "01.03.01",
           "kind": "math",
           "rstver": "0",
-          "text": "",
-          "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"blockMath\",\"attrs\":{\"latex\":\"\\\\text{margin} = \\\\frac{\\\\text{profit}}{\\\\text{revenue}}\"}}]}"
+          "ptext": "",
+          "tipjson": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"blockMath\",\"attrs\":{\"latex\":\"\\\\text{margin} = \\\\frac{\\\\text{profit}}{\\\\text{revenue}}\"}}]}"
          },
          "indents": [
           "space",
@@ -199,7 +199,7 @@
          "lastSibling": true
         }
        ],
-       "json": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"Finance\"}]}]}"
+       "tipjson": "{\"contype\":\"doc\",\"content\":[{\"contype\":\"paragraph\",\"content\":[{\"contype\":\"text\",\"text\":\"Finance\"}]}]}"
       },
       "indents": [
        "childx"

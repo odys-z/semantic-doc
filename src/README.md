@@ -32,7 +32,8 @@ editor/            the widget (package entry: editor/index.ts)
   rst/serialize.ts   Tiptap doc → RST
   styles/            theme-roles.css (share with Sphinx), editor.css
 doctree/           AnDoctreeditor (package entry: doctree/index.ts), on anreact's AnTreeditor
-  doctree-tier.ts    wire types (s-tree modification) + where a node goes (moveReq, insertReq)
+  doc-stree.ts       types as doctree.jserv's (DoctreeReq, DocNode, ...), StreeDoctier,
+                     the table's rules (greying out buttons), replacing a received subtree
   rst-assembler.ts   doc tree → RST files, one per section (index.rst, <nid>.rst)
 preview/           html preview (package entry: preview/index.ts): Sphinx in Pyodide, in a Web Worker
   RstPreviewer.ts    the worker's page side, one per template; sphinx-worker.ts the worker
@@ -43,8 +44,8 @@ demo/              dev pages using the widgets through their public API
   App.tsx            paragraph editor page (index.html)
   doctree.tsx        doc tree page (doctree.html)
   stub-tier.ts       plays the server over demo/jsons (load, text saves, commit)
-  jsons/             server-shaped r/tree answers, until SmandocServ serves them
-test/cases/        serializer cases: inline, format, math
+  jsons/             server-shaped r/tree answers
+test/cases/        serializer cases: inline, format, math; rst-assembler, doc-stree
 ```
 
 ## Html preview

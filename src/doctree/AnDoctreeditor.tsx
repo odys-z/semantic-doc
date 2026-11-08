@@ -8,12 +8,12 @@
  * StaticBlock; sections, blocks and the doc root all render through the same
  * formatters, in AnTreeditor's folder heads and TreeCards alike.
  *
- *  - The server owns the tree: every structural change is a request (u/move, i, d)
- *    answered with the reloaded subtree, which replaces ours. The client only works
- *    out where a node goes (moveReq, insertReq in doctree-tier).
+ *  - The server owns the tree: every structural change is a TreeModify (u/tree) as the
+ *    user means it, answered with the reloaded subtree, which replaces ours. Buttons
+ *    that can't apply are greyed out by a copy of the table's rules (doc-stree Rules).
  *  - Autosave: text is sent SAVE_DELAY ms after typing stops, or at once when the
  *    user leaves the block. Commit marks the work as finished.
- *  - ref: one read-only line. avail === 'false': a placeholder, e.g. not on this synode.
+ *  - docref: one read-only line.
  *
  * Layout (MUI): a fixed head (error banner, toolbar, column header), the rows in a
  * scrolling body, and a snackbar for refused or failed changes. With props.preview (a Sphinx
@@ -22,7 +22,7 @@
  * load or save) shows in the banner with Retry; a refused change only in the snackbar.
  */
 import React from 'react';
-import type { AnTreeNode } from '@anclient/semantier';
+import type { AnTreeNode, TreeModify } from '@anclient/semantier';
 import {
 	AnTreeditorComp, AnTreegridComp, CrudCompW, type AnTreeditorProps, type AnTreegridCol,
 	TreeNodeVisual, treeditorStyles, withStyles, withWidth,
@@ -37,23 +37,23 @@ import Typography from '@mui/material/Typography';
 
 import { ParagraphEditor, StaticBlock, type JSONContent, type RstResult } from '../editor';
 import {
-	DocKind, type DocCols, type DocInf, type DocTreeNode, type DoctreeResp, type DoctreeTier, type MoveTo,
-	DoctreeReq, fromTiptap, insertReq, isContainer, locate, moveReq, received, referencedIn, toTiptap,
-} from './doctree-tier';
+	DocNode, type DocInf, type DocKind, type DocTreeNode, type DoctreeResp, type Doctier, type MoveOp,
+	fromTiptap, insertMod, isContainer, locate, moveMod, received, removeMod, replaced, toTiptap,
+} from './doc-stree';
 import './doctree.css';
 import { assemble, type RstFile } from './rst-assembler';
-import { fillJson } from './facts';
+import { fillTipjson } from './facts';
 import { DocPreview } from '../preview/DocPreview';
 
-/** version of the json -> rst serializer, stored in DocNode.rstver */
+/** version of the tipjson -> rstext serializer, stored in DocNode.rstver */
 export const RSTVER = 1;
 /** autosave delay after typing stops, ms */
 export const SAVE_DELAY = 1500;
 
 export interface AnDoctreeditorProps extends Partial<Omit<AnTreeditorProps, 'columns' | 'pk' | 'tier'>> {
 	docId: string;
-	/** requests to the doc-content tier */
-	doctier: DoctreeTier;
+	/** requests to the doc-tree tier, e.g. a StreeDoctier */
+	doctier: Doctier;
 	/** height of the editor; the rows scroll inside. Default 100% of the parent */
 	height?: number | string;
 	/**
@@ -95,6 +95,9 @@ const rstOf = (r: RstResult) =>
 /** keep a click in a cell from toggling the folder or selecting the row */
 const stop = (e: React.UIEvent) => e.stopPropagation();
 
+/** a node's columns, as the tree carries them */
+type Cols = DocTreeNode['node'];
+
 /** a row button; no run: disabled */
 type Act = { label: string; title: string; run?: () => void };
 
@@ -124,7 +127,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	}
 
 	/** a text change waiting for autosave */
-	pending: { node: DocCols; timer: ReturnType<typeof setTimeout> } | undefined;
+	pending: { node: Cols; timer: ReturnType<typeof setTimeout> } | undefined;
 
 	/** Tiptap JSON by its stored text, so static rows keep their content object */
 	parsed = new Map<string, JSONContent>();
@@ -146,7 +149,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 
 	load() {
 		this.props.doctier.tree(this.props.docId, (resp) => {
-			const forest = fillJson(received(resp.forest));
+			const forest = fillTipjson(received(resp.forest));
 			console.debug('rst files', assemble(forest[0]));
 			expandAll(forest);
 			this.setState({ forest, rstFiles: this.rstOf(forest), doc: resp.doc, alert: undefined,
@@ -160,19 +163,11 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 			this.setState({ snack: `Not changed: ${resp.rejected}` });
 			return;
 		}
-		const sub = fillJson(received(resp.forest));
-		let forest: DocTreeNode[];
-		if (resp.root == null) {
-			keepExpanded(this.state.forest, sub);
-			forest = sub;
-		} else {
-			const old = locate(this.state.forest, resp.root);
-			if (!old || sub.length !== 1) return this.load(); // not ours to patch
-			keepExpanded([old.t], sub);
-			placeAs(sub[0], old.t);
-			old.sibs[old.ix] = sub[0];
-			forest = [...this.state.forest];
-		}
+		const sub = fillTipjson(received(resp.forest));
+		const old = resp.root == null ? this.state.forest : locate(this.state.forest, resp.root)?.t;
+		if (old) keepExpanded(Array.isArray(old) ? old : [old], sub);
+		const forest = replaced(this.state.forest, resp);
+		if (!forest) return this.load(); // not ours to patch
 		this.setState({ forest, rstFiles: this.rstOf(forest), committed: resp.doc ? !resp.doc.dirty : false });
 	};
 
@@ -185,11 +180,11 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	// ---- autosave ----------------------------------------------------------
 
 	/** ParagraphEditor reports every change; save after typing stops */
-	changed(node: DocCols, json: JSONContent, rst: RstResult) {
+	changed(node: Cols, json: JSONContent, rst: RstResult) {
 		const s = fromTiptap(json);
-		if (s === (node.json ?? EMPTY)) return; // e.g. the editor's report on creation
-		node.json = s;
-		node.rst = rstOf(rst);
+		if (s === (node.tipjson ?? EMPTY)) return; // e.g. the editor's report on creation
+		node.tipjson = s;
+		node.rstext = rstOf(rst);
 		node.rstver = String(RSTVER);
 
 		if (this.pending && this.pending.node !== node) this.flush();
@@ -208,8 +203,9 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	}
 
 	/** send one node's text; on failure keep it and offer a retry (no reload: it would drop the text) */
-	save(node: DocCols) {
-		this.props.doctier.update(this.props.docId, node,
+	save(node: Cols) {
+		const n = new DocNode({ nid: node.nid, tipjson: node.tipjson, rstext: node.rstext, rstver: RSTVER });
+		this.props.doctier.update(this.props.docId, n,
 			(resp) => this.setState({ saving: !!this.pending, committed: !resp.doc?.dirty, alert: undefined,
 				rstFiles: this.rstOf(this.state.forest) }),
 			(msg) => this.setState({ saving: false, alert: { msg: `Not saved: ${msg}`, retry: () => this.save(node) } }));
@@ -223,19 +219,17 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 		this.setState({ editing: id });
 	}
 
-	modify(req: ReturnType<typeof moveReq>, open?: boolean) {
-		if (!req) return;
+	modify(mod: TreeModify | undefined, open?: boolean) {
+		if (!mod) return;
 		this.flush();
-		this.props.doctier.modify(this.props.docId, req, (resp) => {
+		this.props.doctier.modify(this.props.docId, mod, (resp) => {
 			this.applied(resp);
 			if (open && resp.newId) this.setState({ editing: resp.newId });
 		}, this.failed);
 	}
 
 	del(t: DocTreeNode) {
-		const question = referencedIn(t)
-			? 'Other documents reference this part. Deleting it removes it from them too. Delete anyway?'
-			: t.node.children?.length ? 'Delete this section and everything in it?' : undefined;
+		const question = t.node.children?.length ? 'Delete this section and everything in it?' : undefined;
 		if (question && !window.confirm(question)) return;
 
 		// the block being edited is inside: drop its pending save, close the editor
@@ -244,7 +238,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 			this.pending = undefined;
 			this.setState({ editing: null, saving: false });
 		}
-		this.modify({ a: DoctreeReq.A.del, rootId: t.id });
+		this.modify(removeMod(this.state.forest, t.id));
 	}
 
 	commit() {
@@ -262,14 +256,14 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 
 	/** the row head after the indents; the title itself is in the content column */
 	sectionTitle(t: AnTreeNode) {
-		return (t as DocTreeNode).node.kind === DocKind.section ? <span className="sd-glyph">§</span> : null;
+		return (t as DocTreeNode).node.kind === DocNode.Kind.section ? <span className="sd-glyph">§</span> : null;
 	}
 
 	/** AnTreeditor's header click: a new section at the end of the doc */
 	toAddChild(e: React.MouseEvent<HTMLElement>) {
 		e?.stopPropagation();
 		const root = this.state.forest[0];
-		if (root) this.modify(insertReq(this.state.forest, root.id, DocKind.section), true);
+		if (root) this.modify(insertMod(this.state.forest, root.id, DocNode.Kind.section), true);
 	}
 
 	/** AnTreeditor's own delete */
@@ -284,27 +278,25 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	content(t: DocTreeNode) {
 		const n = t.node;
 		let cell: React.ReactNode;
-		if (n.avail === 'false')
-			cell = <div className="sd-unavail">{n.text} — not available here</div>;
-		else switch (n.kind) {
-			case DocKind.doc:
-				cell = <div className="sd-doctitle">{n.text}</div>;
+		switch (n.kind) {
+			case DocNode.Kind.doc:
+				cell = <div className="sd-doctitle">{n.ptext}</div>;
 				break;
-			case DocKind.ref:
-				cell = <div className="sd-ref" title="Read-only, expanded when compiled">↪ {n.text}</div>;
+			case DocNode.Kind.docref:
+				cell = <div className="sd-ref" title="Read-only, expanded when compiled">↪ {n.ptext}</div>;
 				break;
-			case DocKind.image:
+			case DocNode.Kind.image:
 				cell = <div className="sd-media">[image {n.resId}]</div>;
 				break;
 			default: // section title, paragraph, formula
 				cell = n.nid === this.state.editing
 					? <ParagraphEditor
-						content={this.parse(n.json)}
+						content={this.parse(n.tipjson)}
 						autofocus
 						onChange={(j, rst) => this.changed(n, j, rst)}
 						editMath={(kind, latex) => window.prompt(kind === 'block' ? 'Block formula (LaTeX)' : 'Formula (LaTeX)', latex)}
 					  />
-					: <StaticBlock json={this.parse(n.json)} className="sd-clickable" onClick={() => this.edit(n.nid)} />;
+					: <StaticBlock json={this.parse(n.tipjson)} className="sd-clickable" onClick={() => this.edit(n.nid!)} />;
 		}
 		return <div className={'sd-cell sd-' + n.kind} onClick={stop}>{cell}</div>;
 	}
@@ -321,26 +313,29 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	actions(t: DocTreeNode) {
 		const f = this.state.forest;
 
-		const add = (label: string, kind: DocKind, title: string): Act =>
-			({ label, title, run: () => this.modify(insertReq(f, t.id, kind), true) });
-
-		const mov = (label: string, to: MoveTo, title: string): Act => {
-			const req = moveReq(f, t.id, to);
-			return { label, title, run: req && (() => this.modify(req)) };
+		// a button without run is greyed out: the rules (doc-stree Rules) say it can't apply
+		const add = (label: string, kind: DocKind, title: string): Act => {
+			const mod = insertMod(f, t.id, kind);
+			return { label, title, run: mod && (() => this.modify(mod, true)) };
 		};
 
-		const del: Act = { label: '✕', title: 'Delete', run: () => this.del(t) };
-		const at = t.node.kind === DocKind.section ? ' at the start of this section' : ' after';
+		const mov = (label: string, op: MoveOp, title: string): Act => {
+			const mod = moveMod(f, t.id, op);
+			return { label, title, run: mod && (() => this.modify(mod)) };
+		};
+
+		const del: Act = { label: '✕', title: 'Delete', run: removeMod(f, t.id) && (() => this.del(t)) };
+		const K = DocNode.Kind;
+		const at = t.node.kind === K.section ? ' at the start of this section' : ' after';
 
 		const btns: Act[] =
-			t.node.avail === 'false' ? [del]
-			: t.node.kind === DocKind.doc ? [
-				add('§+', DocKind.section, 'Add section at the end'),
-				add('¶+', DocKind.p, 'Add paragraph at the end'),
+			t.node.kind === K.doc ? [
+				add('§+', K.section, 'Add section at the end'),
+				add('¶+', K.p, 'Add paragraph at the end'),
 			] : [
-				add('¶+', DocKind.p, 'Add paragraph' + at),
-				add('∑+', DocKind.math, 'Add formula' + at),
-				add('§+', DocKind.section, 'Add section after'),
+				add('¶+', K.p, 'Add paragraph' + at),
+				add('∑+', K.math, 'Add formula' + at),
+				add('§+', K.section, 'Add section after'),
 				mov('↑', 'up', 'Up'),
 				mov('↓', 'down', 'Down'),
 				mov('→', 'indent', 'Indent (into the section above)'),
@@ -425,30 +420,6 @@ function keepExpanded(old: DocTreeNode[], sub: DocTreeNode[]) {
 	const was = new Map<string, boolean>();
 	walk(old, (t) => was.set(t.id, !!t.node.expandChildren));
 	walk(sub, (t) => { if (isContainer(t)) t.node.expandChildren = was.get(t.id) ?? true; });
-}
-
-/**
- * A reloaded subtree comes with its root at level 0 and no indents. Display only:
- * give it the place of the node it replaces, and its descendants the indents
- * TreeIndenode.indents() would give them in the whole tree.
- */
-function placeAs(sub: DocTreeNode, old: DocTreeNode) {
-	sub.level = old.level;
-	sub.indents = old.indents;
-	sub.islastSibling = old.islastSibling ?? (old as any).lastSibling;
-	const down = (p: DocTreeNode) => {
-		const kids = (p.node.children ?? []) as DocTreeNode[];
-		const base = p.indents?.length
-			? [...p.indents.slice(0, -1), (p.islastSibling ?? (p as any).lastSibling) ? 'spacex' : 'vlink'] as DocTreeNode['indents']
-			: [];
-		kids.forEach((k, x) => {
-			k.level = p.level + 1;
-			k.islastSibling = x === kids.length - 1;
-			k.indents = [...base!, k.islastSibling ? 'childx' : 'childi'];
-			down(k);
-		});
-	};
-	down(sub);
 }
 
 /** columns are bound to each editor instance */

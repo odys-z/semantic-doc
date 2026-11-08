@@ -1,6 +1,6 @@
 /**
  * The importer's run facts → Tiptap JSON (the stored form, "contype"), for nodes that
- * have facts but no json yet (a newly imported doc). Mapping to the editor's schema lives
+ * have facts but no tipjson yet (a newly imported doc). Mapping to the editor's schema lives
  * here, beside the schema (editor/rst/marks.ts), so a palette change needs no re-import.
  *
  * Facts (doctree.jserv io.oz.sdoc.imports.Run), version 1:
@@ -10,7 +10,7 @@
  *
  * Colours go to the nearest of the palette (ROLES), or none if nearer to black / white.
  */
-import { DocKind, fromTiptap, type DocTreeNode } from './doctree-tier';
+import { DocNode, fromTiptap, type DocTreeNode } from './doc-stree';
 
 export interface RunFacts {
 	t: string;
@@ -108,13 +108,17 @@ export function factsToJson(facts: string): string | undefined {
 }
 
 /**
- * Paragraphs with facts but no json get json built from their facts, in memory: the tree
- * shows them formatted, the preview serializes them; saved when the user edits them.
+ * Nodes without tipjson get one in memory, built from the importer's facts (paragraphs),
+ * else from its plain text (a section's title, a table's text): the tree shows them
+ * formatted, the preview serializes them; saved when the user edits them.
  */
-export function fillJson(forest: DocTreeNode[]): DocTreeNode[] {
+export function fillTipjson(forest: DocTreeNode[]): DocTreeNode[] {
 	const fill = (t: DocTreeNode) => {
 		const n = t.node;
-		if (!n.json && n.facts && n.kind === DocKind.p) n.json = factsToJson(n.facts);
+		if (!n.tipjson && n.facts && n.kind === DocNode.Kind.p)
+			n.tipjson = factsToJson(n.facts);
+		if (!n.tipjson && n.ptext && n.kind !== DocNode.Kind.doc && n.kind !== DocNode.Kind.math)
+			n.tipjson = fromTiptap({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: n.ptext }] }] });
 		n.children?.forEach(fill);
 	};
 	forest.forEach(fill);

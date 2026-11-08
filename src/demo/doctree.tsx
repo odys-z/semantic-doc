@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import 'katex/dist/katex.min.css'; // host app provides KaTeX CSS (see editor/index.ts)
 import './demo.css';
-import { AnDoctreeditor, type TreeModify } from '../doctree';
+import type { TreeModify } from '@anclient/semantier';
+import { AnDoctreeditor } from '../doctree';
 import { StubDoctreeTier, describe, stubDocs } from './stub-tier';
 
 const stub = new StubDoctreeTier();

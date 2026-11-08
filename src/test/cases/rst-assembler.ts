@@ -3,8 +3,8 @@
  * Not serializer cases (no Tiptap doc), so they have their own runner, runAssemble().
  */
 import { assemble } from '../../doctree/rst-assembler';
-import { fillJson } from '../../doctree/facts';
-import type { DocTreeNode } from '../../doctree/doctree-tier';
+import { fillTipjson } from '../../doctree/facts';
+import type { DocTreeNode } from '../../doctree/doc-stree';
 import type { Result } from '../runner';
 import docA from '../../demo/jsons/doc-a.json';
 
@@ -18,14 +18,14 @@ const rst = (body: string, roleDecls: string[] = []) =>
 
 const red = '.. role:: red\n   :class: red';
 
-const doc = t('d', 'doc', { text: 'Annual Report' }, [
-	t('d.1', 'p', { text: 'Preface * text' }),
-	t('d.2', 'section', { text: '第一章 总则' }, [
-		t('d.3', 'p', { text: 'ignored', rst: rst('Revenue :red:`grew`.', [red]) }),
-		t('d.4', 'section', { text: '1.1 Scope' }, [t('d.5', 'p', { text: '1. not a list' })]),
-		t('d.6', 'p', { text: 'After the sub-section, :red: again', rst: rst('Again :red:`red`.', [red]) }),
+const doc = t('d', 'doc', { ptext: 'Annual Report' }, [
+	t('d.1', 'p', { ptext: 'Preface * text' }),
+	t('d.2', 'section', { ptext: '第一章 总则' }, [
+		t('d.3', 'p', { ptext: 'ignored', rstext: rst('Revenue :red:`grew`.', [red]) }),
+		t('d.4', 'section', { ptext: '1.1 Scope' }, [t('d.5', 'p', { ptext: '1. not a list' })]),
+		t('d.6', 'p', { ptext: 'After the sub-section, :red: again', rstext: rst('Again :red:`red`.', [red]) }),
 	]),
-	t('d.7', 'section', { text: 'Empty' }),
+	t('d.7', 'section', { ptext: 'Empty' }),
 ]);
 
 interface ACase { name: string; actual: () => string; expected: string }
@@ -70,12 +70,12 @@ const cases: ACase[] = [
 		expected: 'Finance\n=======\n\n.. math::\n\n   \\text{margin} = \\frac{\\text{profit}}{\\text{revenue}}\n',
 	},
 	{
-		name: 'facts: an imported paragraph (facts, no json) → json → rst',
+		name: 'facts: an imported paragraph (facts, no tipjson) → tipjson → rst',
 		actual: () => {
 			const facts = JSON.stringify({ v: 1, runs: [
 				{ t: '1. ' }, { t: 'Revenue grew ' }, { t: '12%', b: 1, color: '1E8449' },
 				{ t: ' see ' }, { t: 'report', href: 'https://example.com/r', hl: 'yellow' }, { t: '.' }] });
-			const d = fillJson([t('f', 'doc', { text: 'F' }, [t('f.1', 'p', { text: 'plain', facts })])]);
+			const d = fillTipjson([t('f', 'doc', { ptext: 'F' }, [t('f.1', 'p', { ptext: 'plain', facts })])]);
 			return assemble(d[0])[0].rst;
 		},
 		expected: '.. role:: strong_green(strong)\n   :class: green\n.. role:: bg-yellow\n\nF\n===\n\n'

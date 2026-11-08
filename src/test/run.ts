@@ -8,8 +8,9 @@
 import { allCases } from './cases';
 import { run } from './runner';
 import { runAssemble } from './cases/rst-assembler';
+import { runDocstree } from './cases/doc-stree';
 
-const results = [...run(allCases), ...runAssemble()];
+const results = [...run(allCases), ...runAssemble(), ...runDocstree()];
 let failed = results.filter((r) => !r.pass).length;
 
 if (process.argv.includes('--json')) {

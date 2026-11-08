@@ -1,14 +1,12 @@
 /**
- * Plays the doc-content server over hard-coded json files (demo/jsons), until
- * SmandocServ serves them. The files are what the server would answer to r/tree:
+ * Plays the doc-tree server over hard-coded json files (demo/jsons). The files are what the server would answer to r/tree:
  * the doc root with its subtree, node fields as strings.
  *
  * Text saves and commits work on an in-memory copy. Structure changes need the
  * server's reshaping, so they are answered with an error naming the request.
  */
-import {
-	DoctreeReq, locate, type DocCols, type DoctreeResp, type DoctreeTier, type OnErr, type OnOk, type TreeModify,
-} from '../doctree';
+import type { TreeModify } from '@anclient/semantier';
+import { DoctreeResp, DocNode, locate, type Doctier, type OnErr, type OnOk } from '../doctree';
 
 /** urls of the json files; webpack emits them as assets */
 export const stubDocs: Record<string, string> = {
@@ -18,12 +16,11 @@ export const stubDocs: Record<string, string> = {
 
 const clone = <T,>(o: T): T => JSON.parse(JSON.stringify(o));
 
-/** a request as one line, e.g. "u/move a2.3 → a2[0]" */
+/** a modification as one line, e.g. "indent a2.3", "insert after a1 p" */
 export const describe = (q: TreeModify) =>
-	q.a === DoctreeReq.A.del ? `d ${q.rootId}`
-	: `${q.a} ${q.rootId ?? q.nvs?.find((nv) => nv[0] === 'kind')?.[1] ?? ''} → ${q.toParent ?? '(top)'}[${q.toIndex}]`;
+	[q.op, q.at, q.nid, q.nvs?.find((nv) => nv[0] === 'kind')?.[1]].filter(Boolean).join(' ');
 
-export class StubDoctreeTier implements DoctreeTier {
+export class StubDoctreeTier implements Doctier {
 	/** the "server's" copy of each doc */
 	docs = new Map<string, Promise<DoctreeResp>>();
 	/** answer delay, ms */
@@ -47,38 +44,38 @@ export class StubDoctreeTier implements DoctreeTier {
 	/** answer like a server: later, a copy */
 	private answer(docId: string, ok: OnOk, err: OnErr | undefined, f: (d: DoctreeResp) => DoctreeResp) {
 		this.doc(docId)
-			.then((d) => setTimeout(() => ok(clone(f(d))), this.delay))
+			.then((d) => setTimeout(() => ok(new DoctreeResp(clone(f(d)))), this.delay))
 			.catch((e) => err?.(String(e)));
 	}
 
 	tree(docId: string, ok: OnOk, err?: OnErr) {
-		this.answer(docId, ok, err, (d) => ({ doc: d.doc, root: null, forest: d.forest }));
+		this.answer(docId, ok, err, (d) => new DoctreeResp({ doc: d.doc, forest: d.forest }));
 	}
 
-	update(docId: string, node: DocCols, ok: OnOk, err?: OnErr) {
+	update(docId: string, node: DocNode, ok: OnOk, err?: OnErr) {
 		if (this.failSaves) {
 			setTimeout(() => err?.('server unreachable (simulated)'), this.delay);
 			return;
 		}
 		this.answer(docId, ok, err, (d) => {
-			const n = locate(d.forest ?? [], node.nid)?.t.node;
-			if (n) Object.assign(n, { json: node.json, rst: node.rst, rstver: node.rstver });
+			const n = locate(d.forest ?? [], node.nid!)?.t.node;
+			if (n) Object.assign(n, { tipjson: node.tipjson, rstext: node.rstext, rstver: String(node.rstver) });
 			d.doc!.dirty = true;
-			return { doc: d.doc };
+			return new DoctreeResp({ doc: d.doc, forest: [] });
 		});
 	}
 
 	modify(_docId: string, req: TreeModify, _ok: OnOk, err?: OnErr) {
 		this.log = [...this.log, req];
 		this.onLog?.(this.log);
-		setTimeout(() => err?.(`${describe(req)}: structure changes need SmandocServ`), this.delay);
+		setTimeout(() => err?.(`${describe(req)}: structure changes need the server (doctree.serv)`), this.delay);
 	}
 
 	commit(docId: string, ok: OnOk, err?: OnErr) {
 		this.answer(docId, ok, err, (d) => {
 			d.doc!.dirty = false;
 			d.doc!.committedAt = new Date().toLocaleString();
-			return { doc: d.doc };
+			return new DoctreeResp({ doc: d.doc, forest: [] });
 		});
 	}
 }
