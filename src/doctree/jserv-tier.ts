@@ -12,6 +12,7 @@ import { AnsonBody, AnsonResp, Protocol, type AnsonMsg, type SessionClient } fro
 import {
 	DoctreeReq, type DocCols, type DocInf, type DoctreeResp, type DoctreeTier, type OnErr, type OnOk, type TreeModify,
 } from './doctree-tier';
+import { SynDocollPort } from 'src/tiers/syn-docoll-port';
 
 /** io.oz.sdoc.DoctreeReq on the wire, extending AnDatasetReq */
 export class DoctreeReqBody extends AnsonBody {
@@ -55,9 +56,9 @@ export class JservDoctier implements DoctreeTier {
 	/**
 	 * @param client logged-in client
 	 * @param uri function uri, e.g. "/album/sys" (no session check on the server for now)
-	 * @param port default "doctree"
+	 * @param port default SynDocollPort.doctree
 	 */
-	constructor(readonly client: SessionClient, readonly uri: string, readonly port = 'doctree') {}
+	constructor(readonly client: SessionClient, readonly uri: string, readonly port = SynDocollPort.doctree) {}
 
 	private send(a: string, opts: ConstructorParameters<typeof DoctreeReqBody>[2], ok: OnOk, err?: OnErr) {
 		const req = this.client.userReq(this.uri, this.port, new DoctreeReqBody(this.uri, a, opts));

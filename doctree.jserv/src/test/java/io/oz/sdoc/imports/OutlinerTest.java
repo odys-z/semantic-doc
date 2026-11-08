@@ -20,7 +20,7 @@ class OutlinerTest {
 
 		DocNode table = o.nodes.get(8);
 		assertEquals("body/8", table.src);
-		assertEquals("heading 1", o.nodes.get(9).style);
+		assertEquals("heading 1", o.nodes.get(9).docxstyle);
 	}
 
 	@Test

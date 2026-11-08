@@ -73,7 +73,7 @@ public class Outliner {
 				continue;
 
 			String kind = b.isHeading() ? DocNode.Kind.section
-						: Block.table.equals(b.kind) ? DocNode.Kind.table : DocNode.Kind.p;
+						: Block.table.equals(b.kind) ? DocNode.Kind.tabl : DocNode.Kind.p;
 
 			if (b.isHeading())
 				while (stack.peek() != root && levels.get(stack.peek().nid) >= b.outline)
@@ -92,7 +92,7 @@ public class Outliner {
 					runs.add(0, new Run(b.numLabel + " "));
 				node.facts = Run.json(runs);
 			}
-			node.style = b.styleName;
+			node.docxstyle = b.styleName;
 			o.nodes.add(node);
 
 			if (b.isHeading()) {

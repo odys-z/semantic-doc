@@ -39,7 +39,7 @@ import io.oz.sdoc.imports.Importer;
  *
  * @author ody
  */
-@WebServlet(description = "semantic-doc doc-tree tier", urlPatterns = { "/doctree.jserv" })
+@WebServlet(description = "semantic-doc doc-tree tier", urlPatterns = { "/doctree.serv" })
 public class DoctreeTier extends ServPort<DoctreeReq> {
 	private static final long serialVersionUID = 1L;
 

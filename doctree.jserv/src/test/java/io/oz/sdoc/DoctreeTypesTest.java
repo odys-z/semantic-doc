@@ -83,7 +83,7 @@ class DoctreeTypesTest {
 		assertEquals("u/node", back.a());
 		assertEquals("doc-a", back.docId);
 		assertEquals("a1.1", back.node.nid);
-		assertEquals(req.node.json, back.node.json);
+		assertEquals(req.node.tipjson, back.node.tipjson);
 		assertEquals(1, back.node.rstver);
 	}
 }
