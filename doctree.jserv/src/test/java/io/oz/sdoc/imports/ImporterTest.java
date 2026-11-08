@@ -3,6 +3,8 @@ package io.oz.sdoc.imports;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static io.odysz.semantic.ext.SemanticTree.childIds;
+import static java.util.Arrays.asList;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -24,6 +26,7 @@ import io.odysz.semantic.jprotocol.AnsonMsg.MsgCode;
 import io.odysz.semantic.jprotocol.AnsonMsg.Port;
 import io.odysz.semantic.jprotocol.AnsonResp;
 import io.odysz.semantic.ext.TreeModify;
+import io.odysz.semantic.jserv.JRobot;
 import io.oz.sdoc.DocInf;
 import io.oz.sdoc.DocNode;
 import io.oz.sdoc.S_DocNodeMeta;
@@ -44,6 +47,7 @@ class ImporterTest {
 	static DoctreeTier tier;
 	/** set up once, with fresh tables; don't set up again, the docs imported by the tests would be dropped */
 	static DoctreeDBHelper db;
+	static final JRobot robot = new JRobot();
 
 	@BeforeAll
 	static void init() throws Exception {
@@ -144,12 +148,12 @@ class ImporterTest {
 		assertEquals(n1, r.root());
 		assertEquals(1, r.forest().size());
 		assertEquals(n1, ((AnTreeNode) r.forest().get(0)).id());
-		assertEquals(String.join(" ", n3, n2, d + ".4"), kids(n1));
+		assertEquals(asList(n3, n2, d + ".4"), childIds(conn, db.nodem.treeSemantics(), n1, robot));
 		assertEquals(true, r.doc.dirty);
 
 		// indent: under the previous sibling, now the section .3
 		modify(d, TreeModify.indent(n2));
-		assertEquals(n2, kids(n3));
+		assertEquals(asList(n2), childIds(conn, db.nodem.treeSemantics(), n3, robot));
 
 		// a paragraph can't have children; the doc root is fixed
 		assertEquals(TreeModify.Rejected.holder, modify(d, TreeModify.indent(n7)).rejected());
@@ -160,14 +164,14 @@ class ImporterTest {
 		r = modify(d, TreeModify.insert(n7, TreeModify.At.after, "kind", "p", "docId", "not-this"));
 		assertEquals(d + ".b", r.newId());
 		assertEquals(n5, r.root());
-		assertEquals(String.join(" ", n6, n7, d + ".b", d + ".8"), kids(n5));
+		assertEquals(asList(n6, n7, d + ".b", d + ".8"), childIds(conn, db.nodem.treeSemantics(), n5, robot));
 		assertEquals(12, db.doc(d).nextNid);
 		assertEquals(1, Connects.select(conn, String.format(
 				"select nid from s_docnodes where nid = '%s.b' and docId = '%s'", d, d)).total());
 
 		// remove, with the subtree
 		modify(d, TreeModify.remove(n9));
-		assertEquals(n1, kids(d));
+		assertEquals(asList(n1), childIds(conn, db.nodem.treeSemantics(), d, robot));
 		assertEquals(0, Connects.select(conn, String.format(
 				"select nid from s_docnodes where nid in ('%1$s.9', '%1$s.a')", d)).total());
 
@@ -198,13 +202,6 @@ class ImporterTest {
 		AnsonMsg<? extends AnsonResp> msg = tier.handle(req);
 		assertEquals(MsgCode.ok, msg.code(), msg.body(0).msg());
 		return (DoctreeResp) msg.body(0);
-	}
-
-	/** children of parent, in sibling order */
-	static String kids(String parent) throws Exception {
-		AnResultset rs = Connects.select(conn, String.format(
-				"select nid from s_docnodes where parentId = '%s' order by sort", parent));
-		return String.join(" ", rs.toArr("nid"));
 	}
 
 	/**
