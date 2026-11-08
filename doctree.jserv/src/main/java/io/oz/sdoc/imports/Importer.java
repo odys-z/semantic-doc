@@ -127,7 +127,7 @@ public class Importer {
 					.nv(nodem.ptext, n.ptext)
 					.nv(nodem.facts, n.facts)
 					.nv(nodem.src, n.src)
-					.nv(nodem.style, n.docxstyle));
+					.nv(nodem.docxstyle, n.docxstyle));
 
 			u.u(st.instancontxt(conn, robot));
 		} catch (Throwable e) {

@@ -90,7 +90,7 @@ public class Outliner {
 				ArrayList<Run> runs = new ArrayList<Run>(b.runs);
 				if (!isblank(b.numLabel))
 					runs.add(0, new Run(b.numLabel + " "));
-				node.facts = Run.json(runs);
+				node.facts = Run.factsOf(runs);
 			}
 			node.docxstyle = b.styleName;
 			o.nodes.add(node);

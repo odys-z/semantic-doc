@@ -1,12 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xml>
-<!-- Datasets of the doc-tree db. sdoc.tree: the tree semantics of DoctreeTier.tree() (only s-tree is used; ptext is sent as text). -->
+<!-- Datasets of doctree.jserv's tests: none, the doc tree's semantics are S_DocNodeMeta's (ITreeMeta). -->
 <dataset>
 <t id="ds" pk="sk" columns="sk,conn,cols,mysql,orcl,ms2k,sqlit,s-tree">
-	<c>
-		<sk>sdoc.tree</sk>
-		<sqlit>select * from s_docnodes where docId = '%s' order by fullpath</sqlit>
-		<s-tree>,s_docnodes,nid,parentId,fullpath,sort,ptext text,kind,false</s-tree>
-	</c>
 </t>
 </dataset>

@@ -1,5 +1,8 @@
 package io.oz.sdoc;
 
+import static io.odysz.common.LangExt.eq;
+import static io.odysz.common.LangExt.isblank;
+
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -8,14 +11,17 @@ import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletResponse;
 
-import io.odysz.semantic.DA.DatasetCfg;
-import io.odysz.semantic.DA.DatasetCfg.TreeSemantics;
 import io.odysz.semantic.DA.DatasetHelper;
+import io.odysz.semantic.ext.AnDatasetResp;
+import io.odysz.semantic.ext.SemanticTree;
+import io.odysz.semantic.ext.TreeModify;
 import io.odysz.semantic.jprotocol.AnsonMsg;
 import io.odysz.semantic.jprotocol.AnsonMsg.MsgCode;
 import io.odysz.semantic.jprotocol.AnsonResp;
 import io.odysz.semantic.jprotocol.IPort;
+import io.odysz.semantic.jserv.JRobot;
 import io.odysz.semantic.jserv.ServPort;
+import io.odysz.semantics.IUser;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.x.TransException;
 import io.oz.sdoc.imports.DocxSource;
@@ -30,10 +36,9 @@ import io.oz.sdoc.imports.Importer;
  *
  * <p>The working copy is in its own db ({@link DoctreeDBHelper}), connection {@link #conn(String, String)},
  * set up at the first request.
- * Served: {@link DoctreeReq.A#docs}, {@link DoctreeReq.A#importDocx}
- * (with {@link #importer(DocxSource, IBlockParser)}), {@link DoctreeReq.A#tree}
- * (tree semantics {@link #sk} in the app's dataset.xml); the other actions of {@link DoctreeReq.A}
- * have their handlers, not implemented yet: they answer exSemantic, naming the action.</p>
+ * Served: every action of {@link DoctreeReq.A}; {@link DoctreeReq.A#importDocx} with
+ * {@link #importer(DocxSource, IBlockParser)}. Tree changes are SemanticTree.onModifyTree()'s,
+ * with the doc's rules in {@link S_DocNodeMeta}.</p>
  *
  * TODO: verify sessions; no session check for now.
  *
@@ -43,15 +48,8 @@ import io.oz.sdoc.imports.Importer;
 public class DoctreeTier extends ServPort<DoctreeReq> {
 	private static final long serialVersionUID = 1L;
 
-	/**
-	 * The doc tree's semantics in the app's dataset.xml (only its s-tree is used):
-	 * <pre>&lt;s-tree&gt;,s_docnodes,nid,parentId,fullpath,sort,ptext text,kind,false&lt;/s-tree&gt;</pre>
-	 * ptext is sent as text, the field the client's tree shows.
-	 */
-	public static final String sk = "sdoc.tree";
-
 	/** url of the port, without the leading '/' */
-	public static final String url = "doctree.less";
+	public static final String url = "doctree.serv";
 
 	/** connection of the working copy, null: not configured (only {@link DoctreeReq.A#docs}, empty) */
 	String conn;
@@ -63,6 +61,9 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	/** created by {@link #db()} at the first request needing it */
 	DoctreeDBHelper db;
 	Importer importer;
+
+	/** TODO the session's user; no session check for now */
+	final IUser robot = new JRobot();
 
 	public DoctreeTier(IPort port) {
 		super(port);
@@ -151,16 +152,10 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 				rsp = tree(req);
 			else if (DoctreeReq.A.update.equals(a))
 				rsp = update(req);
-			else if (DoctreeReq.A.move.equals(a))
-				rsp = move(req);
-			else if (DoctreeReq.A.insert.equals(a))
-				rsp = insert(req);
-			else if (DoctreeReq.A.del.equals(a))
-				rsp = del(req);
+			else if (DoctreeReq.A.modify.equals(a))
+				rsp = modify(req);
 			else if (DoctreeReq.A.commit.equals(a))
 				rsp = commit(req);
-			else if (DoctreeReq.A.createDoc.equals(a))
-				rsp = createDoc(req);
 			else
 				throw new SemanticException("Doc-tree tier: request.a, %s, can not be handled.", a);
 
@@ -191,54 +186,62 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 
 	/** r/tree: the doc root {@link DoctreeReq#docId} with its subtree → doc, forest */
 	DoctreeResp tree(DoctreeReq req) throws Exception {
+		DocInf doc = doc(req);
+
+		// while importing (state parsing), the forest is empty; the client asks again
+		DoctreeResp rsp = new DoctreeResp().doc(doc);
+		rsp.forest(DatasetHelper.buildForest(db.nodes(req.docId), db.nodem.treeSemantics()));
+		rsp.root(null);
+		return rsp;
+	}
+
+	/** u/node: save {@link DoctreeReq#node}'s tipjson, rstext, rstver; the doc gets dirty → doc */
+	DoctreeResp update(DoctreeReq req) throws Exception {
+		doc(req);
+		if (req.node == null || isblank(req.node.nid))
+			throw new SemanticException("Doc-tree tier: no node to save.");
+		req.node.docId = req.docId;
+		return new DoctreeResp().doc(db.update(req.node, robot));
+	}
+
+	/**
+	 * u/tree: modify the doc's tree as req.mod says, by SemanticTree.onModifyTree(), with the
+	 * doc's rules ({@link S_DocNodeMeta}) → doc, root, forest (the reloaded subtree), rejected, newId
+	 */
+	DoctreeResp modify(DoctreeReq req) throws Exception {
+		doc(req);
+		if (req.mod == null)
+			throw new SemanticException("Doc-tree tier: no tree modification.");
+		if (req.mod.op == TreeModify.Op.insert) {
+			// the new node is in the doc, whatever the client says
+			if (req.mod.nvs == null) req.mod.nvs = new ArrayList<String[]>();
+			req.mod.nvs.removeIf((nv) -> eq(nv[0], db.nodem.docId));
+			req.mod.nvs.add(new String[] { db.nodem.docId, req.docId });
+		}
+
+		AnDatasetResp r = new SemanticTree().onModifyTree(conn, db.nodem, req.mod, robot);
+		if (r.rejected() == null)
+			db.dirty(req.docId, robot);
+
+		DoctreeResp rsp = new DoctreeResp().doc(db.doc(req.docId));
+		rsp.root(r.root()).rejected(r.rejected()).newId(r.newId()).forest(r.forest());
+		return rsp;
+	}
+
+	/** c/commit: the doc isn't dirty, committedAt = now → doc */
+	DoctreeResp commit(DoctreeReq req) throws Exception {
+		doc(req);
+		return new DoctreeResp().doc(db.commit(req.docId, robot));
+	}
+
+	/** the doc of the request; the working copy must be configured */
+	DocInf doc(DoctreeReq req) throws Exception {
 		if (db() == null)
 			throw new SemanticException("Doc-tree tier: the working copy isn't configured.");
 		DocInf doc = db.doc(req.docId);
 		if (doc == null)
 			throw new SemanticException("Doc-tree tier: no such doc: %s", req.docId);
-		TreeSemantics sm = DatasetCfg.getTreeSemtcs(sk);
-		if (sm == null)
-			throw new SemanticException("Doc-tree tier: the tree semantics, %s, isn't configured in dataset.xml.", sk);
-
-		// while importing (state parsing), the forest is empty; the client asks again
-		DoctreeResp rsp = new DoctreeResp().doc(doc);
-		rsp.forest(DatasetHelper.buildForest(db.nodes(req.docId), sm));
-		rsp.root(null);
-		return rsp;
+		return doc;
 	}
 
-	/** u/node: save {@link DoctreeReq#node}'s json, rst, rstver; the doc gets dirty → doc */
-	DoctreeResp update(DoctreeReq req) throws Exception {
-		throw notyet(req);
-	}
-
-	/** u/move: rootId under toParent at toIndex → root, forest, rejected */
-	DoctreeResp move(DoctreeReq req) throws Exception {
-		throw notyet(req);
-	}
-
-	/** i: a new node under toParent at toIndex, columns nvs → newId, root, forest */
-	DoctreeResp insert(DoctreeReq req) throws Exception {
-		throw notyet(req);
-	}
-
-	/** d: rootId with its subtree → root, forest */
-	DoctreeResp del(DoctreeReq req) throws Exception {
-		throw notyet(req);
-	}
-
-	/** c/commit: the doc isn't dirty, committedAt = now → doc */
-	DoctreeResp commit(DoctreeReq req) throws Exception {
-		throw notyet(req);
-	}
-
-	/** c/doc: a new doc header with its root node → doc */
-	DoctreeResp createDoc(DoctreeReq req) throws Exception {
-		throw notyet(req);
-	}
-
-	/** the error of a handler not implemented yet, naming the request's a() */
-	static SemanticException notyet(DoctreeReq req) {
-		return new SemanticException("Doc-tree tier: %s is not implemented yet.", req.a());
-	}
 }

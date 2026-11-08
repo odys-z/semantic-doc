@@ -28,6 +28,10 @@ public class S_DocsMeta extends SemanticTableMeta {
 	public final String htmlUri;
 	public final String builtAt;
 	public final String builtBy;
+	/** 1: changed since the last commit */
+	public final String dirty;
+	/** time of the last commit */
+	public final String committedAt;
 
 	public S_DocsMeta(String... conn) {
 		super("s_docs", conn);
@@ -43,6 +47,8 @@ public class S_DocsMeta extends SemanticTableMeta {
 		htmlUri = "htmlUri";
 		builtAt = "builtAt";
 		builtBy = "builtBy";
+		dirty   = "dirty";
+		committedAt = "committedAt";
 
 		ddlSqlite = "CREATE TABLE if not exists " + tbl + " (\n"
 			+ "  " + pk      + " varchar(32) NOT NULL, -- auto key: synode + '.' + radix 32\n"
@@ -56,6 +62,8 @@ public class S_DocsMeta extends SemanticTableMeta {
 			+ "  " + htmlUri + " varchar(512),\n"
 			+ "  " + builtAt + " varchar(24),\n"
 			+ "  " + builtBy + " varchar(32),\n"
+			+ "  " + dirty   + " integer DEFAULT 0,    -- 1: changed since the last commit\n"
+			+ "  " + committedAt + " varchar(24),\n"
 			+ "  PRIMARY KEY (" + pk + ")\n"
 			+ ");";
 	}

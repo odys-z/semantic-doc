@@ -23,8 +23,6 @@ public class DoctreeResp extends AnDatasetResp {
 	@AnsonField(valType="io.oz.sdoc.DocInf")
 	public ArrayList<DocInf> docs;
 
-	/** for {@link DoctreeReq.A#insert}: the new node's id */
-	public String newId;
 
 	public DoctreeResp() { }
 
@@ -38,8 +36,4 @@ public class DoctreeResp extends AnDatasetResp {
 		return this;
 	}
 
-	public DoctreeResp newId(String nid) {
-		this.newId = nid;
-		return this;
-	}
 }

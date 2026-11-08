@@ -18,13 +18,14 @@ import io.odysz.semantic.DASemantext;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.DA.DatasetCfg;
 import io.odysz.semantic.DA.DatasetCfg.AnTreeNode;
-import io.odysz.semantic.DA.DatasetCfg.TreeSemantics;
 import io.odysz.semantic.DA.DatasetHelper;
 import io.odysz.semantic.jprotocol.AnsonMsg;
 import io.odysz.semantic.jprotocol.AnsonMsg.MsgCode;
 import io.odysz.semantic.jprotocol.AnsonMsg.Port;
 import io.odysz.semantic.jprotocol.AnsonResp;
+import io.odysz.semantic.ext.TreeModify;
 import io.oz.sdoc.DocInf;
+import io.oz.sdoc.DocNode;
 import io.oz.sdoc.S_DocNodeMeta;
 import io.oz.sdoc.DoctreeDBHelper;
 import io.oz.sdoc.DoctreeReq;
@@ -41,7 +42,6 @@ class ImporterTest {
 	static final String docx = "src/test/res/tricky.docx";
 
 	static DoctreeTier tier;
-	static TreeSemantics sm;
 	/** set up once, with fresh tables; don't set up again, the docs imported by the tests would be dropped */
 	static DoctreeDBHelper db;
 
@@ -53,7 +53,6 @@ class ImporterTest {
 		Connects.init(webinf);
 		conn = DoctreeDBHelper.connect(webinf, "..", "T");
 		DatasetCfg.init(webinf);
-		sm = DatasetCfg.getTreeSemtcs("sdoc.tree");
 
 		db = DoctreeDBHelper.setup(conn, true);
 
@@ -98,12 +97,12 @@ class ImporterTest {
 				docId, m.pk, m.tbl, m.fullpath)).total());
 
 		// loads as one tree, the doc root
-		List<AnTreeNode> forest = DatasetHelper.buildForest(db.nodes(docId), sm);
+		List<AnTreeNode> forest = DatasetHelper.buildForest(db.nodes(docId), db.nodem.treeSemantics());
 		assertEquals(1, forest.size());
 		assertEquals(docId, forest.get(0).id());
 		assertEquals(2, forest.get(0).children().size());
 
-		// r/tree: the doc and its forest; ptext is sent as text, facts as they are
+		// r/tree: the doc and its forest, the nodes' fields as DocNode's
 		DoctreeReq t = new DoctreeReq("/sdoc").docId(docId);
 		t.a(DoctreeReq.A.tree);
 		AnsonMsg<? extends AnsonResp> tmsg = tier.handle(t);
@@ -113,12 +112,99 @@ class ImporterTest {
 		assertEquals(1, tree.forest().size());
 		AnTreeNode root = (AnTreeNode) tree.forest().get(0);
 		assertEquals(docId, root.id());
-		assertEquals("Annual Report", root.get("text"));
+		assertEquals("Annual Report", root.get("ptext"));
 		AnTreeNode ch1 = (AnTreeNode) root.children().get(0);
 		AnTreeNode p1 = (AnTreeNode) ch1.children().get(0);
-		assertEquals("Body text under chapter one.", p1.get("text"));
+		assertEquals("Body text under chapter one.", p1.get("ptext"));
 		assertEquals("{\"v\":1,\"runs\":[{\"t\":\"Body text \"},{\"t\":\"under\",\"b\":1,\"color\":\"1E8449\"},{\"t\":\" chapter one.\"}]}",
 				p1.get("facts"));
+	}
+
+	/**
+	 * u/tree, u/node, c/commit on an imported tricky doc:
+	 * <pre>
+	 * root
+	 *   .1 section 第一章         [.2 p, .3 section 1.1 Scope, .4 section]
+	 *     .4 section            [.5 section Clause 7]
+	 *       .5 section          [.6 p, .7 p, .8 tabl]
+	 *   .9 section 第二章         [.a p]
+	 * </pre>
+	 */
+	@Test
+	void editTree() throws Exception {
+		DocInf doc = ((DoctreeResp) tier.handle(importReq("doc-a")).body(0)).doc;
+		tier.importer().await();
+		String d = doc.docId;
+		String n1 = d + ".1", n2 = d + ".2", n3 = d + ".3", n5 = d + ".5", n6 = d + ".6", n7 = d + ".7", n9 = d + ".9";
+		assertEquals(false, db.doc(d).dirty);
+
+		// up: the server works out where it goes; the reloaded subtree is the parent's
+		DoctreeResp r = modify(d, TreeModify.up(n3));
+		assertEquals(null, r.rejected());
+		assertEquals(n1, r.root());
+		assertEquals(1, r.forest().size());
+		assertEquals(n1, ((AnTreeNode) r.forest().get(0)).id());
+		assertEquals(String.join(" ", n3, n2, d + ".4"), kids(n1));
+		assertEquals(true, r.doc.dirty);
+
+		// indent: under the previous sibling, now the section .3
+		modify(d, TreeModify.indent(n2));
+		assertEquals(n2, kids(n3));
+
+		// a paragraph can't have children; the doc root is fixed
+		assertEquals(TreeModify.Rejected.holder, modify(d, TreeModify.indent(n7)).rejected());
+		assertEquals(TreeModify.Rejected.fixed, modify(d, TreeModify.outdent(n1)).rejected());
+		assertEquals(TreeModify.Rejected.fixed, modify(d, TreeModify.remove(d)).rejected());
+
+		// insert: the id is the doc's next node number, the docId is the server's
+		r = modify(d, TreeModify.insert(n7, TreeModify.At.after, "kind", "p", "docId", "not-this"));
+		assertEquals(d + ".b", r.newId());
+		assertEquals(n5, r.root());
+		assertEquals(String.join(" ", n6, n7, d + ".b", d + ".8"), kids(n5));
+		assertEquals(12, db.doc(d).nextNid);
+		assertEquals(1, Connects.select(conn, String.format(
+				"select nid from s_docnodes where nid = '%s.b' and docId = '%s'", d, d)).total());
+
+		// remove, with the subtree
+		modify(d, TreeModify.remove(n9));
+		assertEquals(n1, kids(d));
+		assertEquals(0, Connects.select(conn, String.format(
+				"select nid from s_docnodes where nid in ('%1$s.9', '%1$s.a')", d)).total());
+
+		// u/node: tipjson, rstext
+		DoctreeReq u = new DoctreeReq("/sdoc").docId(d).node(new DocNode(d, n6, DocNode.Kind.p)
+				.tipjson("{\"contype\":\"doc\"}").rstext("{\"body\":\"x\"}", 1));
+		u.a(DoctreeReq.A.update);
+		AnsonMsg<? extends AnsonResp> m = tier.handle(u);
+		assertEquals(MsgCode.ok, m.code(), m.body(0).msg());
+		AnResultset rs = Connects.select(conn, String.format(
+				"select tipjson, rstext, rstver from s_docnodes where nid = '%s'", n6));
+		rs.next();
+		assertEquals("{\"contype\":\"doc\"}", rs.getString("tipjson"));
+		assertEquals("{\"body\":\"x\"}", rs.getString("rstext"));
+		assertEquals(1, rs.getInt("rstver"));
+
+		// c/commit
+		DoctreeReq c = new DoctreeReq("/sdoc").docId(d);
+		c.a(DoctreeReq.A.commit);
+		DocInf committed = ((DoctreeResp) tier.handle(c).body(0)).doc;
+		assertEquals(false, committed.dirty);
+		assertTrue(committed.committedAt != null);
+	}
+
+	static DoctreeResp modify(String docId, TreeModify mod) {
+		DoctreeReq req = new DoctreeReq("/sdoc").docId(docId).modify(mod);
+		req.a(DoctreeReq.A.modify);
+		AnsonMsg<? extends AnsonResp> msg = tier.handle(req);
+		assertEquals(MsgCode.ok, msg.code(), msg.body(0).msg());
+		return (DoctreeResp) msg.body(0);
+	}
+
+	/** children of parent, in sibling order */
+	static String kids(String parent) throws Exception {
+		AnResultset rs = Connects.select(conn, String.format(
+				"select nid from s_docnodes where parentId = '%s' order by sort", parent));
+		return String.join(" ", rs.toArr("nid"));
 	}
 
 	/**

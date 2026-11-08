@@ -25,7 +25,7 @@ public class DocNode extends Anson {
 		/** media node, content is in {@link DocNode#resId} */
 		public static final String image = "image";
 		/** live, read-only reference to another doc's subtree, root is {@link DocNode#refId} */
-		public static final String ref = "ref";
+		public static final String docref = "docref";
 		/** docx table, only its text (cells joined) for now */
 		public static final String tabl = "tabl";
 	}
@@ -41,16 +41,16 @@ public class DocNode extends Anson {
 	/** see {@link Kind} */
 	public String kind;
 
-	/** Tiptap JSON (source), serialized; null for image / ref */
+	/** Tiptap JSON (source), serialized; null for image / docref */
 	public String tipjson;
 	/** RST derived from {@link #tipjson} */
-	public String rst;
-	/** version of the json -&gt; rst serializer that produced {@link #rst}; 0 = not yet */
+	public String rstext;
+	/** version of the tipjson -&gt; rstext serializer that produced {@link #rstext}; 0 = not yet */
 	public int rstver;
 
 	/** resource id (image / video on server), for {@link Kind#image} */
 	public String resId;
-	/** referenced node id (subtree root, may be in another doc), for {@link Kind#ref} */
+	/** referenced node id (subtree root, may be in another doc), for {@link Kind#docref} */
 	public String refId;
 
 	/** docx origin, e.g. "body/2", from the importer; null if created in editor */
@@ -84,13 +84,13 @@ public class DocNode extends Anson {
 		return this;
 	}
 
-	public DocNode json(String tiptap) {
+	public DocNode tipjson(String tiptap) {
 		this.tipjson = tiptap;
 		return this;
 	}
 
-	public DocNode rst(String rst, int ver) {
-		this.rst = rst;
+	public DocNode rstext(String rst, int ver) {
+		this.rstext = rst;
 		this.rstver = ver;
 		return this;
 	}

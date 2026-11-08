@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
 
 import io.odysz.anson.Anson;
+import io.odysz.semantic.ext.TreeModify;
 
 /**
  * Round-trips the types through Anson, using nodes from src/dist/jsons/doc-a.json.
@@ -19,17 +20,17 @@ class DoctreeTypesTest {
 	void respRoundTrip() throws Exception {
 		DocInf doc = new DocInf("doc-a", "Annual Report 2026", "ody");
 		doc.dirty = true;
-		DoctreeResp resp = new DoctreeResp().doc(doc).newId("a1.2");
-		resp.root("a1").rejected("no-op");
+		DoctreeResp resp = new DoctreeResp().doc(doc);
+		resp.root("a1").rejected(TreeModify.Rejected.noop).newId("a1.2");
 
 		DoctreeResp back = (DoctreeResp) Anson.fromJson(resp.toBlock());
 
 		assertEquals("Annual Report 2026", back.doc.title);
 		assertTrue(back.doc.dirty);
 		assertNull(back.doc.committedAt);
-		assertEquals("a1.2", back.newId);
+		assertEquals("a1.2", back.newId());
 		assertEquals("a1", back.root());
-		assertEquals("no-op", back.rejected());
+		assertEquals(TreeModify.Rejected.noop, back.rejected());
 	}
 
 	@Test
@@ -45,37 +46,36 @@ class DoctreeTypesTest {
 	}
 
 	@Test
-	void reqRoundTrip() throws Exception {
-		DoctreeReq req = new DoctreeReq("/sdoc").docId("doc-a").move("a2.3", "a1", 2);
-		req.a(DoctreeReq.A.move);
+	void modifyRoundTrip() throws Exception {
+		DoctreeReq req = new DoctreeReq("/sdoc").docId("doc-a").modify(TreeModify.indent("a2.3"));
+		req.a(DoctreeReq.A.modify);
 
 		DoctreeReq back = (DoctreeReq) Anson.fromJson(req.toBlock());
 
-		assertEquals(DoctreeReq.A.move, back.a());
-		assertEquals("u/move", back.a());
-		assertEquals("a2.3", back.root());
-		assertEquals("a1", back.toParent);
-		assertEquals(2, back.toIndex);
+		assertEquals("u/tree", back.a());
+		assertEquals("doc-a", back.docId);
+		assertEquals(TreeModify.Op.indent, back.mod.op);
+		assertEquals("a2.3", back.mod.nid);
 	}
 
 	@Test
 	void insertRoundTrip() throws Exception {
-		DoctreeReq req = new DoctreeReq("/sdoc").docId("doc-a").insert("a1", 0, "kind", "p", "docId", "doc-a");
-		req.a(DoctreeReq.A.insert);
+		DoctreeReq req = new DoctreeReq("/sdoc").docId("doc-a")
+				.modify(TreeModify.insert("a1", TreeModify.At.first, "kind", "p"));
+		req.a(DoctreeReq.A.modify);
 
 		DoctreeReq back = (DoctreeReq) Anson.fromJson(req.toBlock());
 
-		assertEquals("i", back.a());
-		assertEquals("a1", back.toParent);
-		assertEquals(2, back.nvs.size());
-		assertEquals("kind", back.nvs.get(0)[0]);
-		assertEquals("p", back.nvs.get(0)[1]);
+		assertEquals(TreeModify.Op.insert, back.mod.op);
+		assertEquals(TreeModify.At.first, back.mod.at);
+		assertEquals("kind", back.mod.nvs.get(0)[0]);
+		assertEquals("p", back.mod.nvs.get(0)[1]);
 	}
 
 	@Test
 	void updateRoundTrip() throws Exception {
 		DoctreeReq req = new DoctreeReq("/sdoc").node(new DocNode("doc-a", "a1.1", DocNode.Kind.p)
-				.json("{\"contype\":\"doc\"}").rst("{\"body\":\"x\"}", 1));
+				.tipjson("{\"contype\":\"doc\"}").rstext("{\"body\":\"x\"}", 1));
 		req.a(DoctreeReq.A.update);
 
 		DoctreeReq back = (DoctreeReq) Anson.fromJson(req.toBlock());
@@ -84,6 +84,7 @@ class DoctreeTypesTest {
 		assertEquals("doc-a", back.docId);
 		assertEquals("a1.1", back.node.nid);
 		assertEquals(req.node.tipjson, back.node.tipjson);
+		assertEquals(req.node.rstext, back.node.rstext);
 		assertEquals(1, back.node.rstver);
 	}
 }

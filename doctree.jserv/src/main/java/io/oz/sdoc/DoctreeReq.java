@@ -1,18 +1,15 @@
 package io.oz.sdoc;
 
-import java.util.ArrayList;
-
 import io.odysz.semantic.jprotocol.AnsonBody;
 import io.odysz.semantic.jprotocol.AnsonMsg;
 import io.odysz.semantic.ext.AnDatasetReq;
+import io.odysz.semantic.ext.TreeModify;
 
 /**
  * Request body of the doc-tree tier, matching semantic-doc's TS DoctreeReq (doctree-tier.ts).
  *
- * <p>Structural changes use AnDatasetReq's fields, as SemanticTree.onModifyTree() takes them:
- * {@link #rootId} (the node moved / deleted), {@link #toParent}, {@link #toIndex}
- * (position among toParent's children, counted after the node is detached),
- * {@link #nvs} (insert: other columns).</p>
+ * <p>Tree changes are AnDatasetReq's {@link #mod}, a {@link TreeModify} as the user means it,
+ * e.g. indent a node: the server works out where nodes go.</p>
  *
  * @author ody
  */
@@ -24,20 +21,15 @@ public class DoctreeReq extends AnDatasetReq {
 		public static final String docs = "r/docs";
 		/** load a doc: the doc root with its subtree → {@link DoctreeResp#doc}, forest */
 		public static final String tree = "r/tree";
-
-		/** save a node's content, {@link DoctreeReq#node}: json + rst → {@link DoctreeResp#doc} */
+		/** save a node's content, {@link DoctreeReq#node}: tipjson + rstext → {@link DoctreeResp#doc} */
 		public static final String update = "u/node";
-		/** move {@link #rootId} under {@link #toParent} at {@link #toIndex} → root, forest, rejected */
-		public static final String move = AnDatasetReq.A.umove;
-		/** insert a node under {@link #toParent} at {@link #toIndex}, columns {@link #nvs} → newId, root, forest */
-		public static final String insert = AnDatasetReq.A.insrt;
-		/** delete {@link #rootId} with its subtree → root, forest */
-		public static final String del = AnDatasetReq.A.del;
-
+		/**
+		 * modify the doc's tree as {@link #mod} says (up, down, indent, outdent, insert, remove),
+		 * the server works out where nodes go → doc, root, forest (the reloaded subtree), rejected, newId
+		 */
+		public static final String modify = "u/tree";
 		/** mark the doc's work as finished → {@link DoctreeResp#doc} */
 		public static final String commit = "c/commit";
-		/** create a doc header (and its root node) → {@link DoctreeResp#doc} */
-		public static final String createDoc = "c/doc";
 		/**
 		 * import a docx, {@link DoctreeReq#srcId}: answers the header (state parsing) at once,
 		 * nodes are parsed in the background
@@ -79,30 +71,9 @@ public class DoctreeReq extends AnDatasetReq {
 		return this;
 	}
 
-	/** for {@link A#move} */
-	public DoctreeReq move(String nid, String toParent, int toIndex) {
-		this.rootId = nid;
-		this.toParent = toParent;
-		this.toIndex = toIndex;
-		return this;
-	}
-
-	/**
-	 * For {@link A#insert}.
-	 * @param nvs other columns: name, value, name, value, ...
-	 */
-	public DoctreeReq insert(String toParent, int toIndex, String... nvs) {
-		this.toParent = toParent;
-		this.toIndex = toIndex;
-		this.nvs = new ArrayList<String[]>();
-		for (int i = 0; i + 1 < nvs.length; i += 2)
-			this.nvs.add(new String[] { nvs[i], nvs[i + 1] });
-		return this;
-	}
-
-	/** for {@link A#del} */
-	public DoctreeReq del(String nid) {
-		this.rootId = nid;
+	/** for {@link A#modify} */
+	public DoctreeReq modify(TreeModify m) {
+		this.mod = m;
 		return this;
 	}
 }

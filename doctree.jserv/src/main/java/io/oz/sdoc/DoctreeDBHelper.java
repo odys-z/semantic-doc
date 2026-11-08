@@ -5,14 +5,18 @@ import static io.odysz.semantic.meta.SemanticTableMeta.setupSqliTables;
 import java.io.File;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 
 import org.apache.commons.io.FilenameUtils;
 
+import io.odysz.common.DateFormat;
 import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.jserv.JRobot;
 import io.odysz.semantics.IUser;
+import io.odysz.semantics.SemanticObject;
+import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.x.TransException;
 
 /**
@@ -147,6 +151,8 @@ public class DoctreeDBHelper {
 		d.htmlUri = rs.getString(docm.htmlUri);
 		d.builtAt = rs.getString(docm.builtAt);
 		d.builtBy = rs.getString(docm.builtBy);
+		d.dirty   = rs.getInt(docm.dirty, 0) != 0;
+		d.committedAt = rs.getString(docm.committedAt);
 		return d;
 	}
 
@@ -162,5 +168,49 @@ public class DoctreeDBHelper {
 				.orderby(nodem.fullpath)
 				.rs(st.instancontxt(conn, robot))
 				.rs(0);
+	}
+
+	/**
+	 * Save a node's content: tipjson, rstext, rstver; the doc gets dirty.
+	 *
+	 * @param n node, with nid and docId
+	 * @return the doc's header
+	 * @throws SemanticException the node isn't in the doc
+	 */
+	public DocInf update(DocNode n, IUser usr) throws TransException, SQLException {
+		SemanticObject res = (SemanticObject) st.update(nodem.tbl, usr)
+				.nv(nodem.tipjson, n.tipjson)
+				.nv(nodem.rstext, n.rstext)
+				.nv(nodem.rstver, n.rstver)
+				.whereEq(nodem.pk, n.nid)
+				.whereEq(nodem.docId, n.docId)
+				.post(st.update(docm.tbl, usr)
+					.nv(docm.dirty, 1)
+					.whereEq(docm.pk, n.docId))
+				.u(st.instancontxt(conn, usr));
+		if (res == null || res.total() == 0)
+			throw new SemanticException("Can't find node %s in doc %s.", n.nid, n.docId);
+		return doc(n.docId);
+	}
+
+	/** The doc gets dirty, e.g. after a tree modification. */
+	public void dirty(String docId, IUser usr) throws TransException, SQLException {
+		st.update(docm.tbl, usr)
+			.nv(docm.dirty, 1)
+			.whereEq(docm.pk, docId)
+			.u(st.instancontxt(conn, usr));
+	}
+
+	/**
+	 * The doc's work is finished: not dirty, committedAt = now.
+	 * @return the doc's header
+	 */
+	public DocInf commit(String docId, IUser usr) throws TransException, SQLException {
+		st.update(docm.tbl, usr)
+			.nv(docm.dirty, 0)
+			.nv(docm.committedAt, DateFormat.formatime(new Date()))
+			.whereEq(docm.pk, docId)
+			.u(st.instancontxt(conn, usr));
+		return doc(docId);
 	}
 }

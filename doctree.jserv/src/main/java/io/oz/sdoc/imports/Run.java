@@ -5,7 +5,7 @@ package io.oz.sdoc.imports;
  * editor's schema. The client maps them to Tiptap marks (semantic-doc's doctree/facts.ts),
  * so a palette change needs no re-import.
  *
- * <p>Stored per node as {@link #json(java.util.List)}:</p>
+ * <p>Stored per node as {@link #factsOf(java.util.List)}:</p>
  * <pre>{"v":1,"runs":[{"t":"Revenue grew "},{"t":"12%","b":1,"color":"1E8449"}]}</pre>
  *
  * @author ody
@@ -38,16 +38,16 @@ public class Run {
 	 * @param runs
 	 * @return facts json of a block: {"v":1,"runs":[...]}
 	 */
-	public static String json(java.util.List<Run> runs) {
+	public static String factsOf(java.util.List<Run> runs) {
 		StringBuilder sb = new StringBuilder("{\"v\":").append(version).append(",\"runs\":[");
 		for (int x = 0; x < runs.size(); x++) {
 			if (x > 0) sb.append(',');
-			runs.get(x).json(sb);
+			runs.get(x).write(sb);
 		}
 		return sb.append("]}").toString();
 	}
 
-	void json(StringBuilder sb) {
+	void write(StringBuilder sb) {
 		sb.append("{\"t\":").append(str(t));
 		if (b) sb.append(",\"b\":1");
 		if (i) sb.append(",\"i\":1");
