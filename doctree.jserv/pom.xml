@@ -4,7 +4,7 @@
 
   <groupId>io.github.odys-z</groupId>
   <artifactId>doctree.jserv</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0</version>
   <name>semantic-doc doc-tree tier</name>
   <description>The doc-tree tier core of semantic-doc, depended on by synodes (docsync) and the demo jserv</description>
   <url>https://github.com/odys-z/semantic-doc</url>
