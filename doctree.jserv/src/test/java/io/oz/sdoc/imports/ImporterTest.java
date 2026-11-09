@@ -175,7 +175,10 @@ class ImporterTest {
 		assertEquals(0, Connects.select(conn, String.format(
 				"select nid from s_docnodes where nid in ('%1$s.9', '%1$s.a')", d)).total());
 
-		// u/node: tipjson, rstext
+		// u/node: tipjson, rstext; the fullpath is not touched (fullpath2, semantic.DA ShFullpath2)
+		AnResultset fp0 = Connects.select(conn, String.format(
+				"select fullpath from s_docnodes where nid = '%s'", n6));
+		fp0.next();
 		DoctreeReq u = new DoctreeReq("/sdoc").docId(d).node(new DocNode(d, n6, DocNode.Kind.p)
 				.tipjson("{\"contype\":\"doc\"}").rstext("{\"body\":\"x\"}", 1));
 		u.a(DoctreeReq.A.update);
@@ -187,6 +190,11 @@ class ImporterTest {
 		assertEquals("{\"contype\":\"doc\"}", rs.getString("tipjson"));
 		assertEquals("{\"body\":\"x\"}", rs.getString("rstext"));
 		assertEquals(1, rs.getInt("rstver"));
+		rs = Connects.select(conn, String.format(
+				"select fullpath from s_docnodes where nid = '%s'", n6));
+		rs.next();
+		assertTrue(fp0.getString("fullpath").startsWith(d + "."), fp0.getString("fullpath"));
+		assertEquals(fp0.getString("fullpath"), rs.getString("fullpath"));
 
 		// c/commit
 		DoctreeReq c = new DoctreeReq("/sdoc").docId(d);
