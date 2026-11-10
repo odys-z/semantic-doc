@@ -1,6 +1,7 @@
 package io.oz.sdoc.docx;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -36,5 +37,26 @@ class DocxWalkerTest {
 				String.valueOf(b.outline), String.valueOf(b.numLabel), b.text)).toArray(String[]::new));
 
 		assertTrue(blocks.get(8).hasSpans);
+	}
+
+	/**
+	 * media.docx: tricky.docx + a paragraph of a picture only, and a paragraph of an embedded Excel
+	 * object only. The picture is an image block after its (empty) paragraph; the object is a text.
+	 */
+	@Test
+	void media() throws Exception {
+		List<Block> blocks = DocxWalker.blocks("src/test/res/media.docx");
+		assertEquals(14, blocks.size());
+
+		// "src kind text res"
+		assertArrayEquals(new String[] {
+			"body/11 p  null",
+			"body/11/pic/0 image image1.png word/media/image1.png",
+			"body/12 p [excel object is ignored in semantic-doc 0.1.1] null",
+		}, blocks.subList(11, 14).stream().map(b -> String.join(" ", b.src, b.kind, b.text, String.valueOf(b.res)))
+			.toArray(String[]::new));
+
+		// the text is a run, too
+		assertEquals(DocxWalker.excelIgnored, blocks.get(13).runs.get(0).t);
 	}
 }

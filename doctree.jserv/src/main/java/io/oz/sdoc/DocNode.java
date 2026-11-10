@@ -48,7 +48,10 @@ public class DocNode extends Anson {
 	/** version of the tipjson -&gt; rstext serializer that produced {@link #rstext}; 0 = not yet */
 	public int rstver;
 
-	/** resource id (image / video on server), for {@link Kind#image} */
+	/**
+	 * resource id, for {@link Kind#image}: of an imported picture, the file's name in the doc's
+	 * resource folder ({@link DocRes}), e.g. "image1.png"
+	 */
 	public String resId;
 	/** referenced node id (subtree root, may be in another doc), for {@link Kind#docref} */
 	public String refId;

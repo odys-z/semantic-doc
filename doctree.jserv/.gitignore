@@ -5,3 +5,6 @@ RemoteSystemsTempFiles
 .classpath
 /bin/
 /src/test/res/doctree.db
+/src/test/res/*/doctree.temp/
+/src/test/res/r206/*
+!/src/test/res/r206/.keep

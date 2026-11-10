@@ -89,7 +89,7 @@ public class S_DocNodeMeta extends SemanticTableMeta implements ITreeMeta {
 			+ "  " + facts    + " text,                 -- run facts, the client builds tipjson from them\n"
 			+ "  " + src      + " varchar(64),          -- docx origin, e.g. body/2\n"
 			+ "  " + docxstyle+ " varchar(64),\n"
-			+ "  " + resId    + " varchar(64),\n"
+			+ "  " + resId    + " text,                 -- image: file name in the doc's resource folder\n"
 			+ "  " + refId    + " varchar(64),\n"
 			+ "  PRIMARY KEY (" + pk + ")\n"
 			+ ");";

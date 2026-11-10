@@ -84,6 +84,17 @@ class OutlinerTest {
 				c.inserts.toArray(new String[0]));
 		assertEquals("b.docx", c.nodes.get(0).ptext);
 
+		// a picture: an image node; without a resource folder the resId is the docx part
+		ArrayList<Block> pic = new ArrayList<Block>(Tricky.blocks().subList(1, 3));
+		pic.add(new Block(Block.image, "body/2/pic/0").res("word/media/image1.png").text("image1.png"));
+		c = new Collecting();
+		c.outline("X.00000D", pic, null, "d.docx");
+		DocNode img = c.nodes.get(3);
+		assertEquals(DocNode.Kind.image, img.kind);
+		assertEquals("X.00000D.1", img.parentId);
+		assertEquals("word/media/image1.png", img.resId);
+		assertEquals("image1.png", img.ptext);
+
 		// the caller's title is the first choice
 		assertEquals("Given", new Collecting().outline("X.00000C", Tricky.blocks(), "Given", "c.docx").title);
 	}

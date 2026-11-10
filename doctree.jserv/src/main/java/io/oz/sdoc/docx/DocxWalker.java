@@ -8,14 +8,21 @@ import java.util.List;
 import java.util.Map;
 
 import org.docx4j.XmlUtils;
+import org.docx4j.dml.CTBlip;
+import org.docx4j.dml.Graphic;
+import org.docx4j.dml.wordprocessingDrawing.Anchor;
+import org.docx4j.dml.wordprocessingDrawing.Inline;
 import org.docx4j.model.PropertyResolver;
 import org.docx4j.model.listnumbering.Emulator;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
+import org.docx4j.openpackaging.parts.Part;
 import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
 import org.docx4j.openpackaging.parts.relationships.RelationshipsPart;
 import org.docx4j.relationships.Relationship;
 import org.docx4j.wml.BooleanDefaultTrue;
+import org.docx4j.wml.CTObject;
 import org.docx4j.wml.ContentAccessor;
+import org.docx4j.wml.Drawing;
 import org.docx4j.wml.P;
 import org.docx4j.wml.PPr;
 import org.docx4j.wml.PPrBase;
@@ -41,6 +48,11 @@ import io.oz.sdoc.imports.Run;
  * per block, the source path, style, effective outline level and numbering label;
  * per paragraph, its runs: text with direct formatting ({@link Run}).
  *
+ * <p>Pictures (w:drawing, inline or anchored, embedded in the docx) of a paragraph are
+ * {@link Block#image} blocks following the paragraph's block. An embedded Excel object is
+ * the text {@link #excelIgnored} in its paragraph. Pictures in table cells, VML pictures (w:pict)
+ * and linked (external) pictures are not collected.</p>
+ *
  * <p>Usage: {@code tier.importer(source, DocxWalker::blocks)}.</p>
  *
  * <p>A walker is stateful (numbering counters), so {@link #blocks(String)} uses a new one per file.</p>
@@ -56,6 +68,9 @@ public class DocxWalker {
 	 * @return blocks in document order
 	 * @throws Exception
 	 */
+	/** the text an embedded Excel object (w:object, ProgID Excel.*) is imported as */
+	public static final String excelIgnored = "[excel object is ignored in semantic-doc 0.1.1]";
+
 	public static List<Block> blocks(String docxPath) throws Exception {
 		WordprocessingMLPackage pkg = WordprocessingMLPackage.load(new File(docxPath));
 		DocxWalker w = new DocxWalker(pkg);
@@ -81,8 +96,10 @@ public class DocxWalker {
 		for (int i = 0; i < content.size(); i++) {
 			Object o = XmlUtils.unwrap(content.get(i)); // strips JAXBElement wrappers
 			String here = src + "/" + i;
-			if (o instanceof P p)
+			if (o instanceof P p) {
 				blocks.add(paragraph(p, here));
+				pictures(p, here);
+			}
 			else if (o instanceof Tbl tbl)
 				blocks.add(table(tbl, here));
 			else if (o instanceof SdtBlock sdt) // content control: recurse
@@ -127,6 +144,52 @@ public class DocxWalker {
 			} catch (Exception e) { b.num("?"); }
 		}
 		return b;
+	}
+
+	/**
+	 * Add an {@link Block#image} block for each embedded picture (w:drawing) of the paragraph,
+	 * src: the paragraph's + "/pic/" + index, text: the picture's file name.
+	 */
+	void pictures(P p, String src) {
+		List<String> parts = new ArrayList<>();
+		embeds(p, parts);
+		for (int i = 0; i < parts.size(); i++) {
+			String part = parts.get(i);
+			blocks.add(new Block(Block.image, src + "/pic/" + i)
+					.res(part)
+					.text(part.substring(part.lastIndexOf('/') + 1)));
+		}
+	}
+
+	/** Collect the parts of the pictures under a node, in order: runs, hyperlinks, inline sdt. */
+	void embeds(Object o, List<String> parts) {
+		o = XmlUtils.unwrap(o);
+		if (o instanceof Drawing d) {
+			for (Object g : d.getAnchorOrInline()) {
+				Graphic graphic = g instanceof Inline in ? in.getGraphic()
+								: g instanceof Anchor an ? an.getGraphic() : null;
+				String part = part(graphic);
+				if (part != null) parts.add(part);
+			}
+		}
+		else if (o instanceof SdtElement se && se.getSdtContent() != null)
+			for (Object c : se.getSdtContent().getContent()) embeds(c, parts);
+		else if (o instanceof ContentAccessor ca)
+			for (Object c : ca.getContent()) embeds(c, parts);
+	}
+
+	/** the part (zip entry) of a picture embedded in the docx, e.g. "word/media/image1.png"; else null */
+	String part(Graphic graphic) {
+		try {
+			CTBlip blip = graphic.getGraphicData().getPic().getBlipFill().getBlip();
+			RelationshipsPart rels = pkg.getMainDocumentPart().getRelationshipsPart();
+			Relationship rel = rels.getRelationshipByID(blip.getEmbed());
+			Part part = rels.getPart(rel);
+			String name = part.getPartName().getName();
+			return name.startsWith("/") ? name.substring(1) : name;
+		} catch (Exception e) {
+			return null; // a chart, a shape, a linked picture ...
+		}
 	}
 
 	/**
@@ -228,17 +291,32 @@ public class DocxWalker {
 		return b;
 	}
 
-	/** Concatenate w:t text under any node: runs, hyperlinks, inline sdt, cells. */
+	/**
+	 * Concatenate w:t text under any node: runs, hyperlinks, inline sdt, cells;
+	 * an embedded Excel object is {@link #excelIgnored}.
+	 */
 	static String text(Object node) {
 		StringBuilder sb = new StringBuilder();
 		collect(node, sb);
 		return sb.toString().trim();
 	}
 
+	/** w:object with an o:OLEObject of ProgID Excel.*, e.g. "Excel.Sheet.12" */
+	static boolean isExcel(CTObject obj) {
+		for (Object any : obj.getAnyAndAny())
+			if (XmlUtils.unwrap(any) instanceof org.docx4j.vml.officedrawing.CTOLEObject ole
+					&& ole.getProgID() != null && ole.getProgID().startsWith("Excel."))
+				return true;
+		return false;
+	}
+
 	static void collect(Object o, StringBuilder sb) {
 		o = XmlUtils.unwrap(o);
 		if (o instanceof Text t) sb.append(t.getValue());
 		else if (o instanceof R.Tab) sb.append('\t');
+		else if (o instanceof CTObject obj) {
+			if (isExcel(obj)) sb.append(excelIgnored);
+		}
 		else if (o instanceof SdtElement se && se.getSdtContent() != null)
 			for (Object c : se.getSdtContent().getContent()) collect(c, sb);
 		else if (o instanceof ContentAccessor ca) {

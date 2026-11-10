@@ -2,6 +2,7 @@ package io.oz.sdoc.imports;
 
 import static io.odysz.common.LangExt.isblank;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ import io.odysz.semantic.DATranscxt;
 import io.odysz.semantics.IUser;
 import io.odysz.transact.x.TransException;
 import io.oz.sdoc.DocNode;
+import io.oz.sdoc.DocRes;
 import io.oz.sdoc.DoctreeDBHelper;
 import io.oz.sdoc.S_DocNodeMeta;
 
@@ -21,7 +23,8 @@ import io.oz.sdoc.S_DocNodeMeta;
  * <pre>
  * doc root (nid = fullpath = docId, text = title)
  *   a heading     → section, nested by outline level (a heading pops the stack until the top is shallower)
- *   anything else → p / table, under the current section
+ *   anything else → p / table / image, under the current section
+ *   a picture     → image, its file saved into the doc's resource folder, of its creator; resId: the file's name
  *
  * sections popped → the rows not inserted yet, in depth first order (the document's order),
  *                   are inserted at once, as one multi-row insert
@@ -71,6 +74,28 @@ public class Outliner {
 	final IUser usr;
 	final DATranscxt st;
 
+	/** where the pictures are saved; null: not saved, an image's resId is its part in the docx */
+	DocRes res;
+	/** the doc's creator, the owner of the resource folder */
+	String uid;
+	/** path of the docx being imported */
+	String docx;
+
+	/**
+	 * Save the pictures of the docx as the doc's resources.
+	 *
+	 * @param res null: not saved
+	 * @param uid the doc's creator
+	 * @param docx path of the docx the blocks are parsed from
+	 * @return this
+	 */
+	public Outliner resources(DocRes res, String uid, String docx) {
+		this.res = res;
+		this.uid = uid;
+		this.docx = docx;
+		return this;
+	}
+
 	/**
 	 * @param conn the doc-tree db, with the fullpath semantics of the nodes table
 	 * @param nodem
@@ -102,7 +127,7 @@ public class Outliner {
 	 * @return title and next node number; the nodes are in the db
 	 */
 	public Outline outline(String docId, List<Block> blocks, String title, String deftitle)
-			throws TransException, SQLException {
+			throws TransException, SQLException, IOException {
 		Outline o = new Outline();
 
 		// the first Title-styled block; found first: the doc root is in the first insert
@@ -135,7 +160,8 @@ public class Outliner {
 				continue;
 
 			String kind = b.isHeading() ? DocNode.Kind.section
-						: Block.table.equals(b.kind) ? DocNode.Kind.tabl : DocNode.Kind.p;
+						: Block.table.equals(b.kind) ? DocNode.Kind.tabl
+						: Block.image.equals(b.kind) ? DocNode.Kind.image : DocNode.Kind.p;
 
 			// an upper (or the same) level: the sections down to it are finished, insert them
 			if (b.isHeading())
@@ -155,6 +181,8 @@ public class Outliner {
 				node.facts = Run.factsOf(runs);
 			}
 			node.docxstyle = b.styleName;
+			if (Block.image.equals(b.kind))
+				node.resId = res == null ? b.res : res.saveDocxPart(uid, docId, docx, b.res);
 			rows.add(node);
 
 			if (b.isHeading())
@@ -212,6 +240,7 @@ public class Outliner {
 			row.add(new Object[] { nodem.facts, n.facts });
 			row.add(new Object[] { nodem.src, n.src });
 			row.add(new Object[] { nodem.docxstyle, n.docxstyle });
+			row.add(new Object[] { nodem.resId, n.resId });
 			if (n.fullpath != null)
 				row.add(new Object[] { nodem.fullpath, n.fullpath });
 			vals.add(row);
@@ -219,7 +248,7 @@ public class Outliner {
 
 		st.insert(nodem.tbl, usr)
 			.cols(new String[] { nodem.pk, nodem.docId, nodem.parentId, nodem.sort, nodem.kind,
-				nodem.ptext, nodem.facts, nodem.src, nodem.docxstyle, nodem.fullpath })
+				nodem.ptext, nodem.facts, nodem.src, nodem.docxstyle, nodem.resId, nodem.fullpath })
 			.values(vals)
 			.ins(st.instancontxt(conn, usr));
 	}

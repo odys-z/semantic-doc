@@ -27,6 +27,7 @@ import io.odysz.semantic.jprotocol.AnsonMsg.Port;
 import io.odysz.semantic.jprotocol.AnsonResp;
 import io.odysz.semantic.ext.TreeModify;
 import io.odysz.semantic.jserv.JRobot;
+import io.odysz.semantics.IUser;
 import io.oz.sdoc.DocInf;
 import io.oz.sdoc.DocNode;
 import io.oz.sdoc.S_DocNodeMeta;
@@ -34,6 +35,7 @@ import io.oz.sdoc.DoctreeDBHelper;
 import io.oz.sdoc.DoctreeReq;
 import io.oz.sdoc.DoctreeResp;
 import io.oz.sdoc.DoctreeTier;
+import io.oz.sdoc.docx.DocxWalker;
 
 /**
  * c/import through the tier, on a fresh src/test/res/doctree.db, with the tricky blocks as the parser.
@@ -273,6 +275,59 @@ class ImporterTest {
 
 		assertEquals(DocInf.State.failed, db.doc(doc.docId).state);
 		assertEquals(0, db.nodes(doc.docId).total());
+	}
+
+	/**
+	 * media.docx, by the docx walker: the picture is an image node, its file in the doc's resource
+	 * folder (src/test/res/[uid]/doctree.temp/[docId]); the Excel object is a paragraph of text.
+	 */
+	@Test
+	void importMedia() throws Exception {
+		DoctreeTier t = new DoctreeTier(Port.echo)
+				.conn(conn, "H")
+				.importer((srcId) -> "src/test/res/media.docx", DocxWalker::blocks);
+
+		// the session's user is the doc's creator, the owner of its resource folder
+		IUser ody = new JRobot() {
+			@Override public String uid() { return "ody"; }
+		};
+
+		DocInf doc = ((DoctreeResp) t.handle(importReq("media"), ody).body(0)).doc;
+		t.importer().await();
+		String d = doc.docId;
+		assertEquals(DocInf.State.ready, db.doc(d).state, db.doc(d).msg);
+		assertEquals("ody", db.doc(d).creator);
+
+		S_DocNodeMeta m = db.nodem;
+		AnResultset rs = Connects.select(conn, String.format(
+				"select %s, %s, %s, %s from %s where %s in ('%s.b', '%s.c') order by %s",
+				m.parentId, m.kind, m.ptext, m.resId, m.tbl, m.pk, d, d, m.fullpath));
+		rs.next();
+		assertEquals(d + ".9", rs.getString(m.parentId)); // 第二章
+		assertEquals(DocNode.Kind.image, rs.getString(m.kind));
+		assertEquals("image1.png", rs.getString(m.resId));
+		rs.next();
+		assertEquals(DocNode.Kind.p, rs.getString(m.kind));
+		assertEquals("[excel object is ignored in semantic-doc 0.1.1]", rs.getString(m.ptext));
+
+		File png = db.res.file("ody", d, "image1.png");
+		assertEquals(new File("src/test/res/ody/doctree.temp/" + d + "/image1.png").getAbsolutePath(), png.getAbsolutePath());
+		assertTrue(png.length() > 0);
+
+		// a failed import leaves no resources: the picture is saved, then a part is missing
+		DoctreeTier f = new DoctreeTier(Port.echo)
+				.conn(conn, "H")
+				.importer((srcId) -> "src/test/res/media.docx", (path) -> {
+					List<Block> blocks = DocxWalker.blocks(path);
+					blocks.add(new Block(Block.image, "body/13/pic/0").res("word/media/none.png").text("none.png"));
+					return blocks;
+				});
+		expectTrace("importMedia", "IOException: No part word/media/none.png");
+		doc = ((DoctreeResp) f.handle(importReq("media"), ody).body(0)).doc;
+		f.importer().await();
+		assertEquals(DocInf.State.failed, db.doc(doc.docId).state);
+		assertEquals(0, db.nodes(doc.docId).total());
+		assertEquals(false, db.res.dir("ody", doc.docId).exists());
 	}
 
 	static String[] lines(String docId) throws Exception {

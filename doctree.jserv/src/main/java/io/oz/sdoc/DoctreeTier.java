@@ -21,6 +21,7 @@ import io.odysz.semantic.jprotocol.AnsonResp;
 import io.odysz.semantic.jprotocol.IPort;
 import io.odysz.semantic.jserv.JRobot;
 import io.odysz.semantic.jserv.ServPort;
+import io.odysz.semantic.jserv.x.SsException;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.x.TransException;
@@ -40,7 +41,8 @@ import io.oz.sdoc.imports.Importer;
  * {@link #importer(DocxSource, IBlockParser)}. Tree changes are SemanticTree.onModifyTree()'s,
  * with the doc's rules in {@link S_DocNodeMeta}.</p>
  *
- * TODO: verify sessions; no session check for now.
+ * <p>The session is verified ({@link #onPost(AnsonMsg, HttpServletResponse)}); its user is the
+ * creator of the docs he imports, the owner of their resource folders ({@link DocRes}).</p>
  *
  * @author ody
  */
@@ -62,7 +64,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	DoctreeDBHelper db;
 	Importer importer;
 
-	/** TODO the session's user; no session check for now */
+	/** the user of {@link #handle(DoctreeReq)}, without a session (tests), and of the db's logs */
 	final IUser robot = new JRobot();
 
 	public DoctreeTier(IPort port) {
@@ -124,10 +126,18 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	protected void onPost(AnsonMsg<DoctreeReq> msg, HttpServletResponse resp)
 			throws ServletException, IOException {
 		try {
-			write(resp, handle(msg.body(0)));
+			IUser usr = verifier().verify(msg.header());
+			write(resp, handle(msg.body(0), usr));
+		} catch (SsException e) {
+			write(resp, err(MsgCode.exSession, e.getMessage()));
 		} finally {
 			resp.flushBuffer();
 		}
+	}
+
+	/** Serve a request without a session, as the robot: for tests. */
+	public AnsonMsg<? extends AnsonResp> handle(DoctreeReq req) {
+		return handle(req, robot);
 	}
 
 	/**
@@ -137,9 +147,10 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 * SQLException, TransException → exTransct, anything else → exGeneral.
 	 *
 	 * @param req
+	 * @param usr the session's user
 	 * @return response message
 	 */
-	public AnsonMsg<? extends AnsonResp> handle(DoctreeReq req) {
+	public AnsonMsg<? extends AnsonResp> handle(DoctreeReq req, IUser usr) {
 		try {
 			String a = req == null ? null : req.a();
 			DoctreeResp rsp;
@@ -147,7 +158,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 			if (DoctreeReq.A.docs.equals(a))
 				rsp = docs(req);
 			else if (DoctreeReq.A.importDocx.equals(a))
-				rsp = importDocx(req);
+				rsp = importDocx(req, usr);
 			else if (DoctreeReq.A.tree.equals(a))
 				rsp = tree(req);
 			else if (DoctreeReq.A.update.equals(a))
@@ -177,11 +188,11 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	}
 
 	/** c/import: the doc header (state parsing) at once; the nodes are parsed in the background → doc */
-	DoctreeResp importDocx(DoctreeReq req) throws Exception {
+	DoctreeResp importDocx(DoctreeReq req, IUser usr) throws Exception {
 		if (db() == null || importer == null)
 			throw new SemanticException("Doc-tree tier: importing isn't configured.");
 		String title = req.doc == null ? null : req.doc.title;
-		return new DoctreeResp().doc(importer.start(synode, req.srcId, title, null));
+		return new DoctreeResp().doc(importer.start(synode, req.srcId, title, usr.uid()));
 	}
 
 	/** r/tree: the doc root {@link DoctreeReq#docId} with its subtree → doc, forest */

@@ -35,6 +35,11 @@ public class DoctreeReq extends AnDatasetReq {
 		 * nodes are parsed in the background
 		 */
 		public static final String importDocx = "c/import";
+		/**
+		 * a doc's resource file, {@link DoctreeReq#res}, for editing: a GET of
+		 * {@link Doctree206Serv}, e.g. an img's src, with break points (http 206)
+		 */
+		public static final String res = "r/res";
 	}
 
 	public String docId;
@@ -43,6 +48,9 @@ public class DoctreeReq extends AnDatasetReq {
 
 	/** for {@link A#importDocx}: the docx's record id in the doc table (h_photos) */
 	public String srcId;
+
+	/** for {@link A#res}: the resource's name in the doc's folder, e.g. "image1.png" */
+	public String res;
 
 	/** for {@link A#update}: the node's columns, json + rst */
 	public DocNode node;
@@ -68,6 +76,13 @@ public class DoctreeReq extends AnDatasetReq {
 	public DoctreeReq node(DocNode n) {
 		this.node = n;
 		this.docId = n == null ? docId : n.docId;
+		return this;
+	}
+
+	/** for {@link A#res} */
+	public DoctreeReq res(String docId, String name) {
+		this.docId = docId;
+		this.res = name;
 		return this;
 	}
 

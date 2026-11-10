@@ -6,6 +6,7 @@ import java.io.File;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -32,6 +33,8 @@ import io.odysz.transact.x.TransException;
  * <li>oz_autoseq, the auto keys on sqlite: created by semantic-DA's autopk handler (1.5.27)</li>
  * </ul>
  *
+ * <p>The docs' resources (pictures) are files beside the db file, see {@link DocRes}.</p>
+ *
  * <p>Not a syntity: nothing here is synchronized.</p>
  *
  * <p>{@link #connect(String, String, String)} creates the db file, e.g. for a volume upgraded
@@ -47,9 +50,15 @@ public class DoctreeDBHelper {
 
 	public final S_DocsMeta docm;
 	public final S_DocNodeMeta nodem;
+	/** the docs' resource files, beside the db file; null if not connected by {@link #connect(String, String, String)} */
+	public final DocRes res;
+
+	/** conn id: folder of its db file, by {@link #connect(String, String, String)} */
+	static final HashMap<String, String> volumes = new HashMap<String, String>();
 
 	DoctreeDBHelper(String conn, S_DocsMeta docm, S_DocNodeMeta nodem) throws Exception {
 		this.conn = conn;
+		this.res = volumes.containsKey(conn) ? new DocRes(volumes.get(conn)) : null;
 		this.docm = docm;
 		this.nodem = nodem;
 		this.st = new DATranscxt(conn);
@@ -73,10 +82,11 @@ public class DoctreeDBHelper {
 	 * @throws Exception
 	 */
 	public static String connect(String webinf, String volume, String synode) throws Exception {
-		String dbpath = FilenameUtils.concat(
-				FilenameUtils.concat(new File(webinf).getAbsolutePath(), volume), dbfile);
+		String volpath = FilenameUtils.concat(new File(webinf).getAbsolutePath(), volume);
+		String dbpath = FilenameUtils.concat(volpath, dbfile);
 		String conn = "doctree." + synode;
 		Connects.addSqlite(conn, dbpath, smtcs);
+		volumes.put(conn, volpath);
 		return conn;
 	}
 

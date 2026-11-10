@@ -25,8 +25,9 @@ import io.oz.sdoc.imports.Outliner.Outline;
  *
  * <pre>
  * start():  resolve the docx → insert the header (state parsing) → answer it
- * worker:   parse → outline, inserting the nodes section by section ({@link Outliner}) → header ready
- *           | nodes deleted, header failed + msg (not a transaction)
+ * worker:   parse → outline, inserting the nodes section by section and saving the pictures as
+ *           the doc's resource files ({@link Outliner}) → header ready
+ *           | nodes and resources deleted, header failed + msg (not a transaction)
  * </pre>
  *
  * One worker thread: imports run one by one.
@@ -64,7 +65,7 @@ public class Importer {
 	 * @param synode for the doc id
 	 * @param originRefId the docx's record id
 	 * @param title null: the docx's Title, else its file name
-	 * @param creator
+	 * @param creator the session's user, the owner of the doc's resource folder; blank: the robot
 	 * @return the header, state {@link DocInf.State#parsing}
 	 * @throws Exception the docx can't be found (nothing created)
 	 */
@@ -73,12 +74,14 @@ public class Importer {
 		if (isblank(path) || !Path.of(path).toFile().isFile())
 			throw new IllegalArgumentException(String.format("Docx not found: %s, %s", originRefId, path));
 
+		String uid = isblank(creator) ? robot.uid() : creator;
+
 		DATranscxt st = new DATranscxt(conn);
 		S_DocsMeta docm = db.docm;
 		SemanticObject res = (SemanticObject) st.insert(docm.tbl, robot)
 			.nv(docm.synode, synode) // docId: autopk, prefixed with the synode
 			.nv(docm.title, title)
-			.nv(docm.creator, creator)
+			.nv(docm.creator, uid)
 			.nv(docm.state, DocInf.State.parsing)
 			.nv(docm.refId, originRefId)
 			.nv(docm.nextNid, 1)
@@ -86,7 +89,7 @@ public class Importer {
 		String docId = res.resulve(docm.tbl, docm.pk, -1);
 
 		String filename = Path.of(path).getFileName().toString();
-		last = worker.submit(() -> run(docId, path, title, filename));
+		last = worker.submit(() -> run(docId, path, title, filename, uid));
 
 		return db.doc(docId);
 	}
@@ -96,7 +99,7 @@ public class Importer {
 		if (last != null) last.get();
 	}
 
-	void run(String docId, String path, String title, String filename) {
+	void run(String docId, String path, String title, String filename, String uid) {
 		try {
 			S_DocsMeta docm = db.docm;
 			S_DocNodeMeta nodem = db.nodem;
@@ -105,7 +108,9 @@ public class Importer {
 			List<Block> blocks = parser.parse(path);
 
 			// the nodes are inserted by the outliner, section by section
-			Outline o = new Outliner(conn, nodem, robot).outline(docId, blocks, title, filename);
+			Outline o = new Outliner(conn, nodem, robot)
+					.resources(db.res, uid, path) // the pictures: files of the doc's resource folder
+					.outline(docId, blocks, title, filename);
 
 			st.update(docm.tbl, robot)
 				.nv(docm.title, o.title)
@@ -118,7 +123,9 @@ public class Importer {
 			e.printStackTrace();
 			try {
 				DATranscxt st = new DATranscxt(conn);
-				// not a transaction: drop the sections already inserted
+				// not a transaction: drop the sections already inserted, and the pictures saved
+				if (db.res != null)
+					db.res.delete(uid, docId);
 				st.delete(db.nodem.tbl, robot)
 					.whereEq(db.nodem.docId, docId)
 					.d(st.instancontxt(conn, robot));
