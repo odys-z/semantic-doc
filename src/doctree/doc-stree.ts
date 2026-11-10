@@ -141,6 +141,8 @@ export class DoctreeReq extends AnDatasetReq {
 		commit: 'c/commit',
 		/** import a docx, srcId: answers the header (state parsing) at once */
 		importDocx: 'c/import',
+		/** a doc's resource file, res: a GET of Doctree206Serv (doctree206.serv), e.g. an img's src */
+		res: 'r/res',
 	} as const;
 
 	docId?: string;
@@ -150,8 +152,10 @@ export class DoctreeReq extends AnDatasetReq {
 	srcId?: string;
 	/** for update: the node's columns, tipjson + rstext */
 	node?: DocNode;
+	/** for res: the resource's name in the doc's folder, e.g. "image1.png" */
+	res?: string;
 
-	constructor(uri: string, a: Doctree_A, opts: { docId?: string, doc?: DocInf, srcId?: string, node?: DocNode, mod?: TreeModify } = {}) {
+	constructor(uri: string, a: Doctree_A, opts: { docId?: string, doc?: DocInf, srcId?: string, node?: DocNode, mod?: TreeModify, res?: string } = {}) {
 		super({ uri, type: DoctreeReq.__type__ });
 		this.a = a; // after super: AnDatasetReq's TA() is for its own A
 		Object.assign(this, opts);
@@ -191,6 +195,18 @@ export interface Doctier {
 	modify(docId: string, mod: TreeModify, ok: OnOk, err?: OnErr): void;
 	/** c/commit: mark the doc's work as finished */
 	commit(docId: string, ok: OnOk, err?: OnErr): void;
+	/**
+	 * url of a doc's resource, e.g. an imported picture, for an img's src or a fetch;
+	 * the same url for the same resource. Absent, or undefined: no resources (e.g. a stub tier).
+	 */
+	resSrc?(docId: string, name: string): string | undefined;
+}
+
+/** base64 of a string's UTF-8 bytes (btoa() takes Latin-1 only) */
+function base64(s: string): string {
+	let bin = '';
+	for (const b of new TextEncoder().encode(s)) bin += String.fromCharCode(b);
+	return btoa(bin);
 }
 
 /** The doc-tree tier on a synode, doctree.jserv's DoctreeTier */
@@ -199,8 +215,14 @@ export class StreeDoctier implements Doctier {
 	 * @param client logged-in client
 	 * @param uri function uri, e.g. "/album/sdoc"
 	 * @param port the port's value, e.g. album-web's SynDocollPort.doctree, "doctree.serv"
+	 * @param port206 the port of the docs' resources, doctree.jserv's Doctree206Serv, e.g.
+	 * SynDocollPort.doctree206, "doctree206.serv"; absent: no resources shown
 	 */
-	constructor(readonly client: SessionClient, readonly uri: string, readonly port: string) {}
+	constructor(readonly client: SessionClient, readonly uri: string, readonly port: string,
+		readonly port206?: string) {}
+
+	/** urls of resources, so an img keeps its src across renders */
+	private srcs = new Map<string, string>();
 
 	private send(a: Doctree_A, opts: ConstructorParameters<typeof DoctreeReq>[2], ok: OnOk, err?: OnErr) {
 		const req = this.client.userReq(this.uri, this.port, new DoctreeReq(this.uri, a, opts));
@@ -231,6 +253,25 @@ export class StreeDoctier implements Doctier {
 
 	commit(docId: string, ok: OnOk, err?: OnErr) {
 		this.send(DoctreeReq.A.commit, { docId }, ok, err);
+	}
+
+	/**
+	 * r/res: a GET of Doctree206Serv, the request (with the session) as anson64,
+	 * as anreact's GalleryView.imgSrcReq() does for album pictures; range requests resume.
+	 */
+	resSrc(docId: string, name: string): string | undefined {
+		if (!this.port206) return undefined;
+		const key = docId + '/' + name;
+		let src = this.srcs.get(key);
+		if (!src) {
+			const msg = this.client.userReq(this.uri, this.port206,
+				new DoctreeReq(this.uri, DoctreeReq.A.res, { docId, res: name }));
+			// an app's port, e.g. SynDocollPort.doctree206 (servUrl() is typed with the built-in ports)
+			const serv = this.client.an.servUrl(this.port206 as Parameters<typeof this.client.an.servUrl>[0]);
+			src = `${serv}?anson64=${encodeURIComponent(base64(JSON.stringify(msg)))}`;
+			this.srcs.set(key, src);
+		}
+		return src;
 	}
 
 	/**

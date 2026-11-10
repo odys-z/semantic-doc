@@ -112,12 +112,16 @@ export function factsToJson(facts: string): string | undefined {
  * else from its plain text (a section's title, a table's text): the tree shows them
  * formatted, the preview serializes them; saved when the user edits them.
  */
+/** kinds whose ptext is a label, not text to edit */
+const untexted = new Set<string>([DocNode.Kind.doc, DocNode.Kind.math, DocNode.Kind.image, DocNode.Kind.docref]);
+
 export function fillTipjson(forest: DocTreeNode[]): DocTreeNode[] {
 	const fill = (t: DocTreeNode) => {
 		const n = t.node;
 		if (!n.tipjson && n.facts && n.kind === DocNode.Kind.p)
 			n.tipjson = factsToJson(n.facts);
-		if (!n.tipjson && n.ptext && n.kind !== DocNode.Kind.doc && n.kind !== DocNode.Kind.math)
+		// not for nodes whose content isn't text: doc, math, image (resId), docref (refId)
+		if (!n.tipjson && n.ptext && !untexted.has(n.kind!))
 			n.tipjson = fromTiptap({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: n.ptext }] }] });
 		n.children?.forEach(fill);
 	};

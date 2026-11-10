@@ -5,7 +5,7 @@
  */
 import { AnsonMsg, TreeModify } from '@anclient/semantier';
 import {
-	DocNode, DoctreeReq, DoctreeResp, insertMod, moveMod, removeMod, replaced, type DocTreeNode, type MoveOp,
+	DocNode, DoctreeReq, DoctreeResp, StreeDoctier, insertMod, moveMod, removeMod, replaced, type DocTreeNode, type MoveOp,
 } from '../../doctree/doc-stree';
 import type { Result } from '../runner';
 
@@ -44,6 +44,25 @@ const cases: { name: string; actual: () => string; expected: string }[] = [
 		actual: () => json(new DoctreeReq('/sdoc', DoctreeReq.A.update,
 				{ docId: 'd', node: new DocNode({ nid: 'p1', tipjson: '{}', rstext: '{}', rstver: 1 }) }).node),
 		expected: '{"type":"io.oz.sdoc.DocNode","nid":"p1","tipjson":"{}","rstext":"{}","rstver":1}',
+	},
+	{
+		name: 'doc-stree: r/res url, for an img (GET of doctree206.serv, the request as anson64)',
+		actual: () => {
+			// a client as far as resSrc() uses it
+			const client = {
+				userReq: (uri: string, port: string, body: DoctreeReq) => ({ port, header: { ssid: 'ss-1' }, body: [body] }),
+				an: { servUrl: (port: string) => 'http://synode/jserv-album/' + port },
+			};
+			const tier = new StreeDoctier(client as never, '/album/sys', 'doctree.serv', 'doctree206.serv');
+			const src = tier.resSrc('X.0001', 'image1.png')!;
+			const [url, q] = src.split('?anson64=');
+			const bytes = Uint8Array.from(atob(decodeURIComponent(q)), (c) => c.charCodeAt(0));
+			const msg = JSON.parse(new TextDecoder().decode(bytes));
+			const b = msg.body[0];
+			return [url, msg.port, msg.header.ssid, b.type, b.a, b.docId, b.res,
+				tier.resSrc('X.0001', 'image1.png') === src, new StreeDoctier(client as never, '/u', 'doctree.serv').resSrc('X.0001', 'a.png')].join(' ');
+		},
+		expected: 'http://synode/jserv-album/doctree206.serv doctree206.serv ss-1 io.oz.sdoc.DoctreeReq r/res X.0001 image1.png true ',
 	},
 	{
 		name: 'doc-stree: greyed out by the rules (holders doc, section; fixed roots)',

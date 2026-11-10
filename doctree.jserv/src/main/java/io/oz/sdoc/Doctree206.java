@@ -53,6 +53,10 @@ public abstract class Doctree206 extends Docs206 {
 	 */
 	public static void serve(HttpServletRequest req, HttpServletResponse resp, File file, String tag, boolean head)
 			throws IOException {
+		// an img (no-cors, no Origin) and a fetch (cors) of the same url get different answers:
+		// the CORS filter adds Access-Control-Allow-Origin only with an Origin
+		resp.addHeader("Vary", "Origin");
+
 		Resource r = new Resource(file, tag);
 		if (r.file == null) {
 			resp.sendError(HttpServletResponse.SC_NOT_FOUND);

@@ -96,6 +96,7 @@ class Doctree206ServTest {
 		assertEquals("image/png", r.contentType);
 		assertEquals("bytes", r.headers.get("Accept-Ranges"));
 		assertTrue(r.headers.containsKey("ETag"));
+		assertEquals("Origin", r.headers.get("Vary"));
 	}
 
 	@Test

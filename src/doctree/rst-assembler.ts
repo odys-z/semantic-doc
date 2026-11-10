@@ -5,6 +5,7 @@
  *   section   → <nid>.rst:   heading, its blocks, toctree of its sub-sections
  *   p / math  → the block's stored rstext, else its tipjson serialized,
  *               else its ptext (a new, imported block)
+ *   image     → .. image:: media/<resId>, a static, relative link; the file's {@link RstFile#media}
  *
  * Blocks and sections keep their order: consecutive sections share one toctree.
  * Each file declares the roles and defines the substitutions its own blocks use (joinRst).
@@ -29,7 +30,12 @@ export interface RstFile {
 	/** docname for toctrees: the path without ".rst" */
 	name: string;
 	rst: string;
+	/** names of the resources the file's images link, in media/ beside it, e.g. ["image1.png"] */
+	media: string[];
 }
+
+/** the folder of the resources, beside the RST files, in the Sphinx source and the package */
+export const MEDIA = 'media';
 
 /** a block's parts, as joinRst merges them */
 type Part = Omit<RstResult, 'rst'>;
@@ -79,6 +85,10 @@ function serialized(json: string): Part | undefined {
 
 /** one block (not a section) as joinRst parts */
 export function blockPart(n: Cols): Part {
+	// a picture is its link, whatever text the node carries
+	if (n.kind === DocNode.Kind.image && n.resId)
+		return plain(`.. image:: ${MEDIA}/${n.resId}`);
+
 	const part = (n.rstext ? stored(n.rstext) : undefined) ?? (n.tipjson ? serialized(n.tipjson) : undefined);
 	if (part) return part;
 
@@ -86,7 +96,7 @@ export function blockPart(n: Cols): Part {
 		case DocNode.Kind.math: // an empty math directive is an error in Sphinx
 			return plain(n.ptext?.trim() ? serializeBlockMath(n.ptext) : textRst('[formula]'));
 		case DocNode.Kind.image:
-			return plain(textRst(`[image: ${n.resId ?? n.ptext ?? ''}]`));
+			return plain(n.resId ? `.. image:: ${MEDIA}/${n.resId}` : textRst(`[image: ${n.ptext ?? ''}]`));
 		case DocNode.Kind.docref:
 			return plain(textRst(`[ref: ${n.ptext ?? n.refId ?? ''}]`));
 		default: // p, table (text only for now)
@@ -109,6 +119,7 @@ export function assemble(root: DocTreeNode): RstFile[] {
 	const build = (sec: DocTreeNode) => {
 		const parts: Part[] = [plain(heading(sec.node.ptext ?? ''))];
 		const subs: DocTreeNode[] = [];
+		const media: string[] = [];
 		let toc: string[] = [];
 
 		const flush = () => {
@@ -123,12 +134,14 @@ export function assemble(root: DocTreeNode): RstFile[] {
 			} else {
 				flush();
 				parts.push(blockPart(t.node));
+				if (t.node.kind === DocNode.Kind.image && t.node.resId && !media.includes(t.node.resId))
+					media.push(t.node.resId);
 			}
 		}
 		flush();
 
 		const name = docname(sec);
-		files.push({ nid: sec.node.nid ?? sec.id, path: name + '.rst', name, rst: joinRst(parts) + '\n' });
+		files.push({ nid: sec.node.nid ?? sec.id, path: name + '.rst', name, rst: joinRst(parts) + '\n', media });
 		subs.forEach(build);
 	};
 

@@ -19,6 +19,15 @@ export interface BuildResult {
 	pages: string[];
 }
 
+/** a resource for the Sphinx source, e.g. a picture an image directive links */
+export interface MediaFile {
+	/** path in the source folder, e.g. "media/image1.png" */
+	path: string;
+	/** identifies the content, e.g. the url it was fetched from */
+	key: string;
+	bytes: ArrayBuffer;
+}
+
 type Call = { resolve: (r: any) => void; reject: (e: Error) => void };
 
 export class RstPreviewer {
@@ -96,9 +105,12 @@ export class RstPreviewer {
 	/**
 	 * Build the doc: the files replace the previous doc's (unchanged files aren't rewritten).
 	 * Rejects with Sphinx's log if the build fails.
+	 *
+	 * @param media resources the files link, e.g. { path: "media/image1.png", key: its url, bytes };
+	 * written into the source when the key changed
 	 */
-	build(files: RstFile[]): Promise<BuildResult> {
-		return this.call('build', { files: files.map((f) => ({ path: f.path, rst: f.rst })) });
+	build(files: RstFile[], media: MediaFile[] = []): Promise<BuildResult> {
+		return this.call('build', { files: files.map((f) => ({ path: f.path, rst: f.rst })), media });
 	}
 
 	/** html of a built page, e.g. "index.html" */

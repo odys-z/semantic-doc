@@ -10,8 +10,11 @@
  *
  *   init  { template }   fetch manifest.json, load Pyodide, micropip-install manifest.packages,
  *                        copy manifest.files from template/source/ into /sphinx/source/
- *   build { files }      files: [{ path, rst }], the doc's files. Writes the changed ones,
+ *   build { files, media }
+ *                        files: [{ path, rst }], the doc's files. Writes the changed ones,
  *                        deletes the ones gone, runs sphinx-build (incremental).
+ *                        media: [{ path, key, bytes }], resources, e.g. media/image1.png;
+ *                        written when the key (its url) changed.
  *                        → { log, pages: ["index.html", ...] } (the doc's pages)
  *   page  { path }       → the html of build/html/<path>
  */
@@ -21,6 +24,7 @@ const SRC = "/sphinx/source", OUT = "/sphinx/build/html", DOCTREES = "/sphinx/bu
 let py;          // the Pyodide instance
 let ready;       // promise of init
 const written = new Map(); // doc files in SRC: path -> rst
+const writtenMedia = new Map(); // resources in SRC: path -> key
 
 const status = (text) => self.postMessage({ status: text });
 
@@ -56,10 +60,17 @@ async function init({ template }) {
   return { files: m.files.length, packages: m.packages };
 }
 
-async function build({ files }) {
+async function build({ files, media }) {
   await ready;
   const t0 = performance.now();
   status("Building…");
+  for (const m of media || [])
+    if (writtenMedia.get(m.path) !== m.key) {
+      const path = SRC + "/" + m.path;
+      py.FS.mkdirTree(path.slice(0, path.lastIndexOf("/")));
+      py.FS.writeFile(path, new Uint8Array(m.bytes));
+      writtenMedia.set(m.path, m.key);
+    }
   const keep = new Set(files.map((f) => f.path));
   for (const path of [...written.keys()])
     if (!keep.has(path)) {

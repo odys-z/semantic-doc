@@ -1,6 +1,6 @@
 {
   "name": "semantic-doc",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "private": true,
   "description": "Paragraph editor for semantic content trees; paragraphs stored as RST",
   "license": "Apache-2.0",

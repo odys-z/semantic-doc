@@ -6,4 +6,4 @@
 export { DocPreview } from './DocPreview';
 export type { DocPreviewProps } from './DocPreview';
 export { RstPreviewer } from './RstPreviewer';
-export type { BuildResult } from './RstPreviewer';
+export type { BuildResult, MediaFile } from './RstPreviewer';

@@ -83,6 +83,27 @@ const cases: ACase[] = [
 			+ '.. |sd-1271e62b| replace:: :bg-yellow:`report`\n.. __: https://example.com/r\n',
 	},
 	{
+		name: 'assemble: an imported picture → image directive, its media listed',
+		actual: () => {
+			const d = t('m', 'doc', { ptext: 'M' }, [
+				t('m.1', 'image', { ptext: 'image1.png', resId: 'image1.png' }),
+				t('m.2', 'image', { ptext: 'image1.png', resId: 'image1.png' }),
+				t('m.3', 'image', { ptext: 'lost.png' })]);
+			const f = assemble(d)[0];
+			return f.rst + '|' + f.media.join(',');
+		},
+		expected: 'M\n===\n\n.. image:: media/image1.png\n\n.. image:: media/image1.png\n\n[image: lost.png]\n|image1.png',
+	},
+	{
+		name: 'assemble: an imported picture, as loaded (fillTipjson) → still the image directive',
+		actual: () => {
+			const d = fillTipjson([t('i', 'doc', { ptext: 'I' }, [
+				t('i.1', 'image', { ptext: 'image1.png', resId: 'image1.png' })])]);
+			return `${d[0].node.children![0].node.tipjson}|${assemble(d[0])[0].rst}`;
+		},
+		expected: 'undefined|I\n===\n\n.. image:: media/image1.png\n',
+	},
+	{
 		name: 'assemble: demo doc-a',
 		actual: () => assemble((docA as unknown as { forest: DocTreeNode[] }).forest[0]).map((f) => f.path).join(' '),
 		expected: 'index.rst a1.rst a2.rst a3.rst',

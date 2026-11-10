@@ -126,6 +126,9 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 		return this.props.preview && forest[0] ? assemble(forest[0]) : [];
 	}
 
+	/** url of a resource of the doc, for the preview */
+	mediaSrc = (name: string) => this.props.doctier.resSrc?.(this.props.docId, name);
+
 	/** a text change waiting for autosave */
 	pending: { node: Cols; timer: ReturnType<typeof setTimeout> } | undefined;
 
@@ -285,9 +288,13 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 			case DocNode.Kind.docref:
 				cell = <div className="sd-ref" title="Read-only, expanded when compiled">↪ {n.ptext}</div>;
 				break;
-			case DocNode.Kind.image:
-				cell = <div className="sd-media">[image {n.resId}]</div>;
+			case DocNode.Kind.image: {
+				const src = n.resId ? this.props.doctier.resSrc?.(this.props.docId, n.resId) : undefined;
+				cell = src
+					? <div className="sd-media"><img src={src} alt={n.resId} title={n.resId} /></div>
+					: <div className="sd-media">[image {n.resId}]</div>;
 				break;
+			}
 			default: // section title, paragraph, formula
 				cell = n.nid === this.state.editing
 					? <ParagraphEditor
@@ -394,7 +401,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 							{this.editForm}
 						</Box>
 					</Box>
-					{preview && <DocPreview template={this.props.preview!} files={rstFiles} style={{ flex: 1 }} />}
+					{preview && <DocPreview template={this.props.preview!} files={rstFiles} mediaSrc={this.mediaSrc} style={{ flex: 1 }} />}
 				</Box>
 
 				<Snackbar open={!!snack} message={snack} autoHideDuration={6000}
