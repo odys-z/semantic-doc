@@ -16,7 +16,7 @@
 	<maven.compiler.target>17</maven.compiler.target>
 	<jetty.version>12.0.36</jetty.version>
 	<jetty-ee8.version>12.0.32</jetty-ee8.version>
-	<doctree.jserv.version>0.1.0-SNAPSHOT</doctree.jserv.version>
+	<doctree.jserv.version>[0,)</doctree.jserv.version>
 
 	<failOnMissingWebXml>false</failOnMissingWebXml>
   </properties>
