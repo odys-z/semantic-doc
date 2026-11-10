@@ -12,6 +12,9 @@ import org.apache.commons.io.FilenameUtils;
 
 import io.odysz.common.DateFormat;
 import io.odysz.module.rs.AnResultset;
+import io.odysz.semantic.DASemantics.SemanticHandler;
+import io.odysz.semantic.DASemantics.ShFullpath2;
+import io.odysz.semantic.DASemantics.smtype;
 import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.jserv.JRobot;
@@ -107,7 +110,33 @@ public class DoctreeDBHelper {
 		setupSqliTables(conn, forceDrop, docm, nodem);
 		Connects.commit(conn, new JRobot(), nodem.ddlIndex);
 
-		return new DoctreeDBHelper(conn, docm, nodem);
+		DoctreeDBHelper db = new DoctreeDBHelper(conn, docm, nodem); // loads the connection's semantics
+		checkSemantics(conn, docm, nodem);
+		return db;
+	}
+
+	/**
+	 * The semantics the doc tree needs, from {@link #smtcs}: a missing or stale file (e.g. a sandbox's
+	 * WEB-INF copied before fullpath2) would import docs with no fullpaths, or none at all.
+	 * <ul>
+	 * <li>{@link S_DocsMeta}: autopk (smtype autoInc), the docIds</li>
+	 * <li>{@link S_DocNodeMeta}: fullpath2 (ShFullpath2), the nodes' fullpaths in multi-row inserts</li>
+	 * </ul>
+	 *
+	 * @throws SemanticException what's missing, for the user: the tier answers it, the synode keeps running
+	 */
+	static void checkSemantics(String conn, S_DocsMeta docm, S_DocNodeMeta nodem) throws SemanticException {
+		String fix = String.format("Check WEB-INF/%s (connection %s), e.g. copy it from the package's WEB-INF.", smtcs, conn);
+
+		if (!DATranscxt.hasSemantics(conn, docm.tbl, smtype.autoInc))
+			throw new SemanticException("Doc-tree semantics: no autopk for %s. %s", docm.tbl, fix);
+
+		SemanticHandler fp = DATranscxt.getHandler(conn, nodem.tbl, smtype.fullpath2);
+		if (fp == null)
+			fp = DATranscxt.getHandler(conn, nodem.tbl, smtype.fullpath);
+		if (!(fp instanceof ShFullpath2))
+			throw new SemanticException("Doc-tree semantics: %s for %s, expecting <smtc>fullpath2</smtc>. %s",
+					fp == null ? "no fullpath" : "fullpath", nodem.tbl, fix);
 	}
 
 	/**

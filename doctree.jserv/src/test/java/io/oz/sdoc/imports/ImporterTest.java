@@ -2,6 +2,7 @@ package io.oz.sdoc.imports;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static io.odysz.semantic.ext.SemanticTree.childIds;
 import static java.util.Arrays.asList;
@@ -27,6 +28,7 @@ import io.odysz.semantic.jprotocol.AnsonMsg.Port;
 import io.odysz.semantic.jprotocol.AnsonResp;
 import io.odysz.semantic.ext.TreeModify;
 import io.odysz.semantic.jserv.JRobot;
+import io.odysz.semantics.x.SemanticException;
 import io.odysz.semantics.IUser;
 import io.oz.sdoc.DocInf;
 import io.oz.sdoc.DocNode;
@@ -328,6 +330,21 @@ class ImporterTest {
 		assertEquals(DocInf.State.failed, db.doc(doc.docId).state);
 		assertEquals(0, db.nodes(doc.docId).total());
 		assertEquals(false, db.res.dir("ody", doc.docId).exists());
+	}
+
+	/**
+	 * A stale semantics file (fullpath, not fullpath2), e.g. a sandbox's old WEB-INF: the working copy
+	 * isn't set up, with a message saying what to fix, instead of importing docs without fullpaths.
+	 */
+	@Test
+	void staleSemantics() throws Exception {
+		File dbf = new File("src/test/res/r206/stale.db");
+		dbf.delete();
+		Connects.addSqlite("doctree.stale", dbf.getAbsolutePath(), "semantics-doctree-stale.xml");
+
+		SemanticException e = assertThrows(SemanticException.class, () -> DoctreeDBHelper.setup("doctree.stale", true));
+		assertTrue(e.getMessage().contains("expecting <smtc>fullpath2</smtc>"), e.getMessage());
+		assertTrue(e.getMessage().contains("WEB-INF/semantics-doctree.xml"), e.getMessage());
 	}
 
 	static String[] lines(String docId) throws Exception {
