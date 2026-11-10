@@ -253,6 +253,28 @@ class ImporterTest {
 		assertEquals("not a docx", doc.msg);
 	}
 
+	/**
+	 * The nodes are inserted section by section, not in a transaction:
+	 * a failure after some sections leaves no nodes, the header is failed.
+	 */
+	@Test
+	void failsHalfway() throws Exception {
+		ArrayList<Block> blocks = new ArrayList<Block>(Tricky.blocks());
+		blocks.add(null); // 第一章's sections are inserted by 第二章, then a NullPointerException
+
+		DoctreeTier t = new DoctreeTier(Port.echo)
+				.conn(conn, "H")
+				.importer((srcId) -> "pom.xml", (path) -> blocks);
+
+		expectTrace("failsHalfway", "NullPointerException");
+
+		DocInf doc = ((DoctreeResp) t.handle(importReq("x")).body(0)).doc;
+		t.importer().await();
+
+		assertEquals(DocInf.State.failed, db.doc(doc.docId).state);
+		assertEquals(0, db.nodes(doc.docId).total());
+	}
+
 	static String[] lines(String docId) throws Exception {
 		S_DocNodeMeta m = db.nodem;
 		AnResultset rs = db.nodes(docId);

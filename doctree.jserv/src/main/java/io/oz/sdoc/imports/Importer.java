@@ -14,9 +14,7 @@ import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.jserv.JRobot;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
-import io.odysz.transact.sql.Update;
 import io.oz.sdoc.DocInf;
-import io.oz.sdoc.DocNode;
 import io.oz.sdoc.S_DocNodeMeta;
 import io.oz.sdoc.S_DocsMeta;
 import io.oz.sdoc.DoctreeDBHelper;
@@ -27,8 +25,8 @@ import io.oz.sdoc.imports.Outliner.Outline;
  *
  * <pre>
  * start():  resolve the docx → insert the header (state parsing) → answer it
- * worker:   parse → outline → insert the nodes, header ready (one commit)
- *           | header failed + msg
+ * worker:   parse → outline, inserting the nodes section by section ({@link Outliner}) → header ready
+ *           | nodes deleted, header failed + msg (not a transaction)
  * </pre>
  *
  * One worker thread: imports run one by one.
@@ -105,36 +103,25 @@ public class Importer {
 			DATranscxt st = new DATranscxt(conn);
 
 			List<Block> blocks = parser.parse(path);
-			Outline o = Outliner.outline(docId, nodem.siblingWidth(), blocks);
-			if (isblank(title))
-				title = isblank(o.title) ? filename : o.title;
-			o.nodes.get(0).ptext = title;
 
-			Update u = st.update(docm.tbl, robot)
-				.nv(docm.title, title)
+			// the nodes are inserted by the outliner, section by section
+			Outline o = new Outliner(conn, nodem, robot).outline(docId, blocks, title, filename);
+
+			st.update(docm.tbl, robot)
+				.nv(docm.title, o.title)
 				.nv(docm.state, DocInf.State.ready)
 				.nv(docm.nextNid, o.nextNid)
-				.whereEq(docm.pk, docId);
-
-			for (DocNode n : o.nodes)
-				u.post(st.insert(nodem.tbl, robot)
-					.nv(nodem.pk, n.nid)
-					.nv(nodem.docId, n.docId)
-					.nv(nodem.parentId, n.parentId)
-					.nv(nodem.sort, n.sort)
-					.nv(nodem.fullpath, n.fullpath)
-					.nv(nodem.kind, n.kind)
-					.nv(nodem.ptext, n.ptext)
-					.nv(nodem.facts, n.facts)
-					.nv(nodem.src, n.src)
-					.nv(nodem.docxstyle, n.docxstyle));
-
-			u.u(st.instancontxt(conn, robot));
+				.whereEq(docm.pk, docId)
+				.u(st.instancontxt(conn, robot));
 		} catch (Throwable e) {
 			Utils.warnT(new Object() {}, "Importing %s failed: %s", path, e.getMessage());
 			e.printStackTrace();
 			try {
 				DATranscxt st = new DATranscxt(conn);
+				// not a transaction: drop the sections already inserted
+				st.delete(db.nodem.tbl, robot)
+					.whereEq(db.nodem.docId, docId)
+					.d(st.instancontxt(conn, robot));
 				st.update(db.docm.tbl, robot)
 					.nv(db.docm.state, DocInf.State.failed)
 					.nv(db.docm.msg, ifnull(e.getMessage(), e.getClass().getName()))
