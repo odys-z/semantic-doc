@@ -1,7 +1,9 @@
-package io.oz.sdoc;
+package io.oz.sdoc.tier;
 
 import io.odysz.semantic.jprotocol.AnsonBody;
 import io.odysz.semantic.jprotocol.AnsonMsg;
+import io.oz.sdoc.DocInf;
+import io.oz.sdoc.DocNode;
 import io.odysz.semantic.ext.AnDatasetReq;
 import io.odysz.semantic.ext.TreeModify;
 

@@ -1,4 +1,4 @@
-package io.oz.sdoc;
+package io.oz.sdoc.tier;
 
 import static io.odysz.common.LangExt.eq;
 import static io.odysz.common.LangExt.isblank;
@@ -25,6 +25,8 @@ import io.odysz.semantic.jserv.x.SsException;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.x.TransException;
+import io.oz.sdoc.DocInf;
+import io.oz.sdoc.DoctreeDBHelper;
 import io.oz.sdoc.imports.DocxSource;
 import io.oz.sdoc.imports.IBlockParser;
 import io.oz.sdoc.imports.Importer;

@@ -5,12 +5,10 @@ import static io.odysz.semantic.meta.SemanticTableMeta.setupSqliTables;
 import java.io.File;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 
 import org.apache.commons.io.FilenameUtils;
 
-import io.odysz.common.DateFormat;
 import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.DASemantics.SemanticHandler;
 import io.odysz.semantic.DASemantics.ShFullpath2;
@@ -21,6 +19,7 @@ import io.odysz.semantic.jserv.JRobot;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
+import io.odysz.transact.sql.parts.condition.Funcall;
 import io.odysz.transact.x.TransException;
 
 /**
@@ -247,7 +246,7 @@ public class DoctreeDBHelper {
 	public DocInf commit(String docId, IUser usr) throws TransException, SQLException {
 		st.update(docm.tbl, usr)
 			.nv(docm.dirty, 0)
-			.nv(docm.committedAt, DateFormat.formatime(new Date()))
+			.nv(docm.committedAt, Funcall.now())
 			.whereEq(docm.pk, docId)
 			.u(st.instancontxt(conn, usr));
 		return doc(docId);

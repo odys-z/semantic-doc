@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import io.odysz.anson.Anson;
 import io.odysz.semantic.ext.TreeModify;
+import io.oz.sdoc.tier.DoctreeReq;
+import io.oz.sdoc.tier.DoctreeResp;
 
 /**
  * Round-trips the types through Anson, using nodes from src/dist/jsons/doc-a.json.

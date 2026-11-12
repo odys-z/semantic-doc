@@ -1,4 +1,4 @@
-package io.oz.sdoc;
+package io.oz.sdoc.tier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

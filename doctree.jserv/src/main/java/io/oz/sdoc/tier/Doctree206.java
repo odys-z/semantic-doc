@@ -1,4 +1,4 @@
-package io.oz.sdoc;
+package io.oz.sdoc.tier;
 
 import java.io.File;
 import java.io.IOException;

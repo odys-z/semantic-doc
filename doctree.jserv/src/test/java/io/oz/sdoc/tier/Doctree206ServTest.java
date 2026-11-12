@@ -1,4 +1,4 @@
-package io.oz.sdoc;
+package io.oz.sdoc.tier;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,6 +31,8 @@ import io.odysz.semantic.jserv.JRobot;
 import io.odysz.semantic.jserv.x.SsException;
 import io.odysz.semantic.jsession.ISessionVerifier;
 import io.odysz.semantics.IUser;
+import io.oz.sdoc.DocInf;
+import io.oz.sdoc.DoctreeDBHelper;
 import io.oz.sdoc.docx.DocxWalker;
 
 /**

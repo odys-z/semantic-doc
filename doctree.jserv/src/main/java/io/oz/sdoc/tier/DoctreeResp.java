@@ -1,9 +1,10 @@
-package io.oz.sdoc;
+package io.oz.sdoc.tier;
 
 import java.util.ArrayList;
 
 import io.odysz.anson.AnsonField;
 import io.odysz.semantic.ext.AnDatasetResp;
+import io.oz.sdoc.DocInf;
 
 /**
  * Response of the doc-tree tier, matching semantic-doc's TS DoctreeResp (doctree-tier.ts).

@@ -34,10 +34,10 @@ import io.oz.sdoc.DocInf;
 import io.oz.sdoc.DocNode;
 import io.oz.sdoc.S_DocNodeMeta;
 import io.oz.sdoc.DoctreeDBHelper;
-import io.oz.sdoc.DoctreeReq;
-import io.oz.sdoc.DoctreeResp;
-import io.oz.sdoc.DoctreeTier;
 import io.oz.sdoc.docx.DocxWalker;
+import io.oz.sdoc.tier.DoctreeReq;
+import io.oz.sdoc.tier.DoctreeResp;
+import io.oz.sdoc.tier.DoctreeTier;
 
 /**
  * c/import through the tier, on a fresh src/test/res/doctree.db, with the tricky blocks as the parser.
