@@ -262,7 +262,8 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 		const forest = this.state.forest;
 		this.props.doctier.commit(this.props.docId, forest[0] ? assemble(forest[0]) : [],
 			(resp) => {
-				this.setState({ committed: !resp.doc?.dirty, committedAt: resp.doc?.committedAt, build: resp.build });
+				this.setState({ committed: !resp.doc?.dirty, committedAt: resp.doc?.committedAt, build: resp.build,
+					doc: resp.doc ?? this.state.doc });
 				this.pollBuild(resp.build);
 			},
 			(msg) => this.setState({ snack: `Not committed: ${msg}` }));
@@ -396,6 +397,10 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 		const html = build === DoctreeResp.Build.building ? ', building html…'
 				: build === DoctreeResp.Build.built ? ', html built'
 				: build === DoctreeResp.Build.failed ? ', html build failed' : '';
+		// nothing to commit: no change since the last commit, of a doc committed before, with its html
+		// package. A new doc (never committed), or one without a html package, can be committed as it is.
+		const nothing = committed && !saving && !!committedAt && !!doc?.htmlUri;
+		const building = build === DoctreeResp.Build.building;
 		const status = saving ? 'Saving…' : committed ? `Committed ${committedAt ?? ''}${html}` : 'Draft — not committed';
 
 		return (
@@ -417,7 +422,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 							<Button size="small" onClick={() => this.setState({ previewing: !previewing })}>
 								{previewing ? 'Hide preview' : 'Preview'}</Button>}
 						<Button variant="contained" size="small" disableElevation
-							disabled={committed && !saving} onClick={() => this.commit()}>Commit</Button>
+							disabled={nothing || building} onClick={() => this.commit()}>Commit</Button>
 					</Toolbar>
 				</Box>
 
