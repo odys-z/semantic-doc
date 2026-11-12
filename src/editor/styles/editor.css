@@ -16,3 +16,4 @@
 .sd-editor .sd-content [data-type="inline-math"]:hover,
 .sd-editor .sd-content [data-type="block-math"]:hover { background: #eef4ff; }
 .sd-editor .sd-content .ProseMirror-selectednode { outline: 2px solid #7aa7f0; border-radius: 3px; }
+

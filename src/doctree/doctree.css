@@ -1,0 +1,12 @@
+/* doc tree editor; rows and indents are styled by anreact */
+.sd-doctree .sd-glyph { color: #889; margin-left: 4px; }
+.sd-doctree .sd-cell { padding: 2px 0; text-align: left; white-space: normal; }
+.sd-doctree .sd-doctitle { font-size: 1.15em; font-weight: bold; padding: 6px 4px; }
+.sd-doctree .sd-section .sd-content .tiptap { font-weight: bold; padding: 2px 6px; min-height: 0; }
+.sd-doctree .sd-actions { white-space: nowrap; text-align: right; }
+.sd-doctree .sd-act { border: none; background: none; cursor: pointer; padding: 2px 4px; color: #1f5fbf; }
+.sd-doctree .sd-act:disabled { color: #bbb; cursor: default; }
+.sd-doctree .sd-clickable { cursor: text; }
+.sd-doctree .sd-clickable:hover { background: #f6f9ff; }
+.sd-doctree .sd-ref { padding: 8px 12px; color: #555; font-style: italic; }
+.sd-doctree .sd-media, .sd-doctree .sd-unavail { padding: 8px 12px; color: #888; }

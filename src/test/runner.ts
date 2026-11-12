@@ -22,7 +22,14 @@ export function run(cases: Case[]): Result[] {
     try {
       const out = serializeDoc(Node.fromJSON(schema, c.doc));
       const rolesOk = JSON.stringify(out.roles) === JSON.stringify(c.roles ?? []);
-      return { name: c.name, pass: out.body === c.rst && rolesOk, expected: c.rst, actual: out.body, rst: out.rst };
+      const fullOk = c.full === undefined || c.full === out.rst;
+      const pass = out.body === c.rst && rolesOk && fullOk;
+      // on failure show what differs: the body, else the complete fragment / roles
+      const [expected, actual] =
+        out.body !== c.rst || pass ? [c.rst, out.body]
+        : !fullOk ? [c.full!, out.rst]
+        : [`roles ${JSON.stringify(c.roles ?? [])}`, `roles ${JSON.stringify(out.roles)}`];
+      return { name: c.name, pass, expected, actual, rst: out.rst };
     } catch (e) {
       return { name: c.name, pass: false, expected: c.rst, actual: '', rst: '', error: String(e) };
     }

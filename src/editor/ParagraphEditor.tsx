@@ -1,12 +1,34 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent, type JSONContent } from '@tiptap/react';
-import { editorExtensions } from './rst/marks';
+import { UndoRedo } from '@tiptap/extensions';
+import { InlineMath } from '@tiptap/extension-mathematics';
+import { rstExtensions, StyledBlockMath, MathMarkFilter } from './rst/marks';
 import { serializeDoc, type RstResult } from './rst/serialize';
 import { Toolbar } from './Toolbar';
 import './styles/theme-roles.css';
 import './styles/editor.css';
 
 export type MathKind = 'inline' | 'block';
+
+export interface EditorExtensionOptions {
+  /** called when a formula is clicked, e.g. to open a LaTeX editor */
+  onMathClick?: (kind: MathKind, latex: string, pos: number) => void;
+}
+
+/**
+ * Schema + editor-only behaviour: undo / redo (Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y),
+ * click-to-edit formulas, and keeping B / I / U / S / code / link off formulas.
+ */
+export function editorExtensions(opts: EditorExtensionOptions = {}) {
+  const { onMathClick } = opts;
+  return [
+    ...rstExtensions.filter((e) => e !== InlineMath && e !== StyledBlockMath),
+    InlineMath.configure({ onClick: (node, pos) => onMathClick?.('inline', node.attrs.latex, pos) }),
+    StyledBlockMath.configure({ onClick: (node, pos) => onMathClick?.('block', node.attrs.latex, pos) }),
+    MathMarkFilter,
+    UndoRedo,
+  ];
+}
 
 /**
  * Ask the user for LaTeX. Return the new LaTeX, '' to delete the formula,
@@ -99,7 +121,12 @@ export function ParagraphEditor({
       typeof content === 'string'
         ? content === editor.getHTML()
         : JSON.stringify(content) === JSON.stringify(editor.getJSON());
-    if (!same) editor.commands.setContent(content, { emitUpdate: false });
+
+    if (!same)
+      editor.chain()
+            .setMeta('addToHistory', false)
+            .setContent(content, { emitUpdate: false })
+            .run();
   }, [editor, content]);
 
   useEffect(() => {

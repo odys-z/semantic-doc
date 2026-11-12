@@ -1,6 +1,6 @@
 import { p, type Case } from './inline';
 
-const role = (name: string) => ({ name });
+const name = (name: string) => ({ name });
 
 /** strike, underline, colour, background, superscript, subscript */
 export const formatCases: Case[] = [
@@ -9,31 +9,31 @@ export const formatCases: Case[] = [
   { name: 'sup after space', doc: p(['note '], ['1', 'sup']), rst: 'note :sup:`1`' },
   {
     name: 'strike',
-    doc: p(['was '], ['old', 'role', role('strike')]),
+    doc: p(['was '], ['old', 'strike']),
     rst: 'was :strike:`old`',
     roles: ['strike'],
   },
   {
     name: 'underline',
-    doc: p(['an '], ['important', 'role', role('underline')], [' word']),
+    doc: p(['an '], ['important', 'underline'], [' word']),
     rst: 'an :underline:`important` word',
     roles: ['underline'],
   },
   {
     name: 'font colour',
-    doc: p(['in '], ['red', 'role', role('red')], ['.']),
+    doc: p(['in '], ['red', 'color', name('red')], ['.']),
     rst: 'in :red:`red`.',
     roles: ['red'],
   },
   {
     name: 'background colour',
-    doc: p(['a '], ['highlight', 'role', role('bg-yellow')]),
+    doc: p(['a '], ['highlight', 'background', name('bg-yellow')]),
     rst: 'a :bg-yellow:`highlight`',
     roles: ['bg-yellow'],
   },
   {
     name: 'roles declared once, in first-use order',
-    doc: p(['a', 'role', role('red')], [' '], ['b', 'role', role('strike')], [' '], ['c', 'role', role('red')]),
+    doc: p(['a', 'color', name('red')], [' '], ['b', 'strike'], [' '], ['c', 'color', name('red')]),
     rst: ':red:`a` :strike:`b` :red:`c`',
     roles: ['red', 'strike'],
   },
