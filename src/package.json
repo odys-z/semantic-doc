@@ -38,8 +38,6 @@
     "@tiptap/react": "^3.32.2"
   },
   "peerDependencies": {
-    "@anclient/anreact": "^0.8.0",
-    "@anclient/semantier": "^1.1.0",
     "katex": "^0.16.4 || ^0.17.0 || ^0.18.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
