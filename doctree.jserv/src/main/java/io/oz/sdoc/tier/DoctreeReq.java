@@ -32,6 +32,10 @@ public class DoctreeReq extends AnDatasetReq {
 		public static final String modify = "u/tree";
 		/** mark the doc's work as finished → {@link DoctreeResp#doc} */
 		public static final String commit = "c/commit";
+		/** publish the doc's html package at the local html-service, or replace it → {@link DoctreeResp#doc}, with pubpath */
+		public static final String publish = "c/publish";
+		/** the doc is no longer published at html-service → {@link DoctreeResp#doc} */
+		public static final String unpublish = "d/publish";
 		/**
 		 * import a docx, {@link DoctreeReq#srcId}: answers the header (state parsing) at once,
 		 * nodes are parsed in the background

@@ -66,6 +66,13 @@
 	    <version>[1.5.31,)</version>
    	</dependency>
 
+	<!-- requests to the local html-service (ResPublisher) -->
+	<dependency>
+	    <groupId>io.github.odys-z</groupId>
+	    <artifactId>anclient.java</artifactId>
+	    <version>[0.5.24,)</version>
+	</dependency>
+
     <dependency>
       <!-- the docx importer's walker (io.oz.sdoc.docx), verified in hello/docx4j.
            docx4j 11.x = Jakarta XML Binding; pulls in docx4j-core and the Glassfish JAXB RI. -->

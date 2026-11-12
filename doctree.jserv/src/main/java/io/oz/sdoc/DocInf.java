@@ -31,12 +31,24 @@ public class DocInf extends Anson {
 	/** next node id of this doc, see {@link DoctreeDBHelper#nid(String, int)} */
 	public int nextNid;
 
-	/** Compiled html (RST -&gt; html) uri, null if never built. */
+	/**
+	 * The built html package (RST -&gt; html, zipped): a local file path, null if never built.
+	 * This is the zip html-service unzips when the doc is published (see {@link #pubpath}).
+	 */
 	public String htmlUri;
 	/** Time of last build. */
 	public String builtAt;
 	/** Who triggered the last build. */
 	public String builtBy;
+
+	/**
+	 * Published context path at html-service, a single path segment without '/', e.g. "x7k2p0".
+	 * It's assigned by html-service when the doc is first published, and kept by the synode
+	 * (s_docs.pubpath), so the doc's url is the same after rebuilt or html-service restarted.
+	 * Null if not published. The package's version is told by {@link #builtAt}.
+	 * @since 0.1.2
+	 */
+	public String pubpath;
 
 	/** true if changed since the last commit */
 	public boolean dirty;

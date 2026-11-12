@@ -19,6 +19,8 @@ import io.odysz.semantic.jserv.JRobot;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
 import io.odysz.semantics.x.SemanticException;
+import io.odysz.transact.sql.parts.Logic.op;
+import io.odysz.transact.sql.parts.condition.Condit;
 import io.odysz.transact.sql.parts.condition.Funcall;
 import io.odysz.transact.x.TransException;
 
@@ -189,6 +191,7 @@ public class DoctreeDBHelper {
 		d.htmlUri = rs.getString(docm.htmlUri);
 		d.builtAt = rs.getString(docm.builtAt);
 		d.builtBy = rs.getString(docm.builtBy);
+		d.pubpath = rs.getString(docm.pubpath);
 		d.dirty   = rs.getInt(docm.dirty, 0) != 0;
 		d.committedAt = rs.getString(docm.committedAt);
 		return d;
@@ -247,6 +250,51 @@ public class DoctreeDBHelper {
 		st.update(docm.tbl, usr)
 			.nv(docm.dirty, 0)
 			.nv(docm.committedAt, Funcall.now())
+			.whereEq(docm.pk, docId)
+			.u(st.instancontxt(conn, usr));
+		return doc(docId);
+	}
+
+//	/**
+//	 * The doc's html package is (re)built: htmlUri, builtAt = now, builtBy.
+//	 * @param htmlUri the zip's local path, see {@link DocInf#htmlUri}
+//	 * @return the doc's header
+//	 */
+//	public DocInf built(String docId, String htmlUri, IUser usr) throws TransException, SQLException {
+//		st.update(docm.tbl, usr)
+//			.nv(docm.htmlUri, htmlUri)
+//			.nv(docm.builtAt, Funcall.now())
+//			.nv(docm.builtBy, usr.uid())
+//			.whereEq(docm.pk, docId)
+//			.u(st.instancontxt(conn, usr));
+//		return doc(docId);
+//	}
+
+	/**
+	 * Docs published at html-service, i. e. with a {@link DocInf#pubpath}.
+	 * @return docs
+	 */
+	public ArrayList<DocInf> published() throws TransException, SQLException {
+		AnResultset rs = (AnResultset) st.select(docm.tbl)
+				.where(new Condit(op.isNotnull, docm.pubpath, "null"))
+				.orderby(docm.pk)
+				.rs(st.instancontxt(conn, robot))
+				.rs(0);
+
+		ArrayList<DocInf> docs = new ArrayList<DocInf>();
+		while (rs.next())
+			docs.add(doc(rs));
+		return docs;
+	}
+
+	/**
+	 * Keep the doc's context path at html-service.
+	 * @param pubpath null: the doc is no longer published
+	 * @return the doc's header
+	 */
+	public DocInf pubpath(String docId, String pubpath, IUser usr) throws TransException, SQLException {
+		st.update(docm.tbl, usr)
+			.nv(docm.pubpath, pubpath)
 			.whereEq(docm.pk, docId)
 			.u(st.instancontxt(conn, usr));
 		return doc(docId);

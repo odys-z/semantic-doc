@@ -8,3 +8,5 @@ RemoteSystemsTempFiles
 /src/test/res/*/doctree.temp/
 /src/test/res/r206/*
 !/src/test/res/r206/.keep
+/src/test/res/rpub/*
+!/src/test/res/rpub/.keep

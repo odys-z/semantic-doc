@@ -30,6 +30,7 @@ import io.oz.sdoc.DoctreeDBHelper;
 import io.oz.sdoc.imports.DocxSource;
 import io.oz.sdoc.imports.IBlockParser;
 import io.oz.sdoc.imports.Importer;
+import io.oz.sdoc.publish.ResPublisher;
 
 /**
  * The doc-tree tier: the service semantic-doc's editor (AnDoctreeditor) talks to.
@@ -107,7 +108,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 * @return null if not configured
 	 * @throws Exception
 	 */
-	synchronized DoctreeDBHelper db() throws Exception {
+	public synchronized DoctreeDBHelper db() throws Exception {
 		if (db == null && conn != null) {
 			db = DoctreeDBHelper.setup(conn, false);
 			if (parser != null)
@@ -117,6 +118,19 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	}
 
 	public Importer importer() { return importer; }
+
+	ResPublisher publisher;
+
+	/**
+	 * Enable {@link DoctreeReq.A#publish} and {@link DoctreeReq.A#unpublish}.
+	 * 
+	 * @param publisher to the local html-service
+	 * @return this
+	 */
+	public DoctreeTier publisher(ResPublisher publisher) {
+		this.publisher = publisher;
+		return this;
+	}
 
 	@Override
 	protected void onGet(AnsonMsg<DoctreeReq> msg, HttpServletResponse resp)
@@ -169,6 +183,10 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 				rsp = modify(req);
 			else if (DoctreeReq.A.commit.equals(a))
 				rsp = commit(req);
+			else if (DoctreeReq.A.publish.equals(a))
+				rsp = publish(req, usr);
+			else if (DoctreeReq.A.unpublish.equals(a))
+				rsp = unpublish(req, usr);
 			else
 				throw new SemanticException("Doc-tree tier: request.a, %s, can not be handled.", a);
 
@@ -239,6 +257,20 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 		DoctreeResp rsp = new DoctreeResp().doc(db.doc(req.docId));
 		rsp.root(r.root()).rejected(r.rejected()).newId(r.newId()).forest(r.forest());
 		return rsp;
+	}
+
+	/** c/publish: the doc's html package is published at html-service → doc, with pubpath */
+	DoctreeResp publish(DoctreeReq req, IUser usr) throws Exception {
+		if (db() == null || publisher == null)
+			throw new SemanticException("Doc-tree tier: publishing isn't configured.");
+		return new DoctreeResp().doc(publisher.publish(db, req.docId, usr));
+	}
+
+	/** d/publish: the doc is removed from html-service → doc, without pubpath */
+	DoctreeResp unpublish(DoctreeReq req, IUser usr) throws Exception {
+		if (db() == null || publisher == null)
+			throw new SemanticException("Doc-tree tier: publishing isn't configured.");
+		return new DoctreeResp().doc(publisher.unpublish(db, req.docId, usr));
 	}
 
 	/** c/commit: the doc isn't dirty, committedAt = now → doc */

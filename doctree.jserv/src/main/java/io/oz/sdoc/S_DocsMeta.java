@@ -28,6 +28,8 @@ public class S_DocsMeta extends SemanticTableMeta {
 	public final String htmlUri;
 	public final String builtAt;
 	public final String builtBy;
+	/** context path published at html-service, see {@link DocInf#pubpath} */
+	public final String pubpath;
 	/** 1: changed since the last commit */
 	public final String dirty;
 	/** time of the last commit */
@@ -47,6 +49,7 @@ public class S_DocsMeta extends SemanticTableMeta {
 		htmlUri = "htmlUri";
 		builtAt = "builtAt";
 		builtBy = "builtBy";
+		pubpath = "pubpath";
 		dirty   = "dirty";
 		committedAt = "committedAt";
 
@@ -62,6 +65,7 @@ public class S_DocsMeta extends SemanticTableMeta {
 			+ "  " + htmlUri + " varchar(512),\n"
 			+ "  " + builtAt + " varchar(24),\n"
 			+ "  " + builtBy + " varchar(32),\n"
+			+ "  " + pubpath + " varchar(32),          -- context path at html-service\n"
 			+ "  " + dirty   + " integer DEFAULT 0,    -- 1: changed since the last commit\n"
 			+ "  " + committedAt + " varchar(24),\n"
 			+ "  PRIMARY KEY (" + pk + ")\n"
