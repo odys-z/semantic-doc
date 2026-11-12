@@ -62,6 +62,31 @@ public class DocRes {
 		return new File(dir(uid, docId), name(resId));
 	}
 
+	/** the folder of html builds of a user, in his folder of the synode's volume */
+	public static final String buildfolder = "doctree.build";
+	/** the folder of built html packages (zip) of a user, in his folder of the synode's volume */
+	public static final String htmlfolder = "doctree.html";
+
+	/**
+	 * The doc's build folder (Sphinx source, doctrees and html), may not exist yet.
+	 * 
+	 * @param uid the doc's creator
+	 * @param docId
+	 */
+	public File builddir(String uid, String docId) throws IOException {
+		return new File(new File(new File(volume, name(uid)), buildfolder), name(docId));
+	}
+
+	/**
+	 * The doc's html package, &lt;volume&gt;/&lt;uid&gt;/{@link #htmlfolder}/&lt;docId&gt;.zip, may not exist.
+	 * 
+	 * @param uid the doc's creator
+	 * @param docId
+	 */
+	public File htmlzip(String uid, String docId) throws IOException {
+		return new File(new File(new File(volume, name(uid)), htmlfolder), name(docId) + ".zip");
+	}
+
 	/** a file / folder name, no path */
 	static String name(String n) throws IOException {
 		if (isblank(n) || !n.equals(new File(n).getName()) || n.startsWith("."))

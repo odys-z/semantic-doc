@@ -7,6 +7,5 @@ export { AnDoctreeditor, AnDoctreeditorComp, RSTVER, SAVE_DELAY } from './AnDoct
 export type { AnDoctreeditorProps } from './AnDoctreeditor';
 export * from './doc-stree';
 export { assemble, blockPart, docname, MEDIA } from './rst-assembler';
-export type { RstFile } from './rst-assembler';
 export { factsToTiptap, factsToJson, fillTipjson } from './facts';
 export type { RunFacts } from './facts';

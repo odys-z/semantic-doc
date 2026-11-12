@@ -17,7 +17,7 @@
  * under it, so a change inside a doc never reloads other docs.
  */
 import {
-	AnDatasetReq, AnDatasetResp, Anson, Protocol, TreeModify,
+	AnDatasetReq, AnDatasetResp, Anson, Protocol, TreeModify, StreeTier,
 	type AnTreeNode, type AnsonMsg, type AnsonResp, type SessionClient,
 } from '@anclient/semantier';
 
@@ -42,6 +42,8 @@ export class DocInf extends Anson {
 	htmlUri?: string | null;
 	builtAt?: string | null;
 	builtBy?: string | null;
+	/** id of the template the html package was built with, e.g. "rtd-0.8"; null if never built */
+	template?: string | null;
 	/** true if changed since the last commit */
 	dirty?: boolean;
 	/** time of the last commit, null if never committed */
@@ -49,6 +51,30 @@ export class DocInf extends Anson {
 
 	constructor(opts: { docId?: string, title?: string, creator?: string } = {}) {
 		super(DocInf.__type__);
+		Object.assign(this, opts);
+	}
+}
+
+/**
+ * io.oz.sdoc.build.RstFile: one file of a doc's Sphinx source, assembled by rst-assembler.ts.
+ * The files are the preview's source, and go with c/commit: the synode builds the doc's html
+ * package from them (it never generates RST).
+ */
+export class RstFile extends Anson {
+	static __type__ = 'io.oz.sdoc.build.RstFile';
+
+	/** the section (or doc root) the file is built from */
+	nid!: string;
+	/** path in the Sphinx source folder, "index.rst" for the doc root */
+	path!: string;
+	/** docname for toctrees: the path without ".rst" */
+	name!: string;
+	rst!: string;
+	/** names of the resources the file's images link, in media/ beside it, e.g. ["image1.png"] */
+	media!: string[];
+
+	constructor(opts: { nid: string, path: string, name: string, rst: string, media: string[] }) {
+		super(RstFile.__type__);
 		Object.assign(this, opts);
 	}
 }
@@ -123,11 +149,11 @@ export type DocTreeNode = AnTreeNode & {
 	node: AnTreeNode['node'] & { [c in Exclude<keyof DocNode, 'type'>]?: string } & { children?: DocTreeNode[] };
 };
 
-/** io.oz.sdoc.DoctreeReq, extending AnDatasetReq: tree changes are its mod, a TreeModify */
+/** io.oz.sdoc.tier.DoctreeReq, extending AnDatasetReq: tree changes are its mod, a TreeModify */
 export class DoctreeReq extends AnDatasetReq {
-	static __type__ = 'io.oz.sdoc.DoctreeReq';
+	static __type__ = 'io.oz.sdoc.tier.DoctreeReq';
 
-	/** io.oz.sdoc.DoctreeReq.A */
+	/** io.oz.sdoc.tier.DoctreeReq.A */
 	static A = {
 		/** list docs (headers only) → docs */
 		docs: 'r/docs',
@@ -137,8 +163,10 @@ export class DoctreeReq extends AnDatasetReq {
 		update: 'u/node',
 		/** modify the doc's tree as mod says → doc, root, forest (the reloaded subtree), rejected, newId */
 		modify: 'u/tree',
-		/** mark the doc's work as finished → doc */
+		/** mark the doc's work as finished, rstFiles: the synode builds the html package from them → doc, build */
 		commit: 'c/commit',
+		/** the state of the doc's html build, started by commit → doc, build, buildlog */
+		build: 'r/build',
 		/** import a docx, srcId: answers the header (state parsing) at once */
 		importDocx: 'c/import',
 		/** a doc's resource file, res: a GET of Doctree206Serv (doctree206.serv), e.g. an img's src */
@@ -154,8 +182,10 @@ export class DoctreeReq extends AnDatasetReq {
 	node?: DocNode;
 	/** for res: the resource's name in the doc's folder, e.g. "image1.png" */
 	res?: string;
+	/** for commit: the doc as RST files; absent: committed without a html build */
+	rstFiles?: RstFile[];
 
-	constructor(uri: string, a: Doctree_A, opts: { docId?: string, doc?: DocInf, srcId?: string, node?: DocNode, mod?: TreeModify, res?: string } = {}) {
+	constructor(uri: string, a: Doctree_A, opts: { docId?: string, doc?: DocInf, srcId?: string, node?: DocNode, mod?: TreeModify, res?: string, rstFiles?: RstFile[] } = {}) {
 		super({ uri, type: DoctreeReq.__type__ });
 		this.a = a; // after super: AnDatasetReq's TA() is for its own A
 		Object.assign(this, opts);
@@ -165,19 +195,28 @@ export class DoctreeReq extends AnDatasetReq {
 /** a value of {@link DoctreeReq.A} */
 export type Doctree_A = (typeof DoctreeReq.A)[keyof typeof DoctreeReq.A];
 
-/** io.oz.sdoc.DoctreeResp, extending AnDatasetResp */
+/** io.oz.sdoc.tier.DoctreeResp, extending AnDatasetResp */
 export class DoctreeResp extends AnDatasetResp {
-	static __type__ = 'io.oz.sdoc.DoctreeResp';
+	static __type__ = 'io.oz.sdoc.tier.DoctreeResp';
 
 	doc?: DocInf;
+	/** io.oz.sdoc.build.HtmlBuilder.State */
+	static Build = { building: 'building', built: 'built', failed: 'failed' } as const;
+
 	/** r/docs: the docs' headers */
 	docs?: DocInf[];
 	declare forest: DocTreeNode[];
+	/** c/commit, r/build: the state of the doc's html build, see {@link DoctreeResp.Build}; null: no build */
+	build?: string | null;
+	/** output of the build tool: warnings, or why it failed */
+	buildlog?: string | null;
 
 	constructor(json: any) {
 		super({ ...json, forest: json.forest, type: DoctreeResp.__type__ });
 		this.doc = json.doc;
 		this.docs = json.docs;
+		this.build = json.build;
+		this.buildlog = json.buildlog;
 	}
 }
 Protocol.registerBody(DoctreeResp.__type__, (json) => new DoctreeResp(json));
@@ -185,22 +224,27 @@ Protocol.registerBody(DoctreeResp.__type__, (json) => new DoctreeResp(json));
 export type OnOk = (resp: DoctreeResp) => void;
 export type OnErr = (msg: string) => void;
 
-/** Requests of the doc-tree tier, see {@link StreeDoctier} */
-export interface Doctier {
-	/** r/tree: the doc root with its subtree */
-	tree(docId: string, ok: OnOk, err?: OnErr): void;
-	/** u/node: save tipjson + rstext of one node; answers the doc header, no forest */
-	update(docId: string, node: DocNode, ok: OnOk, err?: OnErr): void;
-	/** u/tree: answers the reloaded subtree, or rejected */
-	modify(docId: string, mod: TreeModify, ok: OnOk, err?: OnErr): void;
-	/** c/commit: mark the doc's work as finished */
-	commit(docId: string, ok: OnOk, err?: OnErr): void;
-	/**
-	 * url of a doc's resource, e.g. an imported picture, for an img's src or a fetch;
-	 * the same url for the same resource. Absent, or undefined: no resources (e.g. a stub tier).
-	 */
-	resSrc?(docId: string, name: string): string | undefined;
-}
+// /** Requests of the doc-tree tier, see {@link StreeDoctier} */
+// export interface Doctier {
+// 	/** r/tree: the doc root with its subtree */
+// 	tree(docId: string, ok: OnOk, err?: OnErr): void;
+// 	/** u/node: save tipjson + rstext of one node; answers the doc header, no forest */
+// 	update(docId: string, node: DocNode, ok: OnOk, err?: OnErr): void;
+// 	/** u/tree: answers the reloaded subtree, or rejected */
+// 	modify(docId: string, mod: TreeModify, ok: OnOk, err?: OnErr): void;
+// 	/**
+// 	 * c/commit: mark the doc's work as finished; the synode builds the doc's html package
+// 	 * from rstFiles in the background (resp.build: building), see {@link Doctier.build}
+// 	 */
+// 	commit(docId: string, rstFiles: RstFile[], ok: OnOk, err?: OnErr): void;
+// 	/** r/build: the state of the doc's html build. Absent: no builds (e.g. a stub tier). */
+// 	build?(docId: string, ok: OnOk, err?: OnErr): void;
+// 	/**
+// 	 * url of a doc's resource, e.g. an imported picture, for an img's src or a fetch;
+// 	 * the same url for the same resource. Absent, or undefined: no resources (e.g. a stub tier).
+// 	 */
+// 	resSrc?(docId: string, name: string): string | undefined;
+// }
 
 /** base64 of a string's UTF-8 bytes (btoa() takes Latin-1 only) */
 function base64(s: string): string {
@@ -210,7 +254,7 @@ function base64(s: string): string {
 }
 
 /** The doc-tree tier on a synode, doctree.jserv's DoctreeTier */
-export class StreeDoctier implements Doctier {
+export class StreeDoctier extends StreeTier {
 	/**
 	 * @param client logged-in client
 	 * @param uri function uri, e.g. "/album/sdoc"
@@ -219,7 +263,9 @@ export class StreeDoctier implements Doctier {
 	 * SynDocollPort.doctree206, "doctree206.serv"; absent: no resources shown
 	 */
 	constructor(readonly client: SessionClient, readonly uri: string, readonly port: string,
-		readonly port206?: string) {}
+		readonly port206?: string) {
+		super({uri, port});
+	}
 
 	/** urls of resources, so an img keeps its src across renders */
 	private srcs = new Map<string, string>();
@@ -251,8 +297,12 @@ export class StreeDoctier implements Doctier {
 		this.send(DoctreeReq.A.modify, { docId, mod }, ok, err);
 	}
 
-	commit(docId: string, ok: OnOk, err?: OnErr) {
-		this.send(DoctreeReq.A.commit, { docId }, ok, err);
+	commit(docId: string, rstFiles: RstFile[], ok: OnOk, err?: OnErr) {
+		this.send(DoctreeReq.A.commit, { docId, rstFiles }, ok, err);
+	}
+
+	build(docId: string, ok: OnOk, err?: OnErr) {
+		this.send(DoctreeReq.A.build, { docId }, ok, err);
 	}
 
 	/**

@@ -1,6 +1,7 @@
 package io.oz.sdoc.tier;
 
 import static io.odysz.common.LangExt.eq;
+import static io.odysz.common.LangExt.isNull;
 import static io.odysz.common.LangExt.isblank;
 
 import java.io.IOException;
@@ -27,6 +28,7 @@ import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.x.TransException;
 import io.oz.sdoc.DocInf;
 import io.oz.sdoc.DoctreeDBHelper;
+import io.oz.sdoc.build.HtmlBuilder;
 import io.oz.sdoc.imports.DocxSource;
 import io.oz.sdoc.imports.IBlockParser;
 import io.oz.sdoc.imports.Importer;
@@ -132,6 +134,20 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 		return this;
 	}
 
+	HtmlBuilder builder;
+
+	/**
+	 * Enable building a doc's html package when it's committed with its RST files
+	 * ({@link DoctreeReq#rstFiles}), and {@link DoctreeReq.A#build}.
+	 * 
+	 * @param builder
+	 * @return this
+	 */
+	public DoctreeTier builder(HtmlBuilder builder) {
+		this.builder = builder;
+		return this;
+	}
+
 	@Override
 	protected void onGet(AnsonMsg<DoctreeReq> msg, HttpServletResponse resp)
 			throws ServletException, IOException {
@@ -182,7 +198,9 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 			else if (DoctreeReq.A.modify.equals(a))
 				rsp = modify(req);
 			else if (DoctreeReq.A.commit.equals(a))
-				rsp = commit(req);
+				rsp = commit(req, usr);
+			else if (DoctreeReq.A.build.equals(a))
+				rsp = build(req);
 			else if (DoctreeReq.A.publish.equals(a))
 				rsp = publish(req, usr);
 			else if (DoctreeReq.A.unpublish.equals(a))
@@ -259,10 +277,24 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 		return rsp;
 	}
 
-	/** c/publish: the doc's html package is published at html-service → doc, with pubpath */
+	/**
+	 * c/publish: the doc's html package is published at html-service → doc, with pubpath.
+	 * With a {@link #builder(HtmlBuilder)}, only the package built since the last commit.
+	 */
 	DoctreeResp publish(DoctreeReq req, IUser usr) throws Exception {
 		if (db() == null || publisher == null)
 			throw new SemanticException("Doc-tree tier: publishing isn't configured.");
+
+		if (builder != null) {
+			DocInf doc = doc(req);
+			String state = builder.state(req.docId);
+			if (eq(HtmlBuilder.State.building, state))
+				throw new SemanticException("The doc's html is still building. Try again later.");
+			if (isblank(doc.builtAt) || !isblank(doc.committedAt) && doc.builtAt.compareTo(doc.committedAt) < 0)
+				throw new SemanticException(eq(HtmlBuilder.State.failed, state)
+					? "The doc's html build failed. " + builder.log(req.docId)
+					: "The doc's html isn't built since it's committed. Commit it again.");
+		}
 		return new DoctreeResp().doc(publisher.publish(db, req.docId, usr));
 	}
 
@@ -273,10 +305,30 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 		return new DoctreeResp().doc(publisher.unpublish(db, req.docId, usr));
 	}
 
-	/** c/commit: the doc isn't dirty, committedAt = now → doc */
-	DoctreeResp commit(DoctreeReq req) throws Exception {
+	/**
+	 * c/commit: the doc isn't dirty, committedAt = now → doc; with {@link DoctreeReq#rstFiles},
+	 * the doc's html package is built in the background → build (building), see {@link #build(DoctreeReq)}.
+	 */
+	DoctreeResp commit(DoctreeReq req, IUser usr) throws Exception {
 		doc(req);
-		return new DoctreeResp().doc(db.commit(req.docId, robot));
+		DocInf doc = db.commit(req.docId, robot);
+		DoctreeResp rsp = new DoctreeResp().doc(doc);
+		if (builder != null && !isNull(req.rstFiles)) {
+			builder.start(db, doc, req.rstFiles, usr);
+			rsp.build(builder.state(req.docId), null);
+		}
+		else if (builder != null)
+			builder.forget(req.docId);
+		return rsp;
+	}
+
+	/** r/build: the state of the doc's html build → doc (with builtAt, htmlUri), build, buildlog */
+	DoctreeResp build(DoctreeReq req) throws Exception {
+		DocInf doc = doc(req);
+		DoctreeResp rsp = new DoctreeResp().doc(doc);
+		if (builder != null)
+			rsp.build(builder.state(req.docId), builder.log(req.docId));
+		return rsp;
 	}
 
 	/** the doc of the request; the working copy must be configured */

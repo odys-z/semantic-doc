@@ -40,6 +40,13 @@ public class DocInf extends Anson {
 	public String builtAt;
 	/** Who triggered the last build. */
 	public String builtBy;
+	/**
+	 * Id of the template the html package was built with, name + version, e.g. "rtd-0.8":
+	 * the package has no theme files, its pages link the template's, served by html-service at
+	 * /pub/_t/&lt;template&gt;/_static/. Null if never built.
+	 * @since 0.1.3
+	 */
+	public String template;
 
 	/**
 	 * Published url path at html-service, without the leading '/', e.g. "pub/er3cou": the url root

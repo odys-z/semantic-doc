@@ -24,11 +24,25 @@ public class DoctreeResp extends AnDatasetResp {
 	@AnsonField(valType="io.oz.sdoc.DocInf")
 	public ArrayList<DocInf> docs;
 
+	/**
+	 * for {@link DoctreeReq.A#commit}, {@link DoctreeReq.A#build}: the state of the doc's html build,
+	 * a value of io.oz.sdoc.build.HtmlBuilder.State; null: no build since the synode started.
+	 */
+	public String build;
+
+	/** output of the build tool (warnings, or why it failed) */
+	public String buildlog;
 
 	public DoctreeResp() { }
 
 	public DoctreeResp doc(DocInf d) {
 		this.doc = d;
+		return this;
+	}
+
+	public DoctreeResp build(String state, String log) {
+		this.build = state;
+		this.buildlog = log;
 		return this;
 	}
 

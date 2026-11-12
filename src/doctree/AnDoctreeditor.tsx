@@ -37,8 +37,9 @@ import Typography from '@mui/material/Typography';
 
 import { ParagraphEditor, StaticBlock, type JSONContent, type RstResult } from '../editor';
 import {
-	DocNode, type DocInf, type DocKind, type DocTreeNode, type DoctreeResp, type Doctier, type MoveOp,
+	DocNode, DoctreeResp, type DocInf, type DocKind, type DocTreeNode, type MoveOp,
 	fromTiptap, insertMod, isContainer, locate, moveMod, received, removeMod, replaced, toTiptap,
+	StreeDoctier,
 } from './doc-stree';
 import './doctree.css';
 import { assemble, type RstFile } from './rst-assembler';
@@ -49,11 +50,13 @@ import { DocPreview } from '../preview/DocPreview';
 export const RSTVER = 1;
 /** autosave delay after typing stops, ms */
 export const SAVE_DELAY = 1500;
+/** the synode's html build is asked every BUILD_POLL ms while building */
+export const BUILD_POLL = 2000;
 
 export interface AnDoctreeditorProps extends Partial<Omit<AnTreeditorProps, 'columns' | 'pk' | 'tier'>> {
 	docId: string;
 	/** requests to the doc-tree tier, e.g. a StreeDoctier */
-	doctier: Doctier;
+	doctier: StreeDoctier;
 	/** height of the editor; the rows scroll inside. Default 100% of the parent */
 	height?: number | string;
 	/**
@@ -83,6 +86,8 @@ interface DoctreeState {
 	alert?: { msg: string; retry: () => void };
 	/** snackbar: a change refused or failed; the tree is reloaded */
 	snack?: string;
+	/** state of the synode's html build of the last commit, see DoctreeResp.Build */
+	build?: string | null;
 }
 
 /** an empty paragraph, stored form */
@@ -146,6 +151,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 
 	componentWillUnmount() {
 		this.flush();
+		clearTimeout(this.building);
 	}
 
 	// ---- server ------------------------------------------------------------
@@ -244,11 +250,34 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 		this.modify(removeMod(this.state.forest, t.id));
 	}
 
+	/** polling the synode's html build */
+	building: ReturnType<typeof setTimeout> | undefined;
+
+	/**
+	 * Commit with the doc's RST files: the synode builds the html package from them in the
+	 * background, and its state is polled until the build ends.
+	 */
 	commit() {
 		this.flush();
-		this.props.doctier.commit(this.props.docId,
-			(resp) => this.setState({ committed: !resp.doc?.dirty, committedAt: resp.doc?.committedAt }),
+		const forest = this.state.forest;
+		this.props.doctier.commit(this.props.docId, forest[0] ? assemble(forest[0]) : [],
+			(resp) => {
+				this.setState({ committed: !resp.doc?.dirty, committedAt: resp.doc?.committedAt, build: resp.build });
+				this.pollBuild(resp.build);
+			},
 			(msg) => this.setState({ snack: `Not committed: ${msg}` }));
+	}
+
+	pollBuild(build?: string | null) {
+		clearTimeout(this.building);
+		if (build !== DoctreeResp.Build.building || !this.props.doctier.build) return;
+		this.building = setTimeout(() => this.props.doctier.build!(this.props.docId,
+			(resp) => {
+				this.setState({ build: resp.build, doc: resp.doc ?? this.state.doc,
+					snack: resp.build === DoctreeResp.Build.failed ? `Html build failed: ${resp.buildlog ?? ''}` : this.state.snack });
+				this.pollBuild(resp.build);
+			},
+			() => this.pollBuild(build)), BUILD_POLL);
 	}
 
 	// ---- anreact hooks -----------------------------------------------------
@@ -360,11 +389,14 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	}
 
 	render() {
-		const { committed, committedAt, saving, doc, alert, snack, previewing, rstFiles } = this.state;
+		const { committed, committedAt, saving, doc, alert, snack, previewing, rstFiles, build } = this.state;
 		const preview = this.props.preview && previewing;
 		const classes = this.props.classes || {};
 		const media = CrudCompW.getMedia(this.props.width);
-		const status = saving ? 'Saving…' : committed ? `Committed ${committedAt ?? ''}` : 'Draft — not committed';
+		const html = build === DoctreeResp.Build.building ? ', building html…'
+				: build === DoctreeResp.Build.built ? ', html built'
+				: build === DoctreeResp.Build.failed ? ', html build failed' : '';
+		const status = saving ? 'Saving…' : committed ? `Committed ${committedAt ?? ''}${html}` : 'Draft — not committed';
 
 		return (
 			<Box className="sd-doctree" sx={{

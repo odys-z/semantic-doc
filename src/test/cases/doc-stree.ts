@@ -5,7 +5,7 @@
  */
 import { AnsonMsg, TreeModify } from '@anclient/semantier';
 import {
-	DocNode, DoctreeReq, DoctreeResp, StreeDoctier, insertMod, moveMod, removeMod, replaced, type DocTreeNode, type MoveOp,
+	DocNode, DoctreeReq, DoctreeResp, RstFile, StreeDoctier, insertMod, moveMod, removeMod, replaced, type DocTreeNode, type MoveOp,
 } from '../../doctree/doc-stree';
 import type { Result } from '../runner';
 
@@ -31,12 +31,22 @@ const json = (o: unknown) => JSON.stringify(JSON.parse(JSON.stringify(o)));
 
 const cases: { name: string; actual: () => string; expected: string }[] = [
 	{
+		name: 'doc-stree: c/commit request with the RST files, as doctree.jserv reads it',
+		actual: () => {
+			const files = [new RstFile({ nid: 'd', path: 'index.rst', name: 'index', rst: 'Doc\n===\n', media: ['image1.png'] })];
+			const r = JSON.parse(JSON.stringify(new DoctreeReq('/sdoc', DoctreeReq.A.commit, { docId: 'd', rstFiles: files })));
+			return json({ type: r.type, a: r.a, docId: r.docId, rstFiles: r.rstFiles });
+		},
+		expected: '{"type":"io.oz.sdoc.tier.DoctreeReq","a":"c/commit","docId":"d","rstFiles":[{"type":"io.oz.sdoc.build.RstFile",'
+				+ '"nid":"d","path":"index.rst","name":"index","rst":"Doc\\n===\\n","media":["image1.png"]}]}',
+	},
+	{
 		name: 'doc-stree: u/tree request, as doctree.jserv reads it',
 		actual: () => {
 			const r = JSON.parse(JSON.stringify(new DoctreeReq('/sdoc', DoctreeReq.A.modify, { docId: 'd', mod: TreeModify.indent('p3') })));
 			return json({ type: r.type, a: r.a, uri: r.uri, docId: r.docId, mod: r.mod });
 		},
-		expected: '{"type":"io.oz.sdoc.DoctreeReq","a":"u/tree","uri":"/sdoc","docId":"d",'
+		expected: '{"type":"io.oz.sdoc.tier.DoctreeReq","a":"u/tree","uri":"/sdoc","docId":"d",'
 				+ '"mod":{"type":"io.odysz.semantic.ext.TreeModify","op":"indent","nid":"p3"}}',
 	},
 	{
@@ -62,7 +72,7 @@ const cases: { name: string; actual: () => string; expected: string }[] = [
 			return [url, msg.port, msg.header.ssid, b.type, b.a, b.docId, b.res,
 				tier.resSrc('X.0001', 'image1.png') === src, new StreeDoctier(client as never, '/u', 'doctree.serv').resSrc('X.0001', 'a.png')].join(' ');
 		},
-		expected: 'http://synode/jserv-album/doctree206.serv doctree206.serv ss-1 io.oz.sdoc.DoctreeReq r/res X.0001 image1.png true ',
+		expected: 'http://synode/jserv-album/doctree206.serv doctree206.serv ss-1 io.oz.sdoc.tier.DoctreeReq r/res X.0001 image1.png true ',
 	},
 	{
 		name: 'doc-stree: greyed out by the rules (holders doc, section; fixed roots)',
@@ -102,7 +112,7 @@ const cases: { name: string; actual: () => string; expected: string }[] = [
 		name: 'doc-stree: DoctreeResp from the server, rejected',
 		actual: () => {
 			const msg = new AnsonMsg({ type: 'io.odysz.semantic.jprotocol.AnsonMsg', code: 'ok', port: 'doctree.serv',
-				body: [{ type: 'io.oz.sdoc.DoctreeResp', rejected: 'holder', forest: null, doc: { docId: 'd', dirty: true } }] });
+				body: [{ type: 'io.oz.sdoc.tier.DoctreeResp', rejected: 'holder', forest: null, doc: { docId: 'd', dirty: true } }] });
 			const r = msg.Body() as DoctreeResp;
 			return `${r instanceof DoctreeResp} ${r.rejected === TreeModify.Rejected.holder} ${r.doc?.dirty}`;
 		},

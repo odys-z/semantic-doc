@@ -1,5 +1,5 @@
 {
- "type": "io.oz.sdoc.DoctreeResp",
+ "type": "io.oz.sdoc.tier.DoctreeResp",
  "//": "Server-shaped load response (r/tree), hand-made until SmandocServ serves it. forest: the doc root node with its subtree; node fields are s_docnodes columns as strings.",
  "doc": {
   "docId": "doc-a",

@@ -10,3 +10,5 @@ RemoteSystemsTempFiles
 !/src/test/res/r206/.keep
 /src/test/res/rpub/*
 !/src/test/res/rpub/.keep
+/src/test/res/rbuild/*
+!/src/test/res/rbuild/.keep

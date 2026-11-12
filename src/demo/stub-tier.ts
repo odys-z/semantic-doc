@@ -6,7 +6,7 @@
  * server's reshaping, so they are answered with an error naming the request.
  */
 import type { TreeModify } from '@anclient/semantier';
-import { DoctreeResp, DocNode, locate, type Doctier, type OnErr, type OnOk } from '../doctree';
+import { DoctreeResp, DocNode, locate, type Doctier, type OnErr, type OnOk, type RstFile } from '../doctree';
 
 /** urls of the json files; webpack emits them as assets */
 export const stubDocs: Record<string, string> = {
@@ -71,7 +71,7 @@ export class StubDoctreeTier implements Doctier {
 		setTimeout(() => err?.(`${describe(req)}: structure changes need the server (doctree.serv)`), this.delay);
 	}
 
-	commit(docId: string, ok: OnOk, err?: OnErr) {
+	commit(docId: string, _rstFiles: RstFile[], ok: OnOk, err?: OnErr) {
 		this.answer(docId, ok, err, (d) => {
 			d.doc!.dirty = false;
 			d.doc!.committedAt = new Date().toLocaleString();

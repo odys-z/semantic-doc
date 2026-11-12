@@ -3,7 +3,8 @@
 Make (or refresh) a Sphinx template folder for semantic-doc's html preview:
 
     sdoc-template/
-      manifest.json    the source files the previewer loads into Pyodide, and the pinned packages
+      manifest.json    the template's id, the source files the previewer loads into Pyodide,
+                       and the pinned packages
       source/conf.py   written by hand; a new template gets a copy of the demo's
       source/static/theme-roles.css   copied from editor/styles (the editor's role styles)
       _static/         copied from a native build: the files the preview page's <base> points at
@@ -11,6 +12,12 @@ Make (or refresh) a Sphinx template folder for semantic-doc's html preview:
 Usage (in semantic-doc/src):
     python3 make-template.py                        web-dist/sdoc-template, the demo's
     python3 make-template.py <template folder>      e.g. jserv-album's sdoc-template-0.8
+    python3 make-template.py <template folder> <id> with a new id, e.g. rtd-0.9
+
+The id, name + version, tells a template from its other versions: a doc's html package is built
+without theme files, and its pages link ../_t/<id>/_static/. So an id is never reused for
+different files: a template that changed gets a new id. A folder keeps the id of its
+manifest.json unless one is given; a new folder gets TEMPLATE_ID.
 
 Needs the pinned packages installed natively (PACKAGES), as the browser loads the same versions:
     pip install "sphinx==9.2.0" "sphinx_rtd_theme==3.1.0" "docutils==0.22.4"
@@ -25,18 +32,32 @@ import tempfile
 # The versions the preview installs with micropip (Pyodide 0.29), and the synode builds with.
 PACKAGES = ['sphinx==9.2.0', 'sphinx_rtd_theme==3.1.0', 'docutils==0.22.4']
 PYODIDE = 'https://cdn.jsdelivr.net/pyodide/v0.29.0/full/pyodide.js'
+# id of a new template: sphinx_rtd_theme, portfolio 0.8
+TEMPLATE_ID = 'rtd-0.8'
 
 here = os.path.dirname(os.path.abspath(__file__))
 
 
 def unused(folder, names):
     """
-    Files the preview never loads: the theme's legacy _static/fonts/ (theme.css uses css/fonts/),
-    and the old font formats (.eot, .ttf, .svg) beside woff / woff2.
+    Files browsers never load: the theme's legacy _static/fonts/ (theme.css uses css/fonts/),
+    and every font format but woff2 (.woff, .eot, .ttf, .svg): each font has a woff2 file, the
+    first format theme.css lists.
     """
     if os.path.basename(folder) == '_static':
         return {'fonts'}
-    return {n for n in names if os.path.splitext(n)[1] in ('.eot', '.ttf', '.svg')}
+    return {n for n in names if os.path.splitext(n)[1] in ('.woff', '.eot', '.ttf', '.svg')}
+
+
+def template_id(tpl):
+    """The id given, else the one of the folder's manifest.json, else TEMPLATE_ID."""
+    if len(sys.argv) > 2:
+        return sys.argv[2]
+    try:
+        with open(os.path.join(tpl, 'manifest.json'), encoding='utf-8') as f:
+            return json.load(f).get('id') or TEMPLATE_ID
+    except (OSError, ValueError):
+        return TEMPLATE_ID
 
 
 def main():
@@ -55,8 +76,10 @@ def main():
                    for d, dirs, names in os.walk(src)
                    for f in names
                    if not f.endswith('.rst') and '__pycache__' not in d)
+    tid = template_id(tpl)
     with open(os.path.join(tpl, 'manifest.json'), 'w', encoding='utf-8') as f:
         json.dump({'comment': 'Written by semantic-doc/src/make-template.py; paths are relative to source/.',
+                   'id': tid,
                    'source': 'source/', 'files': files, 'packages': PACKAGES, 'pyodide': PYODIDE},
                   f, indent=2)
         f.write('\n')
@@ -72,7 +95,7 @@ def main():
         shutil.rmtree(os.path.join(tpl, '_static'), ignore_errors=True)
         shutil.copytree(os.path.join(out, '_static'), os.path.join(tpl, '_static'), ignore=unused)
 
-    print(f'{tpl}: {len(files)} source files, _static from sphinx {PACKAGES[0]}')
+    print(f'{tpl}: template {tid}, {len(files)} source files, _static from sphinx {PACKAGES[0]}')
 
 
 if __name__ == '__main__':

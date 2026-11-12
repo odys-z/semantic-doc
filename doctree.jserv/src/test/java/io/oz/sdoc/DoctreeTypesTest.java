@@ -89,4 +89,19 @@ class DoctreeTypesTest {
 		assertEquals(req.node.rstext, back.node.rstext);
 		assertEquals(1, back.node.rstver);
 	}
+
+	/** c/commit as the client sends it (semantic-doc/src/test/cases/doc-stree.ts): the RST files */
+	@Test
+	void commitFromClient() throws Exception {
+		String json = "{\"type\":\"io.oz.sdoc.tier.DoctreeReq\",\"a\":\"c/commit\",\"docId\":\"d\",\"rstFiles\":[{\"type\":\"io.oz.sdoc.build.RstFile\","
+				+ "\"nid\":\"d\",\"path\":\"index.rst\",\"name\":\"index\",\"rst\":\"Doc\\n===\\n\",\"media\":[\"image1.png\"]}]}";
+
+		DoctreeReq req = (DoctreeReq) Anson.fromJson(json);
+
+		assertEquals(DoctreeReq.A.commit, req.a());
+		assertEquals(1, req.rstFiles.size());
+		assertEquals("index.rst", req.rstFiles.get(0).path);
+		assertEquals("Doc\n===\n", req.rstFiles.get(0).rst);
+		assertEquals("image1.png", req.rstFiles.get(0).media[0]);
+	}
 }

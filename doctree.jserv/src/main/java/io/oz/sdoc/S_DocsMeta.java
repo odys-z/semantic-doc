@@ -28,6 +28,8 @@ public class S_DocsMeta extends SemanticTableMeta {
 	public final String htmlUri;
 	public final String builtAt;
 	public final String builtBy;
+	/** id of the template the html package was built with, see {@link DocInf#template} */
+	public final String template;
 	/** url path published at html-service, see {@link DocInf#pubpath} */
 	public final String pubpath;
 	/** 1: changed since the last commit */
@@ -49,6 +51,7 @@ public class S_DocsMeta extends SemanticTableMeta {
 		htmlUri = "htmlUri";
 		builtAt = "builtAt";
 		builtBy = "builtBy";
+		template = "template";
 		pubpath = "pubpath";
 		dirty   = "dirty";
 		committedAt = "committedAt";
@@ -65,6 +68,7 @@ public class S_DocsMeta extends SemanticTableMeta {
 			+ "  " + htmlUri + " varchar(512),\n"
 			+ "  " + builtAt + " varchar(24),\n"
 			+ "  " + builtBy + " varchar(32),\n"
+			+ "  " + template + " varchar(64),         -- template id of the html package, e.g. rtd-0.8\n"
 			+ "  " + pubpath + " varchar(32),          -- url path at html-service\n"
 			+ "  " + dirty   + " integer DEFAULT 0,    -- 1: changed since the last commit\n"
 			+ "  " + committedAt + " varchar(24),\n"

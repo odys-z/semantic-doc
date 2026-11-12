@@ -1,9 +1,13 @@
 package io.oz.sdoc.tier;
 
+import java.util.ArrayList;
+
+import io.odysz.anson.AnsonField;
 import io.odysz.semantic.jprotocol.AnsonBody;
 import io.odysz.semantic.jprotocol.AnsonMsg;
 import io.oz.sdoc.DocInf;
 import io.oz.sdoc.DocNode;
+import io.oz.sdoc.build.RstFile;
 import io.odysz.semantic.ext.AnDatasetReq;
 import io.odysz.semantic.ext.TreeModify;
 
@@ -32,6 +36,11 @@ public class DoctreeReq extends AnDatasetReq {
 		public static final String modify = "u/tree";
 		/** mark the doc's work as finished → {@link DoctreeResp#doc} */
 		public static final String commit = "c/commit";
+		/**
+		 * the state of the doc's html build, started by {@link #commit} → {@link DoctreeResp#doc},
+		 * {@link DoctreeResp#build}, {@link DoctreeResp#buildlog}
+		 */
+		public static final String build = "r/build";
 		/** publish the doc's html package at the local html-service, or replace it → {@link DoctreeResp#doc}, with pubpath */
 		public static final String publish = "c/publish";
 		/** the doc is no longer published at html-service → {@link DoctreeResp#doc} */
@@ -61,6 +70,13 @@ public class DoctreeReq extends AnDatasetReq {
 	/** for {@link A#update}: the node's columns, json + rst */
 	public DocNode node;
 
+	/**
+	 * for {@link A#commit}: the doc as RST files, assembled by the client; the synode builds the
+	 * doc's html package from them, in the background. Null: committed without a build.
+	 */
+	@AnsonField(valType="io.oz.sdoc.build.RstFile")
+	public ArrayList<RstFile> rstFiles;
+
 	public DoctreeReq() {
 		super(null, null);
 	}
@@ -82,6 +98,14 @@ public class DoctreeReq extends AnDatasetReq {
 	public DoctreeReq node(DocNode n) {
 		this.node = n;
 		this.docId = n == null ? docId : n.docId;
+		return this;
+	}
+
+	/** for {@link A#commit} */
+	public DoctreeReq rstFiles(RstFile... files) {
+		this.rstFiles = new ArrayList<RstFile>();
+		for (RstFile f : files)
+			this.rstFiles.add(f);
 		return this;
 	}
 

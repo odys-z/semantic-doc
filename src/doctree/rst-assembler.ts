@@ -16,23 +16,13 @@ import { getSchema } from '@tiptap/core';
 import { Node } from '@tiptap/pm/model';
 import { rstExtensions } from '../editor/rst/marks';
 import { joinRst, serializeBlockMath, serializeDoc, textRst, type RstResult } from '../editor/rst/serialize';
-import { DocNode, toTiptap, type DocTreeNode } from './doc-stree';
+import { DocNode, RstFile, toTiptap, type DocTreeNode } from './doc-stree';
+
+/** one file of the Sphinx source, the same as doctree.jserv's (io.oz.sdoc.build.RstFile) */
+export { RstFile };
 
 /** a node's columns, as the tree carries them */
 type Cols = DocTreeNode['node'];
-
-/** one file of the Sphinx source */
-export interface RstFile {
-	/** the section (or doc root) the file is built from */
-	nid: string;
-	/** path in the Sphinx source folder, "index.rst" for the doc root */
-	path: string;
-	/** docname for toctrees: the path without ".rst" */
-	name: string;
-	rst: string;
-	/** names of the resources the file's images link, in media/ beside it, e.g. ["image1.png"] */
-	media: string[];
-}
 
 /** the folder of the resources, beside the RST files, in the Sphinx source and the package */
 export const MEDIA = 'media';
@@ -141,7 +131,7 @@ export function assemble(root: DocTreeNode): RstFile[] {
 		flush();
 
 		const name = docname(sec);
-		files.push({ nid: sec.node.nid ?? sec.id, path: name + '.rst', name, rst: joinRst(parts) + '\n', media });
+		files.push(new RstFile({ nid: sec.node.nid ?? sec.id, path: name + '.rst', name, rst: joinRst(parts) + '\n', media }));
 		subs.forEach(build);
 	};
 
