@@ -42,7 +42,8 @@ public class DocInf extends Anson {
 	public String builtBy;
 
 	/**
-	 * Published context path at html-service, a single path segment without '/', e.g. "x7k2p0".
+	 * Published url path at html-service, without the leading '/', e.g. "pub/er3cou": the url root
+	 * of all published docs (html-service's configuration) and a short random name.
 	 * It's assigned by html-service when the doc is first published, and kept by the synode
 	 * (s_docs.pubpath), so the doc's url is the same after rebuilt or html-service restarted.
 	 * Null if not published. The package's version is told by {@link #builtAt}.
