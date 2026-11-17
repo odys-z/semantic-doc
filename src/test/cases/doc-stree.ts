@@ -41,6 +41,15 @@ const cases: { name: string; actual: () => string; expected: string }[] = [
 				+ '"nid":"d","path":"index.rst","name":"index","rst":"Doc\\n===\\n","media":["image1.png"]}]}',
 	},
 	{
+		name: 'doc-stree: c/publish, d/publish requests, as doctree.jserv reads them',
+		actual: () => json([DoctreeReq.A.publish, DoctreeReq.A.unpublish].map((a) => {
+			const r = JSON.parse(JSON.stringify(new DoctreeReq('/sdoc', a, { docId: 'd' })));
+			return { type: r.type, a: r.a, docId: r.docId };
+		})),
+		expected: '[{"type":"io.oz.sdoc.tier.DoctreeReq","a":"c/publish","docId":"d"},'
+				+ '{"type":"io.oz.sdoc.tier.DoctreeReq","a":"d/publish","docId":"d"}]',
+	},
+	{
 		name: 'doc-stree: u/tree request, as doctree.jserv reads it',
 		actual: () => {
 			const r = JSON.parse(JSON.stringify(new DoctreeReq('/sdoc', DoctreeReq.A.modify, { docId: 'd', mod: TreeModify.indent('p3') })));

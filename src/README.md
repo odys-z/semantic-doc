@@ -48,6 +48,15 @@ demo/              dev pages using the widgets through their public API
 test/cases/        serializer cases: inline, format, math; rst-assembler, doc-stree
 ```
 
+## Commit and publish
+
+Commit (c/commit) marks the doc's work as finished and sends its RST files: the synode builds
+the doc's html package. Publish (c/publish) puts the package of the last commit at the synode's
+html-service, or replaces the published one, and shows the doc's link, e.g. `/pub/er3cou/`; the
+Link button shows it again. The link is of the page's origin (the page is served by
+html-service), or of `<AnDoctreeditor pubroot="http://127.0.0.1:8900" …>`. Html-service lists
+the published docs at `/pub/`.
+
 ## Html preview
 
 `<AnDoctreeditor preview="sdoc-template/" …>` shows the doc as html beside the tree: the

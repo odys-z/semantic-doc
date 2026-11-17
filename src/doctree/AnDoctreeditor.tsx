@@ -12,7 +12,9 @@
  *    user means it, answered with the reloaded subtree, which replaces ours. Buttons
  *    that can't apply are greyed out by a copy of the table's rules (doc-stree Rules).
  *  - Autosave: text is sent SAVE_DELAY ms after typing stops, or at once when the
- *    user leaves the block. Commit marks the work as finished.
+ *    user leaves the block. Commit marks the work as finished, and the synode builds
+ *    the doc's html package. Publish puts the package at the synode's html-service, and
+ *    shows the doc's link.
  *  - docref: one read-only line.
  *
  * Layout (MUI): a fixed head (error banner, toolbar, column header), the rows in a
@@ -24,7 +26,7 @@
 import React from 'react';
 import type { AnTreeNode, TreeModify } from '@anclient/semantier';
 import {
-	AnTreeditorComp, AnTreegridComp, CrudCompW, type AnTreeditorProps, type AnTreegridCol,
+	AnTreeditorComp, AnTreegridComp, ConfirmDialog, CrudCompW, type AnTreeditorProps, type AnTreegridCol,
 	TreeNodeVisual, treeditorStyles, withStyles, withWidth,
 } from '@anclient/anreact';
 import Alert from '@mui/material/Alert';
@@ -64,6 +66,11 @@ export interface AnDoctreeditorProps extends Partial<Omit<AnTreeditorProps, 'col
 	 * e.g. "sdoc-template/" (see make-template.py). No preview if not set.
 	 */
 	preview?: string;
+	/**
+	 * Root url of the synode's html-service, where docs are published, e.g. "http://127.0.0.1:8900".
+	 * Default: the page's origin, as the page is served by html-service.
+	 */
+	pubroot?: string;
 }
 
 interface DoctreeState {
@@ -88,6 +95,10 @@ interface DoctreeState {
 	snack?: string;
 	/** state of the synode's html build of the last commit, see DoctreeResp.Build */
 	build?: string | null;
+	/** asked to publish, not yet answered */
+	publishing?: boolean;
+	/** dialog: the published doc's url */
+	publink?: string;
 }
 
 /** an empty paragraph, stored form */
@@ -269,6 +280,27 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 			(msg) => this.setState({ snack: `Not committed: ${msg}` }));
 	}
 
+	/** url of the doc published at html-service, undefined if it isn't published */
+	pubUrl(doc?: DocInf) {
+		return doc?.pubpath
+			? `${(this.props.pubroot ?? window.location.origin).replace(/\/+$/, '')}/${doc.pubpath}/`
+			: undefined;
+	}
+
+	/**
+	 * Publish the doc's html package, built since the last commit, at the synode's html-service
+	 * (replacing the published one), and show its link.
+	 */
+	publish() {
+		this.setState({ publishing: true });
+		this.props.doctier.publish(this.props.docId,
+			(resp) => {
+				const doc = resp.doc ?? this.state.doc;
+				this.setState({ publishing: false, doc, publink: this.pubUrl(doc) });
+			},
+			(msg) => this.setState({ publishing: false, snack: `Not published: ${msg}` }));
+	}
+
 	pollBuild(build?: string | null) {
 		clearTimeout(this.building);
 		if (build !== DoctreeResp.Build.building || !this.props.doctier.build) return;
@@ -390,7 +422,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	}
 
 	render() {
-		const { committed, committedAt, saving, doc, alert, snack, previewing, rstFiles, build } = this.state;
+		const { committed, committedAt, saving, doc, alert, snack, previewing, rstFiles, build, publishing, publink } = this.state;
 		const preview = this.props.preview && previewing;
 		const classes = this.props.classes || {};
 		const media = CrudCompW.getMedia(this.props.width);
@@ -401,6 +433,10 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 		// package. A new doc (never committed), or one without a html package, can be committed as it is.
 		const nothing = committed && !saving && !!committedAt && !!doc?.htmlUri;
 		const building = build === DoctreeResp.Build.building;
+		// to publish: the html package of the last commit, as the synode checks again
+		const publishable = committed && !saving && !building && !publishing && !!doc?.htmlUri
+				&& build !== DoctreeResp.Build.failed && !!this.props.doctier.publish /* e.g. a stub tier */;
+		const pubUrl = this.pubUrl(doc);
 		const status = saving ? 'Saving…' : committed ? `Committed ${committedAt ?? ''}${html}` : 'Draft — not committed';
 
 		return (
@@ -423,6 +459,12 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 								{previewing ? 'Hide preview' : 'Preview'}</Button>}
 						<Button variant="contained" size="small" disableElevation
 							disabled={nothing || building} onClick={() => this.commit()}>Commit</Button>
+						<Button variant="outlined" size="small"
+							title="Publish the html of the last commit at html-service"
+							disabled={!publishable} onClick={() => this.publish()}>Publish</Button>
+						{pubUrl &&
+							<Button size="small" title={pubUrl}
+								onClick={() => this.setState({ publink: pubUrl })}>Link</Button>}
 					</Toolbar>
 				</Box>
 
@@ -440,6 +482,12 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 					</Box>
 					{preview && <DocPreview template={this.props.preview!} files={rstFiles} mediaSrc={this.mediaSrc} style={{ flex: 1 }} />}
 				</Box>
+
+				{publink &&
+					<ConfirmDialog open={true} title='Published' msg={`${doc?.title ?? ''}\n${publink}`}
+						ok='Open' cancel='Close'
+						onOk={() => window.open(publink, '_blank', 'noopener')}
+						onClose={() => this.setState({ publink: undefined })} />}
 
 				<Snackbar open={!!snack} message={snack} autoHideDuration={6000}
 					anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}

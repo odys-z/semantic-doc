@@ -44,6 +44,11 @@ export class DocInf extends Anson {
 	builtBy?: string | null;
 	/** id of the template the html package was built with, e.g. "rtd-0.8"; null if never built */
 	template?: string | null;
+	/**
+	 * published url path at html-service, without the leading '/', e.g. "pub/er3cou";
+	 * null if not published
+	 */
+	pubpath?: string | null;
 	/** true if changed since the last commit */
 	dirty?: boolean;
 	/** time of the last commit, null if never committed */
@@ -167,6 +172,10 @@ export class DoctreeReq extends AnDatasetReq {
 		commit: 'c/commit',
 		/** the state of the doc's html build, started by commit → doc, build, buildlog */
 		build: 'r/build',
+		/** publish the doc's html package at the local html-service, or replace it → doc, with pubpath */
+		publish: 'c/publish',
+		/** remove the doc from html-service → doc, without pubpath */
+		unpublish: 'd/publish',
 		/** import a docx, srcId: answers the header (state parsing) at once */
 		importDocx: 'c/import',
 		/** a doc's resource file, res: a GET of Doctree206Serv (doctree206.serv), e.g. an img's src */
@@ -303,6 +312,19 @@ export class StreeDoctier extends StreeTier {
 
 	build(docId: string, ok: OnOk, err?: OnErr) {
 		this.send(DoctreeReq.A.build, { docId }, ok, err);
+	}
+
+	/**
+	 * c/publish: the doc's html package, built since the last commit, is published at the
+	 * synode's html-service, or replaces the published one; answers the header with pubpath.
+	 */
+	publish(docId: string, ok: OnOk, err?: OnErr) {
+		this.send(DoctreeReq.A.publish, { docId }, ok, err);
+	}
+
+	/** d/publish: the doc is removed from html-service; answers the header without pubpath */
+	unpublish(docId: string, ok: OnOk, err?: OnErr) {
+		this.send(DoctreeReq.A.unpublish, { docId }, ok, err);
 	}
 
 	/**
