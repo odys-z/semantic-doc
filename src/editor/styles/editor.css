@@ -17,3 +17,10 @@
 .sd-editor .sd-content [data-type="block-math"]:hover { background: #eef4ff; }
 .sd-editor .sd-content .ProseMirror-selectednode { outline: 2px solid #7aa7f0; border-radius: 3px; }
 
+
+/* tables (grid tables in RST): cells hold paragraphs; merged cells by rowspan / colspan */
+.sd-editor .sd-content table { border-collapse: collapse; table-layout: auto; margin: 0; overflow: hidden; }
+.sd-editor .sd-content td, .sd-editor .sd-content th { position: relative; min-width: 2em; padding: 2px 6px; border: 1px solid #bbb; vertical-align: top; }
+.sd-editor .sd-content th { background: #f2f2f2; font-weight: bold; text-align: left; }
+.sd-editor .sd-content td p, .sd-editor .sd-content th p { margin: 0; }
+.sd-editor .sd-content .selectedCell::after { content: ''; position: absolute; inset: 0; background: rgba(122, 167, 240, 0.25); pointer-events: none; }

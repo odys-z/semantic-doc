@@ -26,7 +26,7 @@ public class DocNode extends Anson {
 		public static final String image = "image";
 		/** live, read-only reference to another doc's subtree, root is {@link DocNode#refId} */
 		public static final String docref = "docref";
-		/** docx table, only its text (cells joined) for now */
+		/** docx table: its text with merge markers (DocxWalker#table()), edited as a table in the editor */
 		public static final String tabl = "tabl";
 	}
 

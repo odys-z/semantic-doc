@@ -104,6 +104,23 @@ const cases: ACase[] = [
 		expected: 'undefined|I\n===\n\n.. image:: media/image1.png\n',
 	},
 	{
+		name: 'assemble: an imported table (marker text, no tipjson) → grid table',
+		actual: () => assemble(t('g', 'doc', { ptext: 'G' }, [
+			t('g.1', 'tabl', { ptext: 'T {colspan=2} // A {vmerge-start} | b1 {br} b2 //  {vmerge-cont} | c' })]))[0].rst,
+		expected: 'G\n===\n\n+--------+\n| T      |\n+---+----+\n| A | b1 |\n|   |    |\n|   | b2 |\n|   +----+\n|   | c  |\n+---+----+\n',
+	},
+	{
+		name: 'facts: an imported table, as loaded (fillTipjson) → a Tiptap table, the same grid table',
+		actual: () => {
+			const d = fillTipjson([t('g', 'doc', { ptext: 'G' }, [
+				t('g.1', 'tabl', { ptext: 'T {colspan=2} // A {vmerge-start} | b1 {br} b2 //  {vmerge-cont} | c' })])]);
+			const tip = JSON.parse(d[0].node.children![0].node.tipjson!);
+			const cells = tip.content[0].content.map((r: any) => (r.content ?? []).map((c: any) => `${c.attrs.colspan}x${c.attrs.rowspan}`).join(','));
+			return `${tip.content[0].contype} ${cells.join(' / ')}|${assemble(d[0])[0].rst}`;
+		},
+		expected: 'table 2x1 / 1x2,1x1 / 1x1|G\n===\n\n+--------+\n| T      |\n+---+----+\n| A | b1 |\n|   |    |\n|   | b2 |\n|   +----+\n|   | c  |\n+---+----+\n',
+	},
+	{
 		name: 'assemble: demo doc-a',
 		actual: () => assemble((docA as unknown as { forest: DocTreeNode[] }).forest[0]).map((f) => f.path).join(' '),
 		expected: 'index.rst a1.rst a2.rst a3.rst',

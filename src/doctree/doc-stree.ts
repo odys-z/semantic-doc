@@ -104,7 +104,7 @@ export class DocNode extends Anson {
 		image: 'image',
 		/** live, read-only reference to another doc's subtree, root refId */
 		docref: 'docref',
-		/** docx table, only its text for now */
+		/** docx table: ptext, the importer's marker text; edited as a Tiptap table (editor/rst/table.ts) */
 		tabl: 'tabl',
 	} as const;
 

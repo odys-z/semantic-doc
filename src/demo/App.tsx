@@ -1,6 +1,6 @@
 // Dev page. Uses the widget only through the public API, like a host app would.
 import React, { useState } from 'react';
-import { ParagraphEditor, type JSONContent, type RstResult } from '../editor';
+import { ParagraphEditor, markersToTiptap, type JSONContent, type RstResult } from '../editor';
 
 type M = string | [string, Record<string, unknown>];
 /** text with any number of marks: t('x', 'strong', ['color', { name: 'red' }]) */
@@ -37,6 +37,12 @@ const paragraph: JSONContent = {
   ],
 };
 
+/** a table as the importer gives it (a tabl node's ptext): merged cells, paragraphs in a cell */
+const table = markersToTiptap(
+  '课程体系 {colspan=3} // 模块 | 内容方向 | 阶段成果 // ' +
+  '1.AI入门基础 {vmerge-start} | 大模型基础 | 火锅店宣传文案 {br} 聊天室开发 {vmerge-start} // ' +
+  ' {vmerge-cont} | 提示词工程 |  {vmerge-cont}');
+
 const formula: JSONContent = {
   type: 'doc',
   content: [{ type: 'blockMath', attrs: { latex: '\\int_0^1 x^2\\,dx = \\frac{1}{3}', color: 'blue' } }],
@@ -71,6 +77,7 @@ export function App() {
       <nav className="demo-nav">Paragraph editor · <a href="doctree.html">Doc tree</a></nav>
       <Block title="Paragraph" content={paragraph} />
       <Block title="Block formula" content={formula} />
+      <Block title="Table" content={table} />
     </>
   );
 }

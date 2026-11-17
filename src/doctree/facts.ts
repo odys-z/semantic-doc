@@ -11,6 +11,7 @@
  * Colours go to the nearest of the palette (ROLES), or none if nearer to black / white.
  */
 import { DocNode, fromTiptap, type DocTreeNode } from './doc-stree';
+import { markersToTiptap } from '../editor/rst/table';
 
 export interface RunFacts {
 	t: string;
@@ -109,8 +110,9 @@ export function factsToJson(facts: string): string | undefined {
 
 /**
  * Nodes without tipjson get one in memory, built from the importer's facts (paragraphs),
- * else from its plain text (a section's title, a table's text): the tree shows them
- * formatted, the preview serializes them; saved when the user edits them.
+ * a table from its marker text (editor/rst/table.ts), else from its plain text (a section's
+ * title): the tree shows them formatted, the preview serializes them; saved when the user
+ * edits them.
  */
 /** kinds whose ptext is a label, not text to edit */
 const untexted = new Set<string>([DocNode.Kind.doc, DocNode.Kind.math, DocNode.Kind.image, DocNode.Kind.docref]);
@@ -120,6 +122,8 @@ export function fillTipjson(forest: DocTreeNode[]): DocTreeNode[] {
 		const n = t.node;
 		if (!n.tipjson && n.facts && n.kind === DocNode.Kind.p)
 			n.tipjson = factsToJson(n.facts);
+		if (!n.tipjson && n.kind === DocNode.Kind.tabl)
+			n.tipjson = fromTiptap(markersToTiptap(n.ptext ?? ''));
 		// not for nodes whose content isn't text: doc, math, image (resId), docref (refId)
 		if (!n.tipjson && n.ptext && !untexted.has(n.kind!))
 			n.tipjson = fromTiptap({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: n.ptext }] }] });

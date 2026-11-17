@@ -21,6 +21,8 @@ export { rstExtensions, ROLES, CLASS_MARKS, MATH_MARKS, MathMarkFilter } from '.
 export type { RoleDef, RoleGroup, ClassMark } from './rst/marks';
 
 export { serializeDoc, serializeParagraph, serializeBlockMath, joinRst, escapeText, textRst } from './rst/serialize';
+export { markersToTiptap, gridTable, displayWidth } from './rst/table';
+export type { GridCellIn } from './rst/table';
 export type { RstResult } from './rst/serialize';
 
 export type { JSONContent } from '@tiptap/core';

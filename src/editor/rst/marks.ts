@@ -1,5 +1,5 @@
 /**
- * Tiptap schema for one RST block: a paragraph, or a block formula.
+ * Tiptap schema for one RST block: a paragraph, a block formula, or a table.
  *
  * Marks combine freely (bold + italic + red + yellow background + link …).
  * RST inline markup cannot nest, so serialize.ts flattens each run of text
@@ -23,6 +23,7 @@
  *  link          `text <url>`__              |sd-hash|__ + substitution + target
  *  inlineMath    :math:`latex`               base role math, classes: size/color/background only
  *  blockMath     .. math::                   .. math:: with :class: (size/color/background attrs)
+ *  table         grid table (rst/table.ts)   cells: paragraphs, with the marks above
  *
  * Formulas only take size, colour and background: B, I, U, S, code, sup, sub
  * and link are stripped from them (MathMarkFilter) and ignored by the serializer.
@@ -33,6 +34,7 @@ import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import { InlineMath, BlockMath } from '@tiptap/extension-mathematics';
+import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 
 export interface RoleDef {
   /** role name in RST and CSS class name in HTML */
@@ -81,7 +83,14 @@ export type ClassMark = (typeof CLASS_MARKS)[number];
 export const MATH_MARKS: ReadonlySet<string> = new Set<string>(CLASS_MARKS);
 
 /** Document holding exactly one block: the tree UI owns structure. */
-export const OneBlock = Document.extend({ content: 'paragraph | blockMath' });
+export const OneBlock = Document.extend({ content: 'paragraph | blockMath | table' });
+
+/**
+ * Table cells hold paragraphs only, no formula blocks or tables: a grid table cell's body.
+ * Rows of header cells (tableHeader) at the top are the grid table's header.
+ */
+export const RstTableCell = TableCell.extend({ content: 'paragraph+' });
+export const RstTableHeader = TableHeader.extend({ content: 'paragraph+' });
 
 /** **strong** */
 export const Strong = Mark.create({
@@ -269,4 +278,5 @@ export const rstExtensions = [
   OneBlock, Paragraph, Text,
   Link, Background, Color, Size, Underline, Strike, Strong, Emphasis, Literal, Sup, Sub,
   InlineMath, StyledBlockMath,
+  Table, TableRow, RstTableHeader, RstTableCell,
 ];

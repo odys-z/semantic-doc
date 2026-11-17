@@ -6,7 +6,7 @@ import './styles/theme-roles.css';
 import './styles/editor.css';
 
 export interface StaticBlockProps {
-  /** Tiptap JSON: one paragraph or one blockMath */
+  /** Tiptap JSON: one paragraph, one blockMath or one table */
   json: JSONContent;
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   className?: string;

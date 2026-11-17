@@ -37,7 +37,7 @@ export function editorExtensions(opts: EditorExtensionOptions = {}) {
 export type EditMath = (kind: MathKind, latex: string) => string | null | Promise<string | null>;
 
 export interface ParagraphEditorProps {
-  /** Tiptap JSON (doc with one paragraph or one blockMath) or an HTML string */
+  /** Tiptap JSON (doc with one paragraph, one blockMath or one table) or an HTML string */
   content?: JSONContent | string;
   /** called on every change with the JSON (to store) and the RST */
   onChange?: (json: JSONContent, rst: RstResult) => void;
@@ -55,7 +55,7 @@ const promptMath: EditMath = (kind, latex) =>
   window.prompt(kind === 'block' ? 'Block formula (LaTeX)' : 'Formula (LaTeX)', latex);
 
 /**
- * WYSIWYG editor for one RST block (a paragraph or a block formula).
+ * WYSIWYG editor for one RST block (a paragraph, a block formula or a table).
  * Self-contained widget, e.g. for an AnTreeditor column formatter:
  *
  *   formatter: (col, tnode) => (

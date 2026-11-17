@@ -20,6 +20,7 @@ import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
 import org.docx4j.openpackaging.parts.relationships.RelationshipsPart;
 import org.docx4j.relationships.Relationship;
 import org.docx4j.wml.BooleanDefaultTrue;
+import org.docx4j.wml.Br;
 import org.docx4j.wml.CTObject;
 import org.docx4j.wml.ContentAccessor;
 import org.docx4j.wml.Drawing;
@@ -29,6 +30,7 @@ import org.docx4j.wml.PPrBase;
 import org.docx4j.wml.R;
 import org.docx4j.wml.RPr;
 import org.docx4j.wml.STVerticalAlignRun;
+import org.docx4j.wml.STBrType;
 import org.docx4j.wml.SdtRun;
 import org.docx4j.wml.SdtBlock;
 import org.docx4j.wml.SdtElement;
@@ -276,12 +278,14 @@ public class DocxWalker {
 			List<String> cells = new ArrayList<>();
 			for (Object co : tr.getContent()) {
 				if (!(XmlUtils.unwrap(co) instanceof Tc tc)) continue;
-				String cell = text(tc);
+				// paragraphs / soft breaks inside a cell -> " {br} ", keeping one line per table
+				String cell = String.join(" {br} ", text(tc).lines()
+						.map(String::strip).filter(l -> !l.isEmpty()).toList());
 				TcPr pr = tc.getTcPr();
 				if (pr != null && pr.getGridSpan() != null)
 					cell += " {colspan=" + pr.getGridSpan().getVal() + "}";
-				if (pr != null && pr.getVMerge() != null) // val "restart" starts; null continues
-					cell += pr.getVMerge().getVal() == null ? " {vmerge-cont}" : " {vmerge-start}";
+				if (pr != null && pr.getVMerge() != null) // val "restart" starts; null or "continue" continues
+					cell += "restart".equals(pr.getVMerge().getVal()) ? " {vmerge-start}" : " {vmerge-cont}";
 				cells.add(cell);
 			}
 			rows.add(String.join(" | ", cells));
@@ -314,6 +318,9 @@ public class DocxWalker {
 		o = XmlUtils.unwrap(o);
 		if (o instanceof Text t) sb.append(t.getValue());
 		else if (o instanceof R.Tab) sb.append('\t');
+		else if (o instanceof R.Cr || o instanceof Br br
+				&& (br.getType() == null || br.getType() == STBrType.TEXT_WRAPPING))
+			sb.append('\n'); // soft line break; page / column breaks ignored
 		else if (o instanceof CTObject obj) {
 			if (isExcel(obj)) sb.append(excelIgnored);
 		}
@@ -321,6 +328,8 @@ public class DocxWalker {
 			for (Object c : se.getSdtContent().getContent()) collect(c, sb);
 		else if (o instanceof ContentAccessor ca) {
 			if (o instanceof Tc && sb.length() > 0) sb.append(' ');
+			else if (o instanceof P && sb.length() > 0 && sb.charAt(sb.length() - 1) != '\n')
+				sb.append('\n'); // paragraph boundary, e.g. inside a cell
 			for (Object c : ca.getContent()) collect(c, sb);
 		}
 	}

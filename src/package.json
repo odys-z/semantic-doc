@@ -32,6 +32,7 @@
     "@tiptap/extension-document": "^3.32.2",
     "@tiptap/extension-mathematics": "^3.32.2",
     "@tiptap/extension-paragraph": "^3.32.2",
+    "@tiptap/extension-table": "^3.32.2",
     "@tiptap/extension-text": "^3.32.2",
     "@tiptap/extensions": "^3.32.2",
     "@tiptap/pm": "^3.32.2",

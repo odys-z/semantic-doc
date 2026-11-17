@@ -1,5 +1,5 @@
 import React from 'react';
-import { type Editor, useEditorState } from '@tiptap/react';
+import { type Editor, type JSONContent, useEditorState } from '@tiptap/react';
 import { ROLES, CLASS_MARKS, type ClassMark, type RoleDef } from './rst/marks';
 import type { MathKind } from './ParagraphEditor';
 
@@ -11,6 +11,13 @@ export interface ToolbarProps {
 
 const MARKS = ['strong', 'emphasis', 'underline', 'strike', 'literal', 'sup', 'sub', 'link'] as const;
 type ToggleMark = (typeof MARKS)[number];
+
+/** @tiptap/extension-table commands of the table buttons */
+const TABLE_CMDS = [
+  'addRowBefore', 'addRowAfter', 'deleteRow', 'addColumnBefore', 'addColumnAfter', 'deleteColumn',
+  'mergeCells', 'splitCell', 'toggleHeaderRow',
+] as const;
+type TableCmd = (typeof TABLE_CMDS)[number];
 
 export function Toolbar({ editor, onEditMath }: ToolbarProps) {
   const s = useEditorState({
@@ -30,6 +37,10 @@ export function Toolbar({ editor, onEditMath }: ToolbarProps) {
         canUndo: editor.can().undo(),
         canRedo: editor.can().redo(),
         isBlockMath,
+        isTable: first?.type.name === 'table',
+        // table commands that can apply at the selection (merge needs a cell selection)
+        ...(Object.fromEntries(TABLE_CMDS.map((c) => [c, !!editor.can()[c]?.()])) as Record<TableCmd, boolean>),
+        headerRow: !!first && first.type.name === 'table' && first.firstChild?.firstChild?.type.name === 'tableHeader',
       };
     },
   });
@@ -80,7 +91,48 @@ export function Toolbar({ editor, onEditMath }: ToolbarProps) {
       : // paragraph → block formula, prefilled with the paragraph text
         onEditMath('block', editor.state.doc.textContent, -1);
 
+  /** cell content: a paragraph's JSON, else an empty paragraph */
+  const tcell = (para?: JSONContent): JSONContent =>
+    ({ type: 'tableCell', attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: [para ?? { type: 'paragraph' }] });
+
+  const toggleTable = () => {
+    if (s.isTable) {
+      // table → one paragraph of the cells' paragraphs, row by row, with their formatting and
+      // formulas, space separated (undo restores the table)
+      const inline: JSONContent[] = [];
+      editor.state.doc.firstChild!.descendants((n) => {
+        if (n.type.name !== 'paragraph') return true;
+        if (n.content.size) {
+          if (inline.length) inline.push({ type: 'text', text: ' ' });
+          n.content.forEach((c) => inline.push(c.toJSON()));
+        }
+        return false;
+      });
+      return run()
+        .setContent({ type: 'doc', content: [inline.length ? { type: 'paragraph', content: inline } : { type: 'paragraph' }] })
+        .run();
+    }
+    // paragraph → 2 x 2 table, the paragraph (with its formatting) in the first cell
+    const para = editor.getJSON().content?.[0];
+    return run()
+      .setContent({
+        type: 'doc',
+        content: [{ type: 'table', content: [
+          { type: 'tableRow', content: [tcell(para), tcell()] },
+          { type: 'tableRow', content: [tcell(), tcell()] },
+        ] }],
+      })
+      .run();
+  };
+
   const btn = (on: boolean) => 'sd-btn' + (on ? ' on' : '');
+
+  /** a table button: enabled when its command can apply at the selection */
+  const tableBtn = (cmd: TableCmd, label: React.ReactNode, title: string, on = false) => (
+    <button className={btn(on)} disabled={!s[cmd]} onClick={() => (run() as any)[cmd]().run()} title={title}>
+      {label}
+    </button>
+  );
   // a block formula takes only size / colour / background
   const off = s.isBlockMath;
 
@@ -120,11 +172,31 @@ export function Toolbar({ editor, onEditMath }: ToolbarProps) {
       {classSelect('background', 'Background', ROLES.background)}
       <span className="sd-sep" />
       <button className="sd-btn" disabled={off} onClick={insertInlineMath} title="Inline formula (or type $$x^2$$)">∑</button>
-      <button className={btn(s.isBlockMath)} onClick={toggleBlockMath} title={s.isBlockMath ? 'Back to paragraph' : 'Block formula'}>
+      <button className={btn(s.isBlockMath)} disabled={s.isTable} onClick={toggleBlockMath} title={s.isBlockMath ? 'Back to paragraph' : 'Block formula'}>
         {s.isBlockMath ? '¶' : '∑▭'}
+      </button>
+      <button className={btn(s.isTable)} disabled={s.isBlockMath} onClick={toggleTable}
+        title={s.isTable ? 'Back to paragraph (the cells\' content joined)' : 'Table (the paragraph in its first cell)'}>
+        {s.isTable ? '¶' : '⊞'}
       </button>
       <span className="sd-sep" />
       <button className="sd-btn" onClick={clearFormatting} title="Clear formatting">⨯</button>
+      {s.isTable && (
+        <>
+          <span className="sd-sep" />
+          {tableBtn('addRowBefore', '↥ row', 'Insert a row above')}
+          {tableBtn('addRowAfter', '↧ row', 'Insert a row below')}
+          {tableBtn('deleteRow', '✕ row', 'Delete the row')}
+          <span className="sd-sep" />
+          {tableBtn('addColumnBefore', '↤ col', 'Insert a column to the left')}
+          {tableBtn('addColumnAfter', '↦ col', 'Insert a column to the right')}
+          {tableBtn('deleteColumn', '✕ col', 'Delete the column')}
+          <span className="sd-sep" />
+          {tableBtn('mergeCells', 'Merge', 'Merge the selected cells (drag across cells to select)')}
+          {tableBtn('splitCell', 'Split', 'Split the merged cell')}
+          {tableBtn('toggleHeaderRow', 'Header', 'The first row is the header row', s.headerRow)}
+        </>
+      )}
     </div>
   );
 }

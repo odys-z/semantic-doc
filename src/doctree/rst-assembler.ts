@@ -5,6 +5,7 @@
  *   section   → <nid>.rst:   heading, its blocks, toctree of its sub-sections
  *   p / math  → the block's stored rstext, else its tipjson serialized,
  *               else its ptext (a new, imported block)
+ *   tabl      → the same; a new, imported table's ptext (marker text) as a grid table
  *   image     → .. image:: media/<resId>, a static, relative link; the file's {@link RstFile#media}
  *
  * Blocks and sections keep their order: consecutive sections share one toctree.
@@ -16,7 +17,8 @@ import { getSchema } from '@tiptap/core';
 import { Node } from '@tiptap/pm/model';
 import { rstExtensions } from '../editor/rst/marks';
 import { joinRst, serializeBlockMath, serializeDoc, textRst, type RstResult } from '../editor/rst/serialize';
-import { DocNode, RstFile, toTiptap, type DocTreeNode } from './doc-stree';
+import { DocNode, RstFile, fromTiptap, toTiptap, type DocTreeNode } from './doc-stree';
+import { markersToTiptap } from '../editor/rst/table';
 
 /** one file of the Sphinx source, the same as doctree.jserv's (io.oz.sdoc.build.RstFile) */
 export { RstFile };
@@ -89,7 +91,9 @@ export function blockPart(n: Cols): Part {
 			return plain(n.resId ? `.. image:: ${MEDIA}/${n.resId}` : textRst(`[image: ${n.ptext ?? ''}]`));
 		case DocNode.Kind.docref:
 			return plain(textRst(`[ref: ${n.ptext ?? n.refId ?? ''}]`));
-		default: // p, table (text only for now)
+		case DocNode.Kind.tabl:
+			return serialized(fromTiptap(markersToTiptap(n.ptext ?? ''))) ?? plain(textRst(n.ptext ?? ''));
+		default: // p
 			return plain(textRst(n.ptext ?? ''));
 	}
 }

@@ -30,6 +30,7 @@ editor/            the widget (package entry: editor/index.ts)
   ParagraphEditor.tsx, Toolbar.tsx
   rst/marks.ts       Tiptap schema: marks, roles (ROLES), math nodes
   rst/serialize.ts   Tiptap doc → RST
+  rst/table.ts       tables: the importer's marker text → Tiptap table, grid table layout
   styles/            theme-roles.css (share with Sphinx), editor.css
 doctree/           AnDoctreeditor (package entry: doctree/index.ts), on anreact's AnTreeditor
   doc-stree.ts       types as doctree.jserv's (DoctreeReq, DocNode, ...), StreeDoctier,
@@ -45,15 +46,15 @@ demo/              dev pages using the widgets through their public API
   doctree.tsx        doc tree page (doctree.html)
   stub-tier.ts       plays the server over demo/jsons (load, text saves, commit)
   jsons/             server-shaped r/tree answers
-test/cases/        serializer cases: inline, format, math; rst-assembler, doc-stree
+test/cases/        serializer cases: inline, format, math, table; rst-assembler, doc-stree
 ```
 
 ## Commit and publish
 
 Commit (c/commit) marks the doc's work as finished and sends its RST files: the synode builds
 the doc's html package. Publish (c/publish) puts the package of the last commit at the synode's
-html-service, or replaces the published one, and shows the doc's link, e.g. `/pub/er3cou/`; the
-Link button shows it again. The link is of the page's origin (the page is served by
+html-service, or replaces the published one, and shows the doc's link, e.g. `/pub/er3cou/`, to open
+in a new tab or copy; the Link button shows it again. The link is of the page's origin (the page is served by
 html-service), or of `<AnDoctreeditor pubroot="http://127.0.0.1:8900" …>`. Html-service lists
 the published docs at `/pub/`.
 
@@ -63,6 +64,8 @@ the published docs at `/pub/`.
 doc is assembled into RST files (`rst-assembler.ts`), built by Sphinx running in the browser
 (Pyodide, in a Web Worker), and shown in an iframe. Rebuilt after every load, structural
 change and saved text; the first build waits for Pyodide and Sphinx (seconds).
+Expand shows the preview in the whole width, the tree hidden (still open, with the block
+being edited); Show tree brings it back.
 
 The template folder is a resource of the host app, served at the given url:
 
@@ -77,6 +80,24 @@ sdoc-template/
 Make or refresh one with `python3 make-template.py [folder]` (needs the pinned packages
 installed natively). The demo's is `web-dist/sdoc-template`; the synode release's is
 jserv-album's `sdoc-template-0.8`.
+
+## Tables
+
+A block can be a table (@tiptap/extension-table): cells hold paragraphs, with the same
+formatting and inline formulas; merged cells (rowspan / colspan) are kept. The toolbar's ⊞
+turns a paragraph into a 2 × 2 table (the paragraph in its first cell), ¶ turns a table back
+into one paragraph of its cells' content; in a table it adds row / column / merge / split /
+header buttons (merge needs cells selected by dragging across them).
+
+A table is serialized as an RST grid table, the only RST table with both row and column
+spans; a top row of header cells (Header) is the grid table's header. Columns are laid out by
+display width, East Asian wide characters taking two columns, as docutils measures them.
+
+An imported docx table (node kind tabl) is the importer's marker text in ptext
+(doctree.jserv DocxWalker#table()): rows joined by ` // `, cells by ` | `, a cell ending with
+`{colspan=n}`, `{vmerge-start}` or `{vmerge-cont}`, paragraphs in a cell joined by ` {br} `.
+`fillTipjson()` turns it into a Tiptap table when the tree is loaded; it's saved as tipjson /
+rstext at the first edit, like a paragraph.
 
 ## Combining styles
 

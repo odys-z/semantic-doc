@@ -20,19 +20,21 @@
  * Layout (MUI): a fixed head (error banner, toolbar, column header), the rows in a
  * scrolling body, and a snackbar for refused or failed changes. With props.preview (a Sphinx
  * template url), the doc's html preview is beside the rows (below them on narrow screens),
- * rebuilt after every load, structural change and saved text. Work at risk (a failed
+ * or in the whole width (Expand, the rows hidden), rebuilt after every load, structural
+ * change and saved text. Work at risk (a failed
  * load or save) shows in the banner with Retry; a refused change only in the snackbar.
  */
 import React from 'react';
 import type { AnTreeNode, TreeModify } from '@anclient/semantier';
 import {
-	AnTreeditorComp, AnTreegridComp, ConfirmDialog, CrudCompW, type AnTreeditorProps, type AnTreegridCol,
+	AnTreeditorComp, AnTreegridComp, ConfirmDialog, CrudCompW, copyToClipboard, type AnTreeditorProps, type AnTreegridCol,
 	TreeNodeVisual, treeditorStyles, withStyles, withWidth,
 } from '@anclient/anreact';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Collapse from '@mui/material/Collapse';
+import Link from '@mui/material/Link';
 import Snackbar from '@mui/material/Snackbar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -79,6 +81,8 @@ interface DoctreeState {
 	rstFiles: RstFile[];
 	/** the preview pane is shown (with props.preview) */
 	previewing: boolean;
+	/** the preview takes the whole width: the tree is hidden (kept mounted: folders, the open editor) */
+	wide?: boolean;
 	tobeLoad: boolean;
 	/** id of the block being edited; at most one */
 	editing: string | null;
@@ -424,6 +428,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	render() {
 		const { committed, committedAt, saving, doc, alert, snack, previewing, rstFiles, build, publishing, publink } = this.state;
 		const preview = this.props.preview && previewing;
+		const wide = !!preview && !!this.state.wide;
 		const classes = this.props.classes || {};
 		const media = CrudCompW.getMedia(this.props.width);
 		const html = build === DoctreeResp.Build.building ? ', building html…'
@@ -455,8 +460,12 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 						<Typography variant="subtitle1" noWrap sx={{ flex: 1, fontWeight: 600 }}>{doc?.title}</Typography>
 						<Typography variant="body2" color="text.secondary" noWrap>{status}</Typography>
 						{this.props.preview &&
-							<Button size="small" onClick={() => this.setState({ previewing: !previewing })}>
+							<Button size="small" onClick={() => this.setState({ previewing: !previewing, wide: false })}>
 								{previewing ? 'Hide preview' : 'Preview'}</Button>}
+						{preview &&
+							<Button size="small" title={wide ? 'Show the tree beside the preview' : 'The preview in the whole width'}
+								onClick={() => this.setState({ wide: !wide })}>
+								{wide ? 'Show tree' : 'Expand'}</Button>}
 						<Button variant="contained" size="small" disableElevation
 							disabled={nothing || building} onClick={() => this.commit()}>Commit</Button>
 						<Button variant="outlined" size="small"
@@ -470,7 +479,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 
 				{/* the tree (column header + rows), and the preview beside it, or below on narrow screens */}
 				<Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1 }}>
-					<Box sx={{ flex: 1, minHeight: 0, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+					<Box sx={{ flex: 1, minHeight: 0, minWidth: 0, display: wide ? 'none' : 'flex', flexDirection: 'column' }}>
 						<Box sx={{ flex: 'none' }}>
 							{AnTreegridComp.th(this.props.columns, classes, media, { onThClick: this.toAddChild })}
 						</Box>
@@ -484,10 +493,16 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 				</Box>
 
 				{publink &&
-					<ConfirmDialog open={true} title='Published' msg={`${doc?.title ?? ''}\n${publink}`}
-						ok='Open' cancel='Close'
-						onOk={() => window.open(publink, '_blank', 'noopener')}
-						onClose={() => this.setState({ publink: undefined })} />}
+					<ConfirmDialog open={true} title='Published' msg={doc?.title ?? ''}
+						ok='Copy link' cancel='Close'
+						onOk={() => copyToClipboard(publink).then(
+							() => this.setState({ snack: 'Link copied' }),
+							() => this.setState({ snack: `Not copied: ${publink}` }))}
+						onClose={() => this.setState({ publink: undefined })}>
+						{/* the doc at html-service, in a new tab */}
+						<Link href={publink} target='_blank' rel='noopener' underline='hover' variant='body1'
+							sx={{ display: 'block', mt: 1, wordBreak: 'break-all' }}>{publink}</Link>
+					</ConfirmDialog>}
 
 				<Snackbar open={!!snack} message={snack} autoHideDuration={6000}
 					anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}

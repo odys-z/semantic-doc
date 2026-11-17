@@ -9,10 +9,12 @@
  *  - inline markup cannot nest, so a run with several effects becomes one
  *    composite custom role (see rst/marks.ts), declared once with ".. role::";
  *  - a link with effects becomes a substitution reference |sd-hash|__ whose
- *    definition holds the styled text, followed by an anonymous target.
+ *    definition holds the styled text, followed by an anonymous target;
+ *  - a table becomes a grid table (rst/table.ts), each cell's paragraphs serialized as above.
  */
 import type { Node as PMNode, Mark as PMMark } from '@tiptap/pm/model';
 import { CLASS_MARKS, MATH_MARKS, blockMathClasses } from './marks';
+import { gridTable, type GridCellIn } from './table';
 
 export interface RstResult {
   /** paragraphs only */
@@ -218,6 +220,32 @@ function paragraph(para: PMNode, ctx: Ctx): string {
   return BLOCK_START.test(text) ? '\\' + text : text;
 }
 
+/**
+ * A table as a grid table: cells in document order (references and their targets stay in
+ * order), a cell's paragraphs separated by blank lines; the leading rows of header cells only
+ * are the header.
+ */
+function table(node: PMNode, ctx: Ctx): string {
+  const rows: GridCellIn[][] = [];
+  let header = 0;
+  node.forEach((row) => {
+    const cells: GridCellIn[] = [];
+    let heads = row.childCount > 0;
+    row.forEach((cell) => {
+      const lines: string[] = [];
+      cell.forEach((b) => {
+        const t = b.type.name === 'paragraph' ? paragraph(b, ctx).trim() : '';
+        if (t) lines.push(...(lines.length ? ['', t] : [t]));
+      });
+      cells.push({ rowspan: cell.attrs.rowspan ?? 1, colspan: cell.attrs.colspan ?? 1, lines });
+      heads &&= cell.type.name === 'tableHeader';
+    });
+    if (heads && header === rows.length) header++;
+    rows.push(cells);
+  });
+  return gridTable(rows, header);
+}
+
 /** Plain text as one paragraph's body: escaped, and not read as a list item etc. */
 export function textRst(text: string): string {
   const t = escapeText(text.replace(/\s*\n\s*/g, ' ').trim());
@@ -243,6 +271,7 @@ export function serializeDoc(doc: PMNode): RstResult {
     if (node.type.name === 'paragraph') blocks.push(paragraph(node, ctx));
     else if (node.type.name === 'blockMath')
       blocks.push(serializeBlockMath(node.attrs.latex ?? '', blockMathClasses(node.attrs)));
+    else if (node.type.name === 'table') blocks.push(table(node, ctx));
   });
   const res = {
     body: blocks.join('\n\n'),
