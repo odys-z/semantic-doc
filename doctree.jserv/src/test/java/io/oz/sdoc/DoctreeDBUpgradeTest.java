@@ -33,6 +33,8 @@ import io.odysz.semantics.x.SemanticException;
 import io.oz.sdoc.tier.DoctreeReq;
 import io.oz.sdoc.tier.DoctreeResp;
 import io.oz.sdoc.tier.DoctreeTier;
+import io.oz.syn.dbpicks.DbInitRow;
+import io.oz.syn.dbpicks.DbPicks;
 
 /**
  * A doc-tree db of earlier versions, upgraded when connected:
@@ -49,8 +51,8 @@ class DoctreeDBUpgradeTest {
 	static final String volFail = "../upgrade-fail";
 	static final String volInits = "../upgrade-inits";
 	static final String volNopicks = "../upgrade-nopicks";
-	/** the test copy of the picking list, as jserv-album's bin/db-picks.json */
-	static final String picks = "src/test/res/db-picks.json";
+	/** the test copy of the picking list, as jserv-album's bin/doctree-picks.json */
+	static final String picks = "src/test/res/doctree-picks.json";
 
 	static final IUser robot = new JRobot();
 

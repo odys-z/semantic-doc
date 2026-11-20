@@ -24,6 +24,7 @@ import io.odysz.transact.sql.parts.Logic.op;
 import io.odysz.transact.sql.parts.condition.Condit;
 import io.odysz.transact.sql.parts.condition.Funcall;
 import io.odysz.transact.x.TransException;
+import io.oz.syn.dbpicks.DbPicks;
 
 /**
  * The working copy of doc trees: its own db file in the synode's volume ({@link #connect(String, String, String)},
@@ -113,7 +114,7 @@ public class DoctreeDBHelper {
 	 * @param webinf
 	 * @param volume settings.json's volume, relative to webinf or absolute
 	 * @param synode makes the conn id unique when several synodes share a JVM (tests)
-	 * @param picks the picking list, e.g. &lt;install&gt;/bin/db-picks.json, see {@link DbPicks}; null: none
+	 * @param picks the picking list, e.g. &lt;install&gt;/bin/doctree-picks.json, see {@link DbPicks}; null: none
 	 * @return conn id, "doctree." + synode
 	 * @throws Exception
 	 * @since 0.1.4

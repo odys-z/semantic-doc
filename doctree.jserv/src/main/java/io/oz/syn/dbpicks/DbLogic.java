@@ -1,4 +1,4 @@
-package io.oz.sdoc;
+package io.oz.syn.dbpicks;
 
 import io.odysz.anson.Anson;
 import io.odysz.transact.sql.parts.Logic;
@@ -12,7 +12,7 @@ import io.odysz.transact.sql.parts.condition.Predicate;
  * { "op": "eq", "l": "state", "r": "'ready'" }
  * </pre>
  *
- * @since 0.1.5
+ * @since doctree.jserv 0.1.4
  * @author ody
  */
 public class DbLogic extends Anson {

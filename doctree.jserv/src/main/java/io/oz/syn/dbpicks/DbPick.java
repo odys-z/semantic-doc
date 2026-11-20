@@ -1,16 +1,16 @@
-package io.oz.sdoc;
+package io.oz.syn.dbpicks;
 
 import io.odysz.anson.Anson;
 
 /**
- * A column of the current tables, picked by {@link DoctreeDBUpgrade} from an earlier version's db,
- * an item of {@link DbPicks#picks}.
+ * A column of the current tables, picked from an earlier version's db by an upgrade, e.g.
+ * {@link io.oz.sdoc.DoctreeDBUpgrade}; an item of {@link DbPicks#picks}.
  *
  * <p>Its value is the old table's column of the first of {@link #names} found; if none is found,
  * i.e. the column is new, {@link #dflt} where {@link #when} holds, else the DDL's default.
  * A column without a pick is picked by its own name.</p>
  *
- * @since 0.1.4
+ * @since doctree.jserv 0.1.4
  * @author ody
  */
 public class DbPick extends Anson {
@@ -33,7 +33,6 @@ public class DbPick extends Anson {
 	 * the condition on the old table's row for {@link #dflt}, e.g. builtAt is not null,
 	 * { "op": "isNotnull", "l": "builtAt" }; null: every row. Rows not matching take null.
 	 */
-	/** @since 0.1.5, replaced the sql text, where */
 	public DbLogic when;
 
 	public DbPick() { }

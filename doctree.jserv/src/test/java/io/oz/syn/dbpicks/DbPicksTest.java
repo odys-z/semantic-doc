@@ -1,4 +1,4 @@
-package io.oz.sdoc;
+package io.oz.syn.dbpicks;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -7,13 +7,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 /**
- * Loading a picking list, the test copy of jserv-album's bin/db-picks.json.
- * The marks are checked both ways by jserv-album's package build (picking.py), against the sources.
+ * Loading a picking list, the test copy of jserv-album's bin/doctree-picks.json.
+ * The marks are checked both ways by jserv-album's package build (semanticshare.io.oz.syn.dbpicks),
+ * against the sources.
  */
 class DbPicksTest {
+	static final String doctreePicks = "src/test/res/doctree-picks.json";
+
 	@Test
 	void load() throws Exception {
-		DbPicks picks = DbPicks.load(DoctreeDBUpgradeTest.picks);
+		DbPicks picks = DbPicks.load(doctreePicks);
 
 		DbPick t = picks.pick("s_docs", "template");
 		assertEquals("DB-PICKING-0.8.2 s_docs.template", t.mark);

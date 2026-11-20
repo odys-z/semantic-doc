@@ -1,0 +1,275 @@
+diff --git a/doctree.jserv/src/main/java/io/oz/sdoc/DoctreeDBHelper.java b/doctree.jserv/src/main/java/io/oz/sdoc/DoctreeDBHelper.java
+index 0b1b58e..0a00aa0 100644
+--- a/doctree.jserv/src/main/java/io/oz/sdoc/DoctreeDBHelper.java
++++ b/doctree.jserv/src/main/java/io/oz/sdoc/DoctreeDBHelper.java
+@@ -24,6 +24,7 @@ import io.odysz.transact.sql.parts.Logic.op;
+ import io.odysz.transact.sql.parts.condition.Condit;
+ import io.odysz.transact.sql.parts.condition.Funcall;
+ import io.odysz.transact.x.TransException;
++import io.oz.syn.dbpicks.DbPicks;
+ 
+ /**
+  * The working copy of doc trees: its own db file in the synode's volume ({@link #connect(String, String, String)},
+@@ -113,7 +114,7 @@ public class DoctreeDBHelper {
+ 	 * @param webinf
+ 	 * @param volume settings.json's volume, relative to webinf or absolute
+ 	 * @param synode makes the conn id unique when several synodes share a JVM (tests)
+-	 * @param picks the picking list, e.g. &lt;install&gt;/bin/db-picks.json, see {@link DbPicks}; null: none
++	 * @param picks the picking list, e.g. &lt;install&gt;/bin/doctree-picks.json, see {@link DbPicks}; null: none
+ 	 * @return conn id, "doctree." + synode
+ 	 * @throws Exception
+ 	 * @since 0.1.4
+diff --git a/doctree.jserv/src/main/java/io/oz/sdoc/DoctreeDBUpgrade.java b/doctree.jserv/src/main/java/io/oz/sdoc/DoctreeDBUpgrade.java
+index d477f8c..f58d79d 100644
+--- a/doctree.jserv/src/main/java/io/oz/sdoc/DoctreeDBUpgrade.java
++++ b/doctree.jserv/src/main/java/io/oz/sdoc/DoctreeDBUpgrade.java
+@@ -26,12 +26,15 @@ import io.odysz.transact.sql.Query;
+ import io.odysz.transact.sql.parts.condition.ExprPart;
+ import io.odysz.transact.sql.parts.condition.Funcall;
+ import io.odysz.transact.x.TransException;
++import io.oz.syn.dbpicks.DbInitRow;
++import io.oz.syn.dbpicks.DbPick;
++import io.oz.syn.dbpicks.DbPicks;
+ 
+ /**
+  * Upgrade a doc-tree db file ({@link DoctreeDBHelper#dbfile}) of an earlier version, the same way
+  * as the synode upgrader's config picks (semanticshare ConfigPicks): the new version's db is the
+  * template, with the installed values picked, as the app's picking list ({@link DbPicks},
+- * e.g. &lt;install&gt;/bin/db-picks.json) says. All through semantic.DA, the sql built by semantic.transact.
++ * e.g. &lt;install&gt;/bin/doctree-picks.json) says. All through semantic.DA, the sql built by semantic.transact.
+  *
+  * <ol>
+  * <li>The db file is connected as &lt;conn&gt;.old, read with a basic transact builder
+diff --git a/doctree.jserv/src/main/java/io/oz/sdoc/DbInitRow.java b/doctree.jserv/src/main/java/io/oz/syn/dbpicks/DbInitRow.java
+similarity index 76%
+rename from doctree.jserv/src/main/java/io/oz/sdoc/DbInitRow.java
+rename to doctree.jserv/src/main/java/io/oz/syn/dbpicks/DbInitRow.java
+index 48f73fc..dd139ba 100644
+--- a/doctree.jserv/src/main/java/io/oz/sdoc/DbInitRow.java
++++ b/doctree.jserv/src/main/java/io/oz/syn/dbpicks/DbInitRow.java
+@@ -1,17 +1,18 @@
+-package io.oz.sdoc;
++package io.oz.syn.dbpicks;
+ 
+ import java.util.ArrayList;
+ 
+ import io.odysz.anson.Anson;
+ 
+ /**
+- * A record the current version needs in the doc-tree db, inserted by {@link DoctreeDBUpgrade}
+- * if missing, an item of {@link DbPicks#inits}; e.g. the sequence of a new auto key in oz_autoseq.
++ * A record the current version needs in a db, inserted if missing, e.g. by
++ * {@link io.oz.sdoc.DoctreeDBUpgrade}; an item of {@link DbPicks#inits}, e.g. the sequence of a
++ * new auto key in oz_autoseq.
+  *
+  * <p>A record is missing if no row of {@link #tabl} has the values of {@link #key} columns.
+  * Existing records, e.g. a sequence copied from the old db, are never changed.</p>
+  *
+- * @since 0.1.4
++ * @since doctree.jserv 0.1.4
+  * @author ody
+  */
+ public class DbInitRow extends Anson {
+diff --git a/doctree.jserv/src/main/java/io/oz/sdoc/DbLogic.java b/doctree.jserv/src/main/java/io/oz/syn/dbpicks/DbLogic.java
+similarity index 94%
+rename from doctree.jserv/src/main/java/io/oz/sdoc/DbLogic.java
+rename to doctree.jserv/src/main/java/io/oz/syn/dbpicks/DbLogic.java
+index 82fcfd4..bd01cfd 100644
+--- a/doctree.jserv/src/main/java/io/oz/sdoc/DbLogic.java
++++ b/doctree.jserv/src/main/java/io/oz/syn/dbpicks/DbLogic.java
+@@ -1,4 +1,4 @@
+-package io.oz.sdoc;
++package io.oz.syn.dbpicks;
+ 
+ import io.odysz.anson.Anson;
+ import io.odysz.transact.sql.parts.Logic;
+@@ -12,7 +12,7 @@ import io.odysz.transact.sql.parts.condition.Predicate;
+  * { "op": "eq", "l": "state", "r": "'ready'" }
+  * </pre>
+  *
+- * @since 0.1.5
++ * @since doctree.jserv 0.1.4
+  * @author ody
+  */
+ public class DbLogic extends Anson {
+diff --git a/doctree.jserv/src/main/java/io/oz/sdoc/DbPick.java b/doctree.jserv/src/main/java/io/oz/syn/dbpicks/DbPick.java
+similarity index 82%
+rename from doctree.jserv/src/main/java/io/oz/sdoc/DbPick.java
+rename to doctree.jserv/src/main/java/io/oz/syn/dbpicks/DbPick.java
+index f27a96b..3ed10a1 100644
+--- a/doctree.jserv/src/main/java/io/oz/sdoc/DbPick.java
++++ b/doctree.jserv/src/main/java/io/oz/syn/dbpicks/DbPick.java
+@@ -1,16 +1,16 @@
+-package io.oz.sdoc;
++package io.oz.syn.dbpicks;
+ 
+ import io.odysz.anson.Anson;
+ 
+ /**
+- * A column of the current tables, picked by {@link DoctreeDBUpgrade} from an earlier version's db,
+- * an item of {@link DbPicks#picks}.
++ * A column of the current tables, picked from an earlier version's db by an upgrade, e.g.
++ * {@link io.oz.sdoc.DoctreeDBUpgrade}; an item of {@link DbPicks#picks}.
+  *
+  * <p>Its value is the old table's column of the first of {@link #names} found; if none is found,
+  * i.e. the column is new, {@link #dflt} where {@link #when} holds, else the DDL's default.
+  * A column without a pick is picked by its own name.</p>
+  *
+- * @since 0.1.4
++ * @since doctree.jserv 0.1.4
+  * @author ody
+  */
+ public class DbPick extends Anson {
+@@ -33,7 +33,6 @@ public class DbPick extends Anson {
+ 	 * the condition on the old table's row for {@link #dflt}, e.g. builtAt is not null,
+ 	 * { "op": "isNotnull", "l": "builtAt" }; null: every row. Rows not matching take null.
+ 	 */
+-	/** @since 0.1.5, replaced the sql text, where */
+ 	public DbLogic when;
+ 
+ 	public DbPick() { }
+diff --git a/doctree.jserv/src/main/java/io/oz/sdoc/DbPicks.java b/doctree.jserv/src/main/java/io/oz/syn/dbpicks/DbPicks.java
+similarity index 65%
+rename from doctree.jserv/src/main/java/io/oz/sdoc/DbPicks.java
+rename to doctree.jserv/src/main/java/io/oz/syn/dbpicks/DbPicks.java
+index 57dcdca..ac5bbef 100644
+--- a/doctree.jserv/src/main/java/io/oz/sdoc/DbPicks.java
++++ b/doctree.jserv/src/main/java/io/oz/syn/dbpicks/DbPicks.java
+@@ -1,4 +1,4 @@
+-package io.oz.sdoc;
++package io.oz.syn.dbpicks;
+ 
+ import java.io.File;
+ import java.io.IOException;
+@@ -7,18 +7,21 @@ import java.util.ArrayList;
+ import io.odysz.anson.Anson;
+ 
+ /**
+- * How {@link DoctreeDBUpgrade} picks an earlier version's db into the current tables.
++ * A db's picking list: how an upgrade picks an earlier version's db into the current tables
++ * ({@link #picks}), and the records the current version needs ({@link #inits}).
+  *
+- * <p>A file of the app's package, e.g. jserv-album's &lt;install&gt;/bin/db-picks.json (the source:
+- * jserv-album/src/main/db-picks.json), beside bin/resource.json, not a resource in a jar:
+- * text resources in jars don't load the same on every SDK, e.g. Android's.</p>
++ * <p>One list per db, a file of the app's package named after the db, beside bin/resource.json,
++ * not a resource in a jar (text resources in jars don't load the same on every SDK, e.g. Android's),
++ * e.g. the doc-tree db's &lt;install&gt;/bin/doctree-picks.json (source: jserv-album/src/main/doctree-picks.json),
++ * read by {@link io.oz.sdoc.DoctreeDBUpgrade}.</p>
+  *
+  * <p>The items are generated (by Claude) and merged with the earlier versions' at each upgrade,
+  * never edited by hand. Each item's {@code mark}, "DB-PICKING-&lt;package version&gt; ...", e.g.
+  * "DB-PICKING-0.8.2 s_docs.template", is also in a comment of the source line that needs it, e.g.
+- * the meta's DDL column; the app's package build checks both ways (jserv-album/picking.py).</p>
++ * the meta's DDL column; the app's package build checks both ways (semantics.py3,
++ * semanticshare.io.oz.syn.dbpicks.DbPicks.check_marks(), the Python type of the same json).</p>
+  *
+- * @since 0.1.4, Portolio-0.8.2
++ * @since doctree.jserv 0.1.4, Portolio-0.8.2
+  * @author ody
+  */
+ public class DbPicks extends Anson {
+@@ -31,7 +34,7 @@ public class DbPicks extends Anson {
+ 	public DbPicks() { }
+ 
+ 	/**
+-	 * @param path the picking list, e.g. &lt;install&gt;/bin/db-picks.json
++	 * @param path the picking list, e.g. &lt;install&gt;/bin/doctree-picks.json
+ 	 * @return the picks; null if path is null or there is no such file
+ 	 * @throws IOException the file can't be parsed
+ 	 */
+diff --git a/doctree.jserv/src/test/java/io/oz/sdoc/DoctreeDBUpgradeTest.java b/doctree.jserv/src/test/java/io/oz/sdoc/DoctreeDBUpgradeTest.java
+index f940f19..e7d4092 100644
+--- a/doctree.jserv/src/test/java/io/oz/sdoc/DoctreeDBUpgradeTest.java
++++ b/doctree.jserv/src/test/java/io/oz/sdoc/DoctreeDBUpgradeTest.java
+@@ -33,6 +33,8 @@ import io.odysz.semantics.x.SemanticException;
+ import io.oz.sdoc.tier.DoctreeReq;
+ import io.oz.sdoc.tier.DoctreeResp;
+ import io.oz.sdoc.tier.DoctreeTier;
++import io.oz.syn.dbpicks.DbInitRow;
++import io.oz.syn.dbpicks.DbPicks;
+ 
+ /**
+  * A doc-tree db of earlier versions, upgraded when connected:
+@@ -49,8 +51,8 @@ class DoctreeDBUpgradeTest {
+ 	static final String volFail = "../upgrade-fail";
+ 	static final String volInits = "../upgrade-inits";
+ 	static final String volNopicks = "../upgrade-nopicks";
+-	/** the test copy of the picking list, as jserv-album's bin/db-picks.json */
+-	static final String picks = "src/test/res/db-picks.json";
++	/** the test copy of the picking list, as jserv-album's bin/doctree-picks.json */
++	static final String picks = "src/test/res/doctree-picks.json";
+ 
+ 	static final IUser robot = new JRobot();
+ 
+diff --git a/doctree.jserv/src/test/java/io/oz/sdoc/DbPicksTest.java b/doctree.jserv/src/test/java/io/oz/syn/dbpicks/DbPicksTest.java
+similarity index 80%
+rename from doctree.jserv/src/test/java/io/oz/sdoc/DbPicksTest.java
+rename to doctree.jserv/src/test/java/io/oz/syn/dbpicks/DbPicksTest.java
+index 95e4bf1..6446a70 100644
+--- a/doctree.jserv/src/test/java/io/oz/sdoc/DbPicksTest.java
++++ b/doctree.jserv/src/test/java/io/oz/syn/dbpicks/DbPicksTest.java
+@@ -1,4 +1,4 @@
+-package io.oz.sdoc;
++package io.oz.syn.dbpicks;
+ 
+ import static org.junit.jupiter.api.Assertions.assertEquals;
+ import static org.junit.jupiter.api.Assertions.assertNull;
+@@ -7,13 +7,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
+ import org.junit.jupiter.api.Test;
+ 
+ /**
+- * Loading a picking list, the test copy of jserv-album's bin/db-picks.json.
+- * The marks are checked both ways by jserv-album's package build (picking.py), against the sources.
++ * Loading a picking list, the test copy of jserv-album's bin/doctree-picks.json.
++ * The marks are checked both ways by jserv-album's package build (semanticshare.io.oz.syn.dbpicks),
++ * against the sources.
+  */
+ class DbPicksTest {
++	static final String doctreePicks = "src/test/res/doctree-picks.json";
++
+ 	@Test
+ 	void load() throws Exception {
+-		DbPicks picks = DbPicks.load(DoctreeDBUpgradeTest.picks);
++		DbPicks picks = DbPicks.load(doctreePicks);
+ 
+ 		DbPick t = picks.pick("s_docs", "template");
+ 		assertEquals("DB-PICKING-0.8.2 s_docs.template", t.mark);
+diff --git a/doctree.jserv/src/test/res/db-picks.json b/doctree.jserv/src/test/res/doctree-picks.json
+similarity index 69%
+rename from doctree.jserv/src/test/res/db-picks.json
+rename to doctree.jserv/src/test/res/doctree-picks.json
+index 841272a..6c25c96 100644
+--- a/doctree.jserv/src/test/res/db-picks.json
++++ b/doctree.jserv/src/test/res/doctree-picks.json
+@@ -1,23 +1,23 @@
+ {
+-  "type": "io.oz.sdoc.DbPicks",
++  "type": "io.oz.syn.dbpicks.DbPicks",
+   "picks": [
+-    { "type": "io.oz.sdoc.DbPick",
++    { "type": "io.oz.syn.dbpicks.DbPick",
+       "mark": "DB-PICKING-0.8.2 s_docnodes.tipjson",
+       "tabl": "s_docnodes", "col": "tipjson", "names": ["tipjson", "json"] },
+-    { "type": "io.oz.sdoc.DbPick",
++    { "type": "io.oz.syn.dbpicks.DbPick",
+       "mark": "DB-PICKING-0.8.2 s_docnodes.rstext",
+       "tabl": "s_docnodes", "col": "rstext", "names": ["rstext", "rst"] },
+-    { "type": "io.oz.sdoc.DbPick",
++    { "type": "io.oz.syn.dbpicks.DbPick",
+       "mark": "DB-PICKING-0.8.2 s_docnodes.docxstyle",
+       "tabl": "s_docnodes", "col": "docxstyle", "names": ["docxstyle", "style"] },
+-    { "type": "io.oz.sdoc.DbPick",
++    { "type": "io.oz.syn.dbpicks.DbPick",
+       "mark": "DB-PICKING-0.8.2 s_docs.template",
+       "tabl": "s_docs", "col": "template", "names": ["template"],
+       "dflt": "rtd-0.8",
+-      "when": { "type": "io.oz.sdoc.DbLogic", "op": "isNotnull", "l": "builtAt" } }
++      "when": { "type": "io.oz.syn.dbpicks.DbLogic", "op": "isNotnull", "l": "builtAt" } }
+   ],
+   "inits": [
+-    { "type": "io.oz.sdoc.DbInitRow",
++    { "type": "io.oz.syn.dbpicks.DbInitRow",
+       "mark": "DB-PICKING-0.8.2 oz_autoseq:s_docnodes.nid",
+       "tabl": "oz_autoseq", "key": ["sid"],
+       "nvs": [["sid", "s_docnodes.nid"], ["seq", "0"], ["remarks", "by DoctreeDBUpgrade"]] }

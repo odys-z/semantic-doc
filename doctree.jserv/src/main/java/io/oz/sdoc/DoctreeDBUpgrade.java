@@ -26,12 +26,15 @@ import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.parts.condition.ExprPart;
 import io.odysz.transact.sql.parts.condition.Funcall;
 import io.odysz.transact.x.TransException;
+import io.oz.syn.dbpicks.DbInitRow;
+import io.oz.syn.dbpicks.DbPick;
+import io.oz.syn.dbpicks.DbPicks;
 
 /**
  * Upgrade a doc-tree db file ({@link DoctreeDBHelper#dbfile}) of an earlier version, the same way
  * as the synode upgrader's config picks (semanticshare ConfigPicks): the new version's db is the
  * template, with the installed values picked, as the app's picking list ({@link DbPicks},
- * e.g. &lt;install&gt;/bin/db-picks.json) says. All through semantic.DA, the sql built by semantic.transact.
+ * e.g. &lt;install&gt;/bin/doctree-picks.json) says. All through semantic.DA, the sql built by semantic.transact.
  *
  * <ol>
  * <li>The db file is connected as &lt;conn&gt;.old, read with a basic transact builder

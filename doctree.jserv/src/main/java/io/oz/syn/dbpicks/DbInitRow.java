@@ -1,17 +1,18 @@
-package io.oz.sdoc;
+package io.oz.syn.dbpicks;
 
 import java.util.ArrayList;
 
 import io.odysz.anson.Anson;
 
 /**
- * A record the current version needs in the doc-tree db, inserted by {@link DoctreeDBUpgrade}
- * if missing, an item of {@link DbPicks#inits}; e.g. the sequence of a new auto key in oz_autoseq.
+ * A record the current version needs in a db, inserted if missing, e.g. by
+ * {@link io.oz.sdoc.DoctreeDBUpgrade}; an item of {@link DbPicks#inits}, e.g. the sequence of a
+ * new auto key in oz_autoseq.
  *
  * <p>A record is missing if no row of {@link #tabl} has the values of {@link #key} columns.
  * Existing records, e.g. a sequence copied from the old db, are never changed.</p>
  *
- * @since 0.1.4
+ * @since doctree.jserv 0.1.4
  * @author ody
  */
 public class DbInitRow extends Anson {
