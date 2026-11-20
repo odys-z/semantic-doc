@@ -27,10 +27,10 @@ public class DbInitRow extends Anson {
 	public ArrayList<String[]> nvs;
 
 	/**
-	 * [column, sql], a value selected in the db after its tables are copied, e.g.
-	 * a sequence starting past the rows a table has: "select count(*) from s_doctable3"
+	 * [column, table], the column's value is the count of the table's rows, e.g. a sequence
+	 * starting past the rows a table has: ["seq", "s_doctable3"]
 	 */
-	public ArrayList<String[]> sqls;
+	public ArrayList<String[]> counts;
 
 	public DbInitRow() { }
 }

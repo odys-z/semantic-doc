@@ -9,6 +9,7 @@ import java.util.HashMap;
 
 import org.apache.commons.io.FilenameUtils;
 
+import io.odysz.common.Utils;
 import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.DASemantics.SemanticHandler;
 import io.odysz.semantic.DASemantics.ShFullpath2;
@@ -65,6 +66,9 @@ public class DoctreeDBHelper {
 	/** conn id: why its db file couldn't be upgraded, by {@link #connect(String, String, String, String)} */
 	static final HashMap<String, String> upgradeErrors = new HashMap<String, String>();
 
+	/** conn id: the picking list of its db, by {@link #connect(String, String, String, String)}, for {@link #setup(String, boolean)} */
+	static final HashMap<String, DbPicks> picklists = new HashMap<String, DbPicks>();
+
 	DoctreeDBHelper(String conn, S_DocsMeta docm, S_DocNodeMeta nodem) throws Exception {
 		this.conn = conn;
 		this.res = volumes.containsKey(conn) ? new DocRes(volumes.get(conn)) : null;
@@ -120,7 +124,15 @@ public class DoctreeDBHelper {
 		String conn = "doctree." + synode;
 
 		upgradeErrors.remove(conn);
-		try { DoctreeDBUpgrade.upgrade(dbpath, picks, new S_DocsMeta(), new S_DocNodeMeta()); }
+		picklists.remove(conn);
+		try {
+			DbPicks picklist = DbPicks.load(picks);
+			if (picklist == null && picks != null)
+				Utils.warn("[DoctreeDBHelper] No picking list: %s", picks);
+			else if (picklist != null)
+				picklists.put(conn, picklist);
+			DoctreeDBUpgrade.upgrade(conn, dbpath, smtcs, picklist, new S_DocsMeta(), new S_DocNodeMeta());
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 			upgradeErrors.put(conn, String.format("Doc-tree db %s can't be upgraded: %s. "
@@ -155,6 +167,9 @@ public class DoctreeDBHelper {
 
 		DoctreeDBHelper db = new DoctreeDBHelper(conn, docm, nodem); // loads the connection's semantics
 		checkSemantics(conn, docm, nodem);
+
+		// the records this version needs, e.g. the sequence of nid, if missing
+		DoctreeDBUpgrade.inits(db.st, conn, picklists.get(conn));
 		return db;
 	}
 

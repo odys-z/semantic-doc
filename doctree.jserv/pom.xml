@@ -63,7 +63,7 @@
 	         1.5.31: ShFullpath2, smtc fullpath2 in semantics-doctree.xml -->
 	    <groupId>io.github.odys-z</groupId>
 	    <artifactId>semantic.DA</artifactId>
-	    <version>[1.5.31,)</version>
+	    <version>[1.5.32,)</version>
    	</dependency>
 
 	<!-- requests to the local html-service (ResPublisher) -->

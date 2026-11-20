@@ -18,7 +18,10 @@ class DbPicksTest {
 		DbPick t = picks.pick("s_docs", "template");
 		assertEquals("DB-PICKING-0.8.2 s_docs.template", t.mark);
 		assertEquals("rtd-0.8", t.dflt);
-		assertEquals("builtAt is not null", t.where);
+		assertEquals("isNotnull", t.when.op);
+		assertEquals("builtAt", t.when.l);
+		String sql = t.when.predicate().sql(null);
+		assertTrue(sql.matches("\\s*builtAt\\s+is\\s+not\\s+null\\s*"), sql);
 		assertEquals(2, picks.pick("s_docnodes", "tipjson").names.length);
 
 		DbInitRow seq = picks.inits.get(0);

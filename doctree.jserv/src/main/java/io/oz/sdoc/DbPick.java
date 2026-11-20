@@ -7,7 +7,7 @@ import io.odysz.anson.Anson;
  * an item of {@link DbPicks#picks}.
  *
  * <p>Its value is the old table's column of the first of {@link #names} found; if none is found,
- * i.e. the column is new, {@link #dflt} where {@link #where} holds, else the DDL's default.
+ * i.e. the column is new, {@link #dflt} where {@link #when} holds, else the DDL's default.
  * A column without a pick is picked by its own name.</p>
  *
  * @since 0.1.4
@@ -30,10 +30,11 @@ public class DbPick extends Anson {
 	public String dflt;
 
 	/**
-	 * sql condition on the old table's row for {@link #dflt}, e.g. "builtAt is not null"; null: every row.
-	 * Rows not matching take the DDL's default.
+	 * the condition on the old table's row for {@link #dflt}, e.g. builtAt is not null,
+	 * { "op": "isNotnull", "l": "builtAt" }; null: every row. Rows not matching take null.
 	 */
-	public String where;
+	/** @since 0.1.5, replaced the sql text, where */
+	public DbLogic when;
 
 	public DbPick() { }
 }
