@@ -90,24 +90,33 @@ class ImporterTest {
 		doc = docs.docs.get(0);
 		assertEquals(DocInf.State.ready, doc.state);
 		assertEquals("Annual Report", doc.title);
-		assertEquals(11, doc.nextNid);
 
-		assertArrayEquals(Tricky.tree(docId), lines(docId));
+		// the nids: auto keys, in the order of generation, which is the tree order here
+		String[] k = nids(docId);
+		assertEquals(11, k.length);
+		for (int i = 0; i < k.length; i++) {
+			assertEquals(4, k[i].length(), k[i]); // Radix32, id-len 4 (src/test/res/WEB-INF/config.xml)
+			if (i > 0) assertTrue(k[i - 1].compareTo(k[i]) < 0, k[i - 1] + " !< " + k[i]);
+		}
+		assertArrayEquals(Tricky.tree(k), lines(docId));
+		String root = k[0];
 
-		// a second doc: a new id; a subtree selected by fullpath prefix stays in its doc
+		// a second doc: a new id, new nids; a subtree selected by fullpath prefix stays in its doc
 		DocInf doc2 = ((DoctreeResp) tier.handle(importReq("doc-a")).body(0)).doc;
 		tier.importer().await();
 		assertEquals("T.0002", doc2.docId);
-		assertArrayEquals(Tricky.tree(doc2.docId), lines(doc2.docId));
+		String[] k2 = nids(doc2.docId);
+		assertArrayEquals(Tricky.tree(k2), lines(doc2.docId));
+		assertTrue(k[10].compareTo(k2[0]) < 0, k[10] + " !< " + k2[0]);
 		S_DocNodeMeta m = db.nodem;
-		assertEquals(Tricky.tree(docId).length, Connects.select(conn, String.format(
+		assertEquals(Tricky.tree(k).length, Connects.select(conn, String.format(
 				"select %2$s from %3$s where %4$s = '%1$s' or %4$s like '%1$s.%%'",
-				docId, m.pk, m.tbl, m.fullpath)).total());
+				root, m.pk, m.tbl, m.fullpath)).total());
 
 		// loads as one tree, the doc root
 		List<AnTreeNode> forest = DatasetHelper.buildForest(db.nodes(docId), db.nodem.treeSemantics());
 		assertEquals(1, forest.size());
-		assertEquals(docId, forest.get(0).id());
+		assertEquals(root, forest.get(0).id());
 		assertEquals(2, forest.get(0).children().size());
 
 		// r/tree: the doc and its forest, the nodes' fields as DocNode's
@@ -118,10 +127,10 @@ class ImporterTest {
 		DoctreeResp tree = (DoctreeResp) tmsg.body(0);
 		assertEquals("Annual Report", tree.doc.title);
 		assertEquals(1, tree.forest().size());
-		AnTreeNode root = (AnTreeNode) tree.forest().get(0);
-		assertEquals(docId, root.id());
-		assertEquals("Annual Report", root.get("ptext"));
-		AnTreeNode ch1 = (AnTreeNode) root.children().get(0);
+		AnTreeNode rootn = (AnTreeNode) tree.forest().get(0);
+		assertEquals(root, rootn.id());
+		assertEquals("Annual Report", rootn.get("ptext"));
+		AnTreeNode ch1 = (AnTreeNode) rootn.children().get(0);
 		AnTreeNode p1 = (AnTreeNode) ch1.children().get(0);
 		assertEquals("Body text under chapter one.", p1.get("ptext"));
 		assertEquals("{\"v\":1,\"runs\":[{\"t\":\"Body text \"},{\"t\":\"under\",\"b\":1,\"color\":\"1E8449\"},{\"t\":\" chapter one.\"}]}",
@@ -129,13 +138,13 @@ class ImporterTest {
 	}
 
 	/**
-	 * u/tree, u/node, c/commit on an imported tricky doc:
+	 * u/tree, u/node, c/commit on an imported tricky doc, k: the nids in tree order:
 	 * <pre>
-	 * root
-	 *   .1 section 第一章         [.2 p, .3 section 1.1 Scope, .4 section]
-	 *     .4 section            [.5 section Clause 7]
-	 *       .5 section          [.6 p, .7 p, .8 tabl]
-	 *   .9 section 第二章         [.a p]
+	 * k0 root
+	 *   k1 section 第一章         [k2 p, k3 section 1.1 Scope, k4 section]
+	 *     k4 section            [k5 section Clause 7]
+	 *       k5 section          [k6 p, k7 p, k8 tabl]
+	 *   k9 section 第二章         [k10 p]
 	 * </pre>
 	 */
 	@Test
@@ -143,7 +152,8 @@ class ImporterTest {
 		DocInf doc = ((DoctreeResp) tier.handle(importReq("doc-a")).body(0)).doc;
 		tier.importer().await();
 		String d = doc.docId;
-		String n1 = d + ".1", n2 = d + ".2", n3 = d + ".3", n5 = d + ".5", n6 = d + ".6", n7 = d + ".7", n9 = d + ".9";
+		String[] k = nids(d);
+		String root = k[0], n1 = k[1], n2 = k[2], n3 = k[3], n5 = k[5], n6 = k[6], n7 = k[7], n8 = k[8], n9 = k[9];
 		assertEquals(false, db.doc(d).dirty);
 
 		// up: the server works out where it goes; the reloaded subtree is the parent's
@@ -152,7 +162,7 @@ class ImporterTest {
 		assertEquals(n1, r.root());
 		assertEquals(1, r.forest().size());
 		assertEquals(n1, ((AnTreeNode) r.forest().get(0)).id());
-		assertEquals(asList(n3, n2, d + ".4"), childIds(conn, db.nodem.treeSemantics(), n1, robot));
+		assertEquals(asList(n3, n2, k[4]), childIds(conn, db.nodem.treeSemantics(), n1, robot));
 		assertEquals(true, r.doc.dirty);
 
 		// indent: under the previous sibling, now the section .3
@@ -162,22 +172,23 @@ class ImporterTest {
 		// a paragraph can't have children; the doc root is fixed
 		assertEquals(TreeModify.Rejected.holder, modify(d, TreeModify.indent(n7)).rejected());
 		assertEquals(TreeModify.Rejected.fixed, modify(d, TreeModify.outdent(n1)).rejected());
-		assertEquals(TreeModify.Rejected.fixed, modify(d, TreeModify.remove(d)).rejected());
+		assertEquals(TreeModify.Rejected.fixed, modify(d, TreeModify.remove(root)).rejected());
 
-		// insert: the id is the doc's next node number, the docId is the server's
+		// insert: the id is the next auto key, the docId is the server's
 		r = modify(d, TreeModify.insert(n7, TreeModify.At.after, "kind", "p", "docId", "not-this"));
-		assertEquals(d + ".b", r.newId());
+		String nb = r.newId();
+		assertEquals(4, nb.length(), nb);
+		assertTrue(k[10].compareTo(nb) < 0, k[10] + " !< " + nb);
 		assertEquals(n5, r.root());
-		assertEquals(asList(n6, n7, d + ".b", d + ".8"), childIds(conn, db.nodem.treeSemantics(), n5, robot));
-		assertEquals(12, db.doc(d).nextNid);
+		assertEquals(asList(n6, n7, nb, n8), childIds(conn, db.nodem.treeSemantics(), n5, robot));
 		assertEquals(1, Connects.select(conn, String.format(
-				"select nid from s_docnodes where nid = '%s.b' and docId = '%s'", d, d)).total());
+				"select nid from s_docnodes where nid = '%s' and docId = '%s'", nb, d)).total());
 
 		// remove, with the subtree
 		modify(d, TreeModify.remove(n9));
-		assertEquals(asList(n1), childIds(conn, db.nodem.treeSemantics(), d, robot));
+		assertEquals(asList(n1), childIds(conn, db.nodem.treeSemantics(), root, robot));
 		assertEquals(0, Connects.select(conn, String.format(
-				"select nid from s_docnodes where nid in ('%1$s.9', '%1$s.a')", d)).total());
+				"select nid from s_docnodes where nid in ('%s', '%s')", n9, k[10])).total());
 
 		// u/node: tipjson, rstext; the fullpath is not touched (fullpath2, semantic.DA ShFullpath2)
 		AnResultset fp0 = Connects.select(conn, String.format(
@@ -197,7 +208,7 @@ class ImporterTest {
 		rs = Connects.select(conn, String.format(
 				"select fullpath from s_docnodes where nid = '%s'", n6));
 		rs.next();
-		assertTrue(fp0.getString("fullpath").startsWith(d + "."), fp0.getString("fullpath"));
+		assertTrue(fp0.getString("fullpath").startsWith(root + "."), fp0.getString("fullpath"));
 		assertEquals(fp0.getString("fullpath"), rs.getString("fullpath"));
 
 		// c/commit
@@ -300,12 +311,14 @@ class ImporterTest {
 		assertEquals(DocInf.State.ready, db.doc(d).state, db.doc(d).msg);
 		assertEquals("ody", db.doc(d).creator);
 
+		// the picture and the Excel object, the 11th and 12th nodes in tree order, under 第二章, the 9th
 		S_DocNodeMeta m = db.nodem;
+		String[] k = nids(d);
 		AnResultset rs = Connects.select(conn, String.format(
-				"select %s, %s, %s, %s from %s where %s in ('%s.b', '%s.c') order by %s",
-				m.parentId, m.kind, m.ptext, m.resId, m.tbl, m.pk, d, d, m.fullpath));
+				"select %s, %s, %s, %s from %s where %s in ('%s', '%s') order by %s",
+				m.parentId, m.kind, m.ptext, m.resId, m.tbl, m.pk, k[11], k[12], m.fullpath));
 		rs.next();
-		assertEquals(d + ".9", rs.getString(m.parentId)); // 第二章
+		assertEquals(k[9], rs.getString(m.parentId)); // 第二章
 		assertEquals(DocNode.Kind.image, rs.getString(m.kind));
 		assertEquals("image1.png", rs.getString(m.resId));
 		rs.next();
@@ -345,6 +358,15 @@ class ImporterTest {
 		SemanticException e = assertThrows(SemanticException.class, () -> DoctreeDBHelper.setup("doctree.stale", true));
 		assertTrue(e.getMessage().contains("expecting <smtc>fullpath2</smtc>"), e.getMessage());
 		assertTrue(e.getMessage().contains("WEB-INF/semantics-doctree.xml"), e.getMessage());
+	}
+
+	/** the doc's nids, in tree order */
+	static String[] nids(String docId) throws Exception {
+		AnResultset rs = db.nodes(docId);
+		ArrayList<String> k = new ArrayList<String>();
+		while (rs.next())
+			k.add(rs.getString(db.nodem.pk));
+		return k.toArray(new String[0]);
 	}
 
 	static String[] lines(String docId) throws Exception {

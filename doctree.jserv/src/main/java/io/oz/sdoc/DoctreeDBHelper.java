@@ -32,10 +32,12 @@ import io.odysz.transact.x.TransException;
  * <ul>
  * <li>{@link S_DocsMeta}: headers, docId: auto key (autopk) prefixed with the synode, e.g. "X.000A";
  *     its radix and length are the synode's config.xml file-sys (radix 32) and id-len</li>
- * <li>{@link S_DocNodeMeta}: nodes of all docs, fullpath; the doc root's nid and fullpath are the docId,
+ * <li>{@link S_DocNodeMeta}: nodes of all docs, nid: auto key; fullpath; the doc root's fullpath is its nid,
  *     so a subtree, selected by fullpath prefix, never reaches into another doc</li>
  * <li>oz_autoseq, the auto keys on sqlite: created by semantic-DA's autopk handler (1.5.27)</li>
  * </ul>
+ *
+ * <p>A db file of an earlier version is upgraded by {@link DoctreeDBUpgrade} when connected.</p>
  *
  * <p>The docs' resources (pictures) are files beside the db file, see {@link DocRes}.</p>
  *
@@ -60,6 +62,9 @@ public class DoctreeDBHelper {
 	/** conn id: folder of its db file, by {@link #connect(String, String, String)} */
 	static final HashMap<String, String> volumes = new HashMap<String, String>();
 
+	/** conn id: why its db file couldn't be upgraded, by {@link #connect(String, String, String)} */
+	static final HashMap<String, String> upgradeErrors = new HashMap<String, String>();
+
 	DoctreeDBHelper(String conn, S_DocsMeta docm, S_DocNodeMeta nodem) throws Exception {
 		this.conn = conn;
 		this.res = volumes.containsKey(conn) ? new DocRes(volumes.get(conn)) : null;
@@ -79,6 +84,9 @@ public class DoctreeDBHelper {
 	 * {@link #smtcs}; the db file is created if there is none. Not configured in connects.xml.
 	 * Call after Connects.init().
 	 *
+	 * <p>A db file of an earlier version is upgraded first ({@link DoctreeDBUpgrade}). If that fails,
+	 * the file is kept as it is, the synode starts, and {@link #setup(String, boolean)} answers why.</p>
+	 *
 	 * @param webinf
 	 * @param volume settings.json's volume, relative to webinf or absolute
 	 * @param synode makes the conn id unique when several synodes share a JVM (tests)
@@ -89,6 +97,15 @@ public class DoctreeDBHelper {
 		String volpath = FilenameUtils.concat(new File(webinf).getAbsolutePath(), volume);
 		String dbpath = FilenameUtils.concat(volpath, dbfile);
 		String conn = "doctree." + synode;
+
+		upgradeErrors.remove(conn);
+		try { DoctreeDBUpgrade.upgrade(dbpath, new S_DocsMeta(), new S_DocNodeMeta()); }
+		catch (Exception e) {
+			e.printStackTrace();
+			upgradeErrors.put(conn, String.format("Doc-tree db %s can't be upgraded: %s. Its backup can be restored, or the file removed (all docs are lost).",
+					dbpath, e.getMessage()));
+		}
+
 		Connects.addSqlite(conn, dbpath, smtcs);
 		volumes.put(conn, volpath);
 		return conn;
@@ -104,10 +121,13 @@ public class DoctreeDBHelper {
 	 * @throws Exception
 	 */
 	public static DoctreeDBHelper setup(String conn, boolean forceDrop) throws Exception {
+		if (upgradeErrors.containsKey(conn))
+			throw new SemanticException(upgradeErrors.get(conn));
+
 		S_DocsMeta docm = new S_DocsMeta(conn);
 		S_DocNodeMeta nodem = new S_DocNodeMeta(conn);
 
-		// oz_autoseq, for the autopk of docId, is created by semantic-DA (1.5.27) when the semantics is loaded
+		// oz_autoseq, for the autopks of docId and nid, is created by semantic-DA (1.5.27) when the semantics is loaded
 		setupSqliTables(conn, forceDrop, docm, nodem);
 		Connects.commit(conn, new JRobot(), nodem.ddlIndex);
 
@@ -121,7 +141,8 @@ public class DoctreeDBHelper {
 	 * WEB-INF copied before fullpath2) would import docs with no fullpaths, or none at all.
 	 * <ul>
 	 * <li>{@link S_DocsMeta}: autopk (smtype autoInc), the docIds</li>
-	 * <li>{@link S_DocNodeMeta}: fullpath2 (ShFullpath2), the nodes' fullpaths in multi-row inserts</li>
+	 * <li>{@link S_DocNodeMeta}: autopk, the nids (since 0.1.4); fullpath2 (ShFullpath2), the nodes' fullpaths
+	 *     in multi-row inserts</li>
 	 * </ul>
 	 *
 	 * @throws SemanticException what's missing, for the user: the tier answers it, the synode keeps running
@@ -138,18 +159,8 @@ public class DoctreeDBHelper {
 		if (!(fp instanceof ShFullpath2))
 			throw new SemanticException("Doc-tree semantics: %s for %s, expecting <smtc>fullpath2</smtc>. %s",
 					fp == null ? "no fullpath" : "fullpath", nodem.tbl, fix);
-	}
-
-	/**
-	 * Node id: unique in the db, as the doc id is unique across synodes.
-	 * The doc root's nid is the doc id.
-	 *
-	 * @param docId
-	 * @param n from the doc's {@link DocInf#nextNid}
-	 * @return e.g. "X.000A.2f"
-	 */
-	public static String nid(String docId, int n) {
-		return String.format("%s.%s", docId, Integer.toString(n, 36));
+		if (!DATranscxt.hasSemantics(conn, nodem.tbl, smtype.autoInc))
+			throw new SemanticException("Doc-tree semantics: no autopk for %s. %s", nodem.tbl, fix);
 	}
 
 	/**
@@ -187,7 +198,6 @@ public class DoctreeDBHelper {
 		d.state   = rs.getString(docm.state);
 		d.msg     = rs.getString(docm.msg);
 		d.srcId   = rs.getString(docm.refId);
-		d.nextNid = rs.getInt(docm.nextNid, 1);
 		d.htmlUri = rs.getString(docm.htmlUri);
 		d.builtAt = rs.getString(docm.builtAt);
 		d.builtBy = rs.getString(docm.builtBy);

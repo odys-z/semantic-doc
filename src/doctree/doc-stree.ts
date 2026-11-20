@@ -13,7 +13,7 @@
  * The client keeps a copy of the table's rules ({@link Rules}, as S_DocNodeMeta's) only
  * to grey out what can't apply; the server checks them again.
  *
- * Each doc is one tree: a root node (kind doc, nid = docId) with sections and blocks
+ * Each doc is one tree: a root node (kind doc, fullpath = its nid) with sections and blocks
  * under it, so a change inside a doc never reloads other docs.
  */
 import {
@@ -37,7 +37,6 @@ export class DocInf extends Anson {
 	msg?: string | null;
 	/** the source docx's record id (h_photos); null if created in the editor */
 	srcId?: string | null;
-	nextNid?: number;
 	/** compiled html uri; null if never built */
 	htmlUri?: string | null;
 	builtAt?: string | null;
@@ -95,7 +94,7 @@ export class DocNode extends Anson {
 
 	/** io.oz.sdoc.DocNode.Kind */
 	static Kind = {
-		/** the doc root, nid = docId */
+		/** the doc root, fullpath = its nid (nodes imported before doctree.jserv 0.1.4: nid = docId) */
 		doc: 'doc',
 		section: 'section',
 		p: 'p',

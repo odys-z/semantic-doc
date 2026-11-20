@@ -23,8 +23,6 @@ public class S_DocsMeta extends SemanticTableMeta {
 	public final String msg;
 	/** the source docx's record id in the doc table (h_photos) */
 	public final String refId;
-	/** next node number of the doc, see {@link DoctreeDBHelper#nid(String, int)} */
-	public final String nextNid;
 	public final String htmlUri;
 	public final String builtAt;
 	public final String builtBy;
@@ -47,7 +45,6 @@ public class S_DocsMeta extends SemanticTableMeta {
 		state   = "state";
 		msg     = "msg";
 		refId   = "refId";
-		nextNid = "nextNid";
 		htmlUri = "htmlUri";
 		builtAt = "builtAt";
 		builtBy = "builtBy";
@@ -64,7 +61,6 @@ public class S_DocsMeta extends SemanticTableMeta {
 			+ "  " + state   + " varchar(8),           -- parsing, ready, failed\n"
 			+ "  " + msg     + " text,\n"
 			+ "  " + refId   + " varchar(64),          -- the docx's record id in h_photos\n"
-			+ "  " + nextNid + " integer DEFAULT 1,\n"
 			+ "  " + htmlUri + " varchar(512),\n"
 			+ "  " + builtAt + " varchar(24),\n"
 			+ "  " + builtBy + " varchar(32),\n"

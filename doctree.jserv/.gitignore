@@ -12,3 +12,5 @@ RemoteSystemsTempFiles
 !/src/test/res/rpub/.keep
 /src/test/res/rbuild/*
 !/src/test/res/rbuild/.keep
+/src/test/res/upgrade/
+/src/test/res/upgrade-fail/

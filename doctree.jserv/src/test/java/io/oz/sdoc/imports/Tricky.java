@@ -39,20 +39,26 @@ class Tricky {
 		return b;
 	}
 
-	/** expected tree: "nid parentId sort fullpath kind text" in tree order; the root's nid and fullpath are the docId */
-	static String[] tree(String docId) {
+	/**
+	 * Expected tree: "nid parentId sort fullpath kind text" in tree order.
+	 * The nids are auto keys; the doc root's fullpath is its own nid.
+	 *
+	 * @param k the 11 nodes' nids, in tree order (k[0]: the doc root), e.g. the first column of the db's lines
+	 */
+	static String[] tree(String... k) {
+		String r = k[0];
 		return new String[] {
-			String.format("%1$s null 1 %1$s doc Annual Report", docId),
-			String.format("%1$s.1 %1$s 1 %1$s.0001 section 第一章 总则", docId),
-			String.format("%1$s.2 %1$s.1 1 %1$s.0001.0001 p Body text under chapter one.", docId),
-			String.format("%1$s.3 %1$s.1 2 %1$s.0001.0002 section 1.1 Scope", docId),
-			String.format("%1$s.4 %1$s.1 3 %1$s.0001.0003 section Direct outline level on a Normal paragraph", docId),
-			String.format("%1$s.5 %1$s.4 1 %1$s.0001.0003.0001 section Clause 7: confidentiality", docId),
-			String.format("%1$s.6 %1$s.5 1 %1$s.0001.0003.0001.0001 p 1. First bullet", docId),
-			String.format("%1$s.7 %1$s.5 2 %1$s.0001.0003.0001.0002 p 2. Second bullet, Ody's", docId),
-			String.format("%1$s.8 %1$s.5 3 %1$s.0001.0003.0001.0003 tabl merged header {colspan=2} | r0c2 // r1c0 | r1c1 | vertical merge {vmerge-start} // r2c0 | r2c1 |  {vmerge-cont}", docId),
-			String.format("%1$s.9 %1$s 2 %1$s.0002 section 第二章 Inside a content control", docId),
-			String.format("%1$s.a %1$s.9 1 %1$s.0002.0001 p Body text under chapter two.", docId),
+			String.format("%s null 1 %s doc Annual Report", r, r),
+			String.format("%s %s 1 %s.0001 section 第一章 总则", k[1], r, r),
+			String.format("%s %s 1 %s.0001.0001 p Body text under chapter one.", k[2], k[1], r),
+			String.format("%s %s 2 %s.0001.0002 section 1.1 Scope", k[3], k[1], r),
+			String.format("%s %s 3 %s.0001.0003 section Direct outline level on a Normal paragraph", k[4], k[1], r),
+			String.format("%s %s 1 %s.0001.0003.0001 section Clause 7: confidentiality", k[5], k[4], r),
+			String.format("%s %s 1 %s.0001.0003.0001.0001 p 1. First bullet", k[6], k[5], r),
+			String.format("%s %s 2 %s.0001.0003.0001.0002 p 2. Second bullet, Ody's", k[7], k[5], r),
+			String.format("%s %s 3 %s.0001.0003.0001.0003 tabl merged header {colspan=2} | r0c2 // r1c0 | r1c1 | vertical merge {vmerge-start} // r2c0 | r2c1 |  {vmerge-cont}", k[8], k[5], r),
+			String.format("%s %s 2 %s.0002 section 第二章 Inside a content control", k[9], r, r),
+			String.format("%s %s 1 %s.0002.0001 p Body text under chapter two.", k[10], k[9], r),
 		};
 	}
 }

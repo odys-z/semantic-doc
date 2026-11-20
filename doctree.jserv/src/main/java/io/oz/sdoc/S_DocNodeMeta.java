@@ -3,7 +3,6 @@ package io.oz.sdoc;
 import java.sql.SQLException;
 import java.util.Set;
 
-import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.DA.DatasetCfg.TreeSemantics;
 import io.odysz.semantic.DASemantics.ShFullpath;
@@ -18,13 +17,16 @@ import io.odysz.transact.x.TransException;
  * Table s_docnodes: nodes ({@link DocNode}) of all docs in the working copy.
  * DDL built from the column names, as jserv-album's PhotoMeta does.
  *
- * <p>Semantics (semantics-doctree.xml): fullpath (parentId, sort, fullpath, sibling width).
- * The doc root's {@link #pk} and {@link #fullpath} are the docId, so a subtree, selected by
- * fullpath prefix, never reaches into another doc.</p>
+ * <p>Semantics (semantics-doctree.xml): {@link #pk} is an auto key (autopk, oz_autoseq, Radix32 of
+ * config.xml id-len), unique in the db; fullpath (parentId, sort, fullpath, sibling width).
+ * The doc root's {@link #fullpath} is its own nid, so a subtree, selected by fullpath prefix, never
+ * reaches into another doc; a doc's nodes are selected by {@link #docId}.</p>
+ *
+ * <p>Nodes imported before 0.1.4 keep their ids, docId + '.' + a node number (the doc root: the docId),
+ * which never equal an auto key: auto keys have no '.'.</p>
  *
  * <p>A tree for SemanticTree.onModifyTree() ({@link ITreeMeta}): only the doc root and sections
- * have children; the doc roots (top level) are fixed; a new node's id is docId + '.' + the doc's
- * next node number.</p>
+ * have children; the doc roots (top level) are fixed; a new node's id is the next auto key.</p>
  *
  * @author ody
  */
@@ -76,11 +78,11 @@ public class S_DocNodeMeta extends SemanticTableMeta implements ITreeMeta {
 		refId    = "refId";
 
 		ddlSqlite = "CREATE TABLE if not exists " + tbl + " (\n"
-			+ "  " + pk       + " varchar(48) NOT NULL, -- docId + '.' + n, the doc root: docId\n"
+			+ "  " + pk       + " varchar(48) NOT NULL, -- auto key; before 0.1.4: docId + '.' + n, the doc root: docId\n"
 			+ "  " + docId    + " varchar(32) NOT NULL,\n"
 			+ "  " + parentId + " varchar(48),\n"
 			+ "  " + sort     + " integer,\n"
-			+ "  " + fullpath + " varchar(512),         -- the doc root: docId\n"
+			+ "  " + fullpath + " varchar(512),         -- the doc root: its nid\n"
 			+ "  " + kind     + " varchar(8),\n"
 			+ "  " + tipjson  + " text,                 -- Tiptap JSON, \"type\" stored as \"contype\"\n"
 			+ "  " + rstext   + " text,\n"
@@ -117,34 +119,13 @@ public class S_DocNodeMeta extends SemanticTableMeta implements ITreeMeta {
 	public boolean fixedRoots() { return true; }
 
 	/**
-	 * docId + '.' + the doc's next node number, which is counted up ({@link S_DocsMeta#nextNid}).
+	 * The next auto key of {@link #pk}, from the same sequence as the autopk semantics' (oz_autoseq),
+	 * given to the insert, which the semantics then leaves as it is.
 	 */
 	@Override
-	public synchronized String newId(String connId, String parent, IUser usr)
+	public String newId(String connId, String parent, IUser usr)
 			throws TransException, SQLException {
-		DATranscxt st = new DATranscxt(connId);
-		AnResultset rs = (AnResultset) st.select(tbl)
-				.col(docId)
-				.whereEq(pk, parent)
-				.rs(st.instancontxt(connId, usr))
-				.rs(0);
-		if (!rs.next())
-			throw new SemanticException("Can't find the parent node %s.", parent);
-		String doc = rs.getString(docId);
-
-		S_DocsMeta docm = new S_DocsMeta(connId);
-		rs = (AnResultset) st.select(docm.tbl)
-				.col(docm.nextNid)
-				.whereEq(docm.pk, doc)
-				.rs(st.instancontxt(connId, usr))
-				.rs(0);
-		int n = rs.next() ? rs.getInt(docm.nextNid, 1) : 1;
-
-		st.update(docm.tbl, usr)
-			.nv(docm.nextNid, n + 1)
-			.whereEq(docm.pk, doc)
-			.u(st.instancontxt(connId, usr));
-		return DoctreeDBHelper.nid(doc, n);
+		return new DATranscxt(connId).instancontxt(connId, usr).genId(connId, tbl, pk);
 	}
 
 	/**

@@ -7,21 +7,24 @@ import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.List;
 
 import io.odysz.semantic.DATranscxt;
 import io.odysz.semantics.IUser;
+import io.odysz.semantics.SemanticObject;
+import io.odysz.transact.sql.parts.Resulving;
+import io.odysz.transact.sql.parts.condition.ExprPart;
 import io.odysz.transact.x.TransException;
 import io.oz.sdoc.DocNode;
 import io.oz.sdoc.DocRes;
-import io.oz.sdoc.DoctreeDBHelper;
 import io.oz.sdoc.S_DocNodeMeta;
 
 /**
  * Builds a doc tree from {@link Block}s and inserts it into the nodes table, subtree by subtree.
  *
  * <pre>
- * doc root (nid = fullpath = docId, text = title)
+ * doc root (fullpath = its nid, text = title), inserted first, alone
  *   a heading     → section, nested by outline level (a heading pops the stack until the top is shallower)
  *   anything else → p / table / image, under the current section
  *   a picture     → image, its file saved into the doc's resource folder, of its creator; resId: the file's name
@@ -31,6 +34,11 @@ import io.oz.sdoc.S_DocNodeMeta;
  * end of blocks   → all the open sections are popped, the doc root too
  * </pre>
  *
+ * <p>The nids are auto keys (the autopk semantics of the nodes table), generated in an insert,
+ * in the order of its rows. A row's parentId is the parent's nid if the parent is inserted already,
+ * or, if the parent is earlier in the same insert, {@code new Resulving(nodes, nid, i)}: the key of
+ * the insert's i-th row. Rows leave the nid out: it's the last column, appended by the semantics.</p>
+ *
  * <ul>
  * <li>The first Title-styled block (outline -1) is the doc's title, not a node.</li>
  * <li>Empty paragraphs (spacing) are dropped; empty headings are kept.</li>
@@ -38,8 +46,9 @@ import io.oz.sdoc.S_DocNodeMeta;
  * <li>Nodes carry structure, text, src, style and the paragraphs' run facts ({@link Run}):
  *     no json / rst, the client builds them.</li>
  * <li>The fullpath is the fullpath semantics' (semantic.DA ShFullpath2), not composed here; only the
- *     doc root's is given, the docId. The handler needs a row's parent in the db or earlier in the
- *     same insert: the rows are inserted in depth first order, parents first.</li>
+ *     doc root's is given, its own nid ({@code new Resulving(nodes, nid)}). The handler needs a row's
+ *     parent in the db or earlier in the same insert: the rows are inserted in depth first order,
+ *     parents first.</li>
  * <li>Not a transaction: a statement each time sections are popped; no rows are returned.</li>
  * </ul>
  *
@@ -51,8 +60,8 @@ public class Outliner {
 	public static class Outline {
 		/** the doc root's text */
 		public String title;
-		/** next node number of the doc, after the nodes */
-		public int nextNid;
+		/** the doc root's nid */
+		public String root;
 	}
 
 	/** An open section: on the stack until a heading of its level or upper comes. */
@@ -73,6 +82,9 @@ public class Outliner {
 	final S_DocNodeMeta nodem;
 	final IUser usr;
 	final DATranscxt st;
+
+	/** each node's parent, until the node is inserted and its parentId known */
+	final IdentityHashMap<DocNode, DocNode> parents = new IdentityHashMap<DocNode, DocNode>();
 
 	/** where the pictures are saved; null: not saved, an image's resId is its part in the docx */
 	DocRes res;
@@ -108,10 +120,10 @@ public class Outliner {
 		this.st = new DATranscxt(conn);
 	}
 
-	/** Without a db, for tests overriding {@link #insert(ArrayList)}. */
+	/** Without a db, for tests overriding {@link #insertRoot(DocNode)} and {@link #insert(ArrayList)}. */
 	Outliner() {
 		this.conn = null;
-		this.nodem = null;
+		this.nodem = new S_DocNodeMeta();
 		this.usr = null;
 		this.st = null;
 	}
@@ -124,7 +136,7 @@ public class Outliner {
 	 * @param blocks in document order
 	 * @param title the doc root's text; blank: the docx's Title, else deftitle
 	 * @param deftitle e.g. the file name
-	 * @return title and next node number; the nodes are in the db
+	 * @return title and the doc root's nid; the nodes are in the db
 	 */
 	public Outline outline(String docId, List<Block> blocks, String title, String deftitle)
 			throws TransException, SQLException, IOException {
@@ -140,19 +152,19 @@ public class Outliner {
 		o.title = !isblank(title) ? title
 				: docxTitle != null && !isblank(docxTitle.text) ? docxTitle.text : deftitle;
 
-		DocNode root = new DocNode(docId, docId, DocNode.Kind.doc);
+		DocNode root = new DocNode(docId, null, DocNode.Kind.doc);
 		root.sort = 1;
-		root.fullpath = docId; // the prefix of the doc's subtree, unique in the nodes table
 		root.ptext = o.title;
+		// its fullpath, its own nid, is the prefix of the doc's subtree, unique in the nodes table
+		insertRoot(root);
+		o.root = root.nid;
 
 		Deque<Section> stack = new ArrayDeque<Section>();
 		stack.push(new Section(root, -2));
 
 		// rows not inserted yet, in the document's order: depth first, parents first
 		ArrayList<DocNode> rows = new ArrayList<DocNode>();
-		rows.add(root);
 
-		int n = 1;
 		for (Block b : blocks) {
 			if (b == docxTitle)
 				continue;
@@ -169,9 +181,9 @@ public class Outliner {
 
 			Section parent = stack.peek();
 
-			// fullpath: left to the fullpath semantics, by parentId & sort
-			DocNode node = new DocNode(docId, DoctreeDBHelper.nid(docId, n++), kind)
-					.parent(parent.node.nid, ++parent.children);
+			// nid: the auto key; parentId: when inserted; fullpath: the semantics', by parentId & sort
+			DocNode node = new DocNode(docId, null, kind).parent(null, ++parent.children);
+			parents.put(node, parent.node);
 			node.ptext = isblank(b.numLabel) ? b.text : b.numLabel + " " + b.text;
 			node.src = b.src;
 			if (!b.isHeading() && !b.runs.isEmpty()) {
@@ -192,7 +204,6 @@ public class Outliner {
 		// end of the doc: every open section is finished, the doc root (the upmost level) too
 		pop2db(stack, Integer.MIN_VALUE, rows);
 
-		o.nextNid = n;
 		return o;
 	}
 
@@ -218,9 +229,61 @@ public class Outliner {
 	}
 
 	/**
-	 * Insert the nodes as one multi-row statement, cols() &amp; values().
-	 * The fullpath, the last column, is given only by the doc root; the others' are composed by the
-	 * fullpath semantics, so a row's parent must be in the db or earlier in the rows.
+	 * Insert the doc root, alone: its fullpath is its own nid, the latest key generated
+	 * ({@code new Resulving(nodes, nid)}), resolved by the fullpath semantics after the autopk's.
+	 * Sets the root's nid and fullpath.
+	 *
+	 * @param root
+	 */
+	void insertRoot(DocNode root) throws TransException, SQLException {
+		SemanticObject res = (SemanticObject) st.insert(nodem.tbl, usr)
+			.nv(nodem.docId, root.docId)
+			.nv(nodem.sort, root.sort)
+			.nv(nodem.kind, root.kind)
+			.nv(nodem.ptext, root.ptext)
+			.nv(nodem.fullpath, new Resulving(nodem.tbl, nodem.pk))
+			.ins(st.instancontxt(conn, usr));
+		root.nid = res.resulve(nodem.tbl, nodem.pk, -1);
+		root.fullpath = root.nid;
+	}
+
+	/**
+	 * A row's parentId: the parent's nid if inserted, else the key of the parent's row in the same insert.
+	 *
+	 * @param n
+	 * @param rows of the insert
+	 * @return nid or {@link Resulving}
+	 */
+	ExprPart parentRef(DocNode n, ArrayList<DocNode> rows) throws TransException {
+		DocNode p = parents.get(n);
+		if (p.nid != null)
+			return ExprPart.constVal(p.nid);
+		for (int i = 0; i < rows.size(); i++)
+			if (rows.get(i) == p)
+				return new Resulving(nodem.tbl, nodem.pk, i);
+		throw new TransException("Outliner: the parent of %s isn't inserted before it.", n.ptext);
+	}
+
+	/**
+	 * The rows are inserted: their nids, in the order of the rows, and then their parentIds.
+	 *
+	 * @param rows
+	 * @param nids generated by the insert
+	 */
+	void inserted(ArrayList<DocNode> rows, List<String> nids) throws TransException {
+		if (nids == null || nids.size() != rows.size())
+			throw new TransException("Outliner: %s nodes inserted, but %s keys generated.",
+					rows.size(), nids == null ? 0 : nids.size());
+		for (int i = 0; i < rows.size(); i++)
+			rows.get(i).nid = nids.get(i);
+		for (DocNode n : rows)
+			n.parentId = parents.remove(n).nid;
+	}
+
+	/**
+	 * Insert the nodes as one multi-row statement, cols() &amp; values(), then {@link #inserted(ArrayList, List)}.
+	 * The nid, the last column, is left out by every row, generated by the autopk semantics; the fullpath
+	 * is composed by the fullpath semantics, so a row's parent must be in the db or earlier in the rows.
 	 *
 	 * @param nodes in depth first order; nothing is done if empty
 	 */
@@ -231,9 +294,8 @@ public class Outliner {
 		ArrayList<ArrayList<Object[]>> vals = new ArrayList<ArrayList<Object[]>>(nodes.size());
 		for (DocNode n : nodes) {
 			ArrayList<Object[]> row = new ArrayList<Object[]>();
-			row.add(new Object[] { nodem.pk, n.nid });
 			row.add(new Object[] { nodem.docId, n.docId });
-			row.add(new Object[] { nodem.parentId, n.parentId });
+			row.add(new Object[] { nodem.parentId, parentRef(n, nodes) });
 			row.add(new Object[] { nodem.sort, n.sort });
 			row.add(new Object[] { nodem.kind, n.kind });
 			row.add(new Object[] { nodem.ptext, n.ptext });
@@ -241,15 +303,14 @@ public class Outliner {
 			row.add(new Object[] { nodem.src, n.src });
 			row.add(new Object[] { nodem.docxstyle, n.docxstyle });
 			row.add(new Object[] { nodem.resId, n.resId });
-			if (n.fullpath != null)
-				row.add(new Object[] { nodem.fullpath, n.fullpath });
 			vals.add(row);
 		}
 
-		st.insert(nodem.tbl, usr)
-			.cols(new String[] { nodem.pk, nodem.docId, nodem.parentId, nodem.sort, nodem.kind,
-				nodem.ptext, nodem.facts, nodem.src, nodem.docxstyle, nodem.resId, nodem.fullpath })
+		SemanticObject res = (SemanticObject) st.insert(nodem.tbl, usr)
+			.cols(new String[] { nodem.docId, nodem.parentId, nodem.sort, nodem.kind,
+				nodem.ptext, nodem.facts, nodem.src, nodem.docxstyle, nodem.resId, nodem.pk })
 			.values(vals)
 			.ins(st.instancontxt(conn, usr));
+		inserted(nodes, res.resulve(nodem.tbl, nodem.pk));
 	}
 }

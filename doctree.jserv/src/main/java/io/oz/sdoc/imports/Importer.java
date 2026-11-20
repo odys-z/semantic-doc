@@ -84,7 +84,6 @@ public class Importer {
 			.nv(docm.creator, uid)
 			.nv(docm.state, DocInf.State.parsing)
 			.nv(docm.refId, originRefId)
-			.nv(docm.nextNid, 1)
 			.ins(st.instancontxt(conn, robot));
 		String docId = res.resulve(docm.tbl, docm.pk, -1);
 
@@ -115,7 +114,6 @@ public class Importer {
 			st.update(docm.tbl, robot)
 				.nv(docm.title, o.title)
 				.nv(docm.state, DocInf.State.ready)
-				.nv(docm.nextNid, o.nextNid)
 				.whereEq(docm.pk, docId)
 				.u(st.instancontxt(conn, robot));
 		} catch (Throwable e) {
