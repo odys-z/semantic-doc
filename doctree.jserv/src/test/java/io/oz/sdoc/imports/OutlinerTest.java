@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +26,7 @@ class OutlinerTest {
 		/** nids of each insert statement */
 		final ArrayList<String> inserts = new ArrayList<String>();
 		final ArrayList<DocNode> nodes = new ArrayList<DocNode>();
-		/** each insert's parentIds, as given: a nid, or [i] for the insert's i-th row's key (a Resulving) */
+		/** each insert's parentIds, as given: a nid (sql, quoted), or [i] for the insert's i-th row's key (a Resulving) */
 		final ArrayList<String> parentRefs = new ArrayList<String>();
 		int k = 0;
 
@@ -42,9 +43,12 @@ class OutlinerTest {
 			if (rows.isEmpty())
 				return;
 			ArrayList<String> refs = new ArrayList<String>();
-			for (DocNode n : rows) {
-				ExprPart p = parentRef(n, rows);
-				refs.add(p instanceof Resulving ? "[" + rows.indexOf(parents.get(n)) + "]" : p.sql(null));
+			IdentityHashMap<DocNode, Integer> ix = new IdentityHashMap<DocNode, Integer>();
+			for (int i = 0; i < rows.size(); i++) {
+				DocNode n = rows.get(i);
+				ExprPart p = parentRef(n, ix);
+				refs.add(p instanceof Resulving ? "[" + ix.get(parents.get(n)) + "]" : p.sql(null));
+				ix.put(n, i);
 			}
 			parentRefs.add(String.join(" ", refs));
 
@@ -85,11 +89,11 @@ class OutlinerTest {
 				"k9 k10"},
 			c.inserts.toArray(new String[0]));
 
-		// parents inserted already: their nids; in the same insert: the key of their rows
+		// parents inserted already: their nids, quoted strings in the sql; in the same insert: the key of their rows
 		assertArrayEquals(new String[] {
-				"k0 [0] [0]",
-				"k1 [0] [1] [1] [1]",
-				"k0 [0]"},
+				"'k0' [0] [0]",
+				"'k1' [0] [1] [1] [1]",
+				"'k0' [0]"},
 			c.parentRefs.toArray(new String[0]));
 
 		// in tree order as they are; only the doc root's fullpath is given, its nid

@@ -249,19 +249,21 @@ public class Outliner {
 
 	/**
 	 * A row's parentId: the parent's nid if inserted, else the key of the parent's row in the same insert.
+	 * The rows are in depth first order, parents first, so a parent in the insert is an earlier row,
+	 * already indexed when its children come.
 	 *
 	 * @param n
-	 * @param rows of the insert
+	 * @param ix index of the insert's rows before n
 	 * @return nid or {@link Resulving}
 	 */
-	ExprPart parentRef(DocNode n, ArrayList<DocNode> rows) throws TransException {
+	ExprPart parentRef(DocNode n, IdentityHashMap<DocNode, Integer> ix) throws TransException {
 		DocNode p = parents.get(n);
 		if (p.nid != null)
-			return ExprPart.constVal(p.nid);
-		for (int i = 0; i < rows.size(); i++)
-			if (rows.get(i) == p)
-				return new Resulving(nodem.tbl, nodem.pk, i);
-		throw new TransException("Outliner: the parent of %s isn't inserted before it.", n.ptext);
+			return ExprPart.constr(p.nid); // a string, quoted: constVal() isn't
+		Integer i = ix.get(p);
+		if (i == null)
+			throw new TransException("Outliner: the parent of %s isn't inserted before it.", n.ptext);
+		return new Resulving(nodem.tbl, nodem.pk, i);
 	}
 
 	/**
@@ -292,10 +294,13 @@ public class Outliner {
 			return;
 
 		ArrayList<ArrayList<Object[]>> vals = new ArrayList<ArrayList<Object[]>>(nodes.size());
-		for (DocNode n : nodes) {
+		IdentityHashMap<DocNode, Integer> ix = new IdentityHashMap<DocNode, Integer>(nodes.size());
+		for (int i = 0; i < nodes.size(); i++) {
+			DocNode n = nodes.get(i);
 			ArrayList<Object[]> row = new ArrayList<Object[]>();
 			row.add(new Object[] { nodem.docId, n.docId });
-			row.add(new Object[] { nodem.parentId, parentRef(n, nodes) });
+			row.add(new Object[] { nodem.parentId, parentRef(n, ix) });
+			ix.put(n, i);
 			row.add(new Object[] { nodem.sort, n.sort });
 			row.add(new Object[] { nodem.kind, n.kind });
 			row.add(new Object[] { nodem.ptext, n.ptext });
