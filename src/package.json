@@ -45,7 +45,7 @@
     "@anclient/anreact": "^0.8.1",
     "@anclient/semantier": "^1.1.1"
   },
-  "//peerDependencies": "@anclient/* are imported by the editor but never installed by or packed into semantic-doc: the app (e.g. Anclient album-web) provides them. Optional, so npm 7+ won't auto-install a registry copy beside the app's. For building and testing semantic-doc itself, the devDependencies below link them to the Anclient sources (never packed); diff-anclient.py --check verifies the build uses the sources.",
+  "//peerDependencies": "@anclient/* are imported by the editor but never installed by or packed into semantic-doc: the app (e.g. Anclient album-web) provides them. Optional, so npm 7+ won't auto-install a registry copy beside the app's. For building and testing semantic-doc itself, the devDependencies below install published versions from the npm registry (never packed); diff-anclient.py copies unpublished changes of the Anclient sources into them (s a), and --check fails while a copy differs from its source.",
   "devDependencies": {
     "@anclient/anreact": "^0.8.2",
     "@anclient/semantier": "^1.1.1",

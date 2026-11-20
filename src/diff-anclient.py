@@ -4,9 +4,13 @@ Compare the @anclient/* packages semantic-doc builds with against their sources
 (Anclient/js/<package>), and open the differences in VS Code.
 Adapted from Anclient/examples/example.js/diff-anclient.py.
 
-semantic-doc (this folder, src/) can get @anclient/* from:
-    node_modules/@anclient/* -> ../../anclient/js/*   the "file:" devDependencies: the sources themselves
-    node_modules/@anclient/*                          an npm install of a published version
+semantic-doc (this folder, src/) gets @anclient/* from the npm registry: its devDependencies are
+published versions, installed as copies in node_modules/@anclient/*, as if there were no local
+sources. To build and test with unpublished changes of the sources, copy them into the copies
+(s a, below); the next npm install that reinstalls a package overwrites them again.
+Other locations are still recognized:
+    node_modules/@anclient/* -> ../../anclient/js/*   a link to the sources (npm link, "file:");
+                                                      --check fails on it, not being the registry's
     a webpack resolve.alias                           if webpack.config.js ever aliases them
 
 The location is found the way the build finds it: the resolve.alias of webpack.config.js
@@ -18,12 +22,13 @@ Usage (in semantic-doc/src):
     python3 diff-anclient.py                         compare node_modules/@anclient/* with the sources
     python3 diff-anclient.py -p anreact
     python3 diff-anclient.py --src ~/github/anclient/js
-    python3 diff-anclient.py --check                 report only, exit 1 if what the build uses differs
+    python3 diff-anclient.py --check                 report only, exit 1 if a copy the build uses differs
+                                                     from its source, or a package is linked to its source
                                                      (jserv-album's tasks.py stops building)
     python3 diff-anclient.py -h
 
-The sources default to ../../anclient/js (or ../../Anclient/js), the checkout the
-"file:" devDependencies in package.json point at.
+The sources default to ../../anclient/js (or ../../Anclient/js), the Anclient checkout
+beside semantic-doc.
 
 Then it lists the files that differ, and asks:
     3         open file 3 in VS Code's diff editor
@@ -233,6 +238,8 @@ def compare(installed: str, source: str):
 other_lines = {}
 # packages of the last scan not found, or without their sources
 missing = []
+# packages of the last scan that are links to their sources, not installed from the registry
+linked = []
 
 
 def scan(project: str, pkgs, src_root, pairs=None, used_only=False):
@@ -242,6 +249,7 @@ def scan(project: str, pkgs, src_root, pairs=None, used_only=False):
     rows = []
     other_lines.clear()
     missing.clear()
+    linked.clear()
     print(f'\nProject {os.path.relpath(project)}')
     for pkg in pkgs:
         source = os.path.join(src_root, pkg)
@@ -260,6 +268,11 @@ def scan(project: str, pkgs, src_root, pairs=None, used_only=False):
             # built from the sources: nothing to compare, unless an installed copy is shadowed
             others = [s for s in shadowed if not s.is_source(source)]
             print(f'\n@anclient/{pkg}  built from the source: {used.label(source)}')
+            if used.how == 'node_modules':
+                linked.append(pkg)
+                print(f'    not installed from the npm registry (package.json: a published version); if the\n'
+                      f'    lock still links it: remove "node_modules/@anclient/{pkg}" and the "{os.path.relpath(source, project)}"\n'
+                      f'    entries from package-lock.json, then rm -rf node_modules/@anclient/{pkg} && npm install')
             if not others or used_only:
                 continue
             left = others[0]
@@ -278,6 +291,13 @@ def scan(project: str, pkgs, src_root, pairs=None, used_only=False):
                   f'    Compare with a checkout of {release_line(version(left.path))}.x, see --src (-h).')
         if not r:
             print('    identical')
+        elif not note:
+            v, sv = version(left.path), version(source)
+            if v != sv:
+                print(f'    versions differ, {v} -> {sv}: once {sv} is published, npm install -D @anclient/{pkg}@^{sv}\n'
+                      f'    (and in package.json); until then, s a copies the source into the copy')
+            else:
+                print(f'    the source has unpublished changes: s a copies them into the copy (publish them later)')
         rows += [(pkg,) + x for x in r]
 
     labels = {'M': 'modified', 'I': 'used only', 'S': 'source only'}
@@ -373,7 +393,7 @@ def ask(prompt: str) -> str:
 
 
 def default_src() -> str:
-    """../../anclient/js beside semantic-doc, as the "file:" devDependencies point at"""
+    """../../anclient/js, the Anclient checkout beside semantic-doc"""
     for name in ('anclient', 'Anclient'):
         p = os.path.normpath(os.path.join(here, '..', '..', name, 'js'))
         if os.path.isdir(p):
@@ -400,13 +420,13 @@ def main():
 
     if args.check:
         rows = scan(project, args.packages, src_root, used_only=True)
-        if rows or missing:
-            sys.exit(f'\n{os.path.relpath(project)}: '
-                     + (f'{len(rows)} file(s) differ from the sources' if rows else '')
-                     + (', ' if rows and missing else '')
-                     + (f'not found: {" ".join(missing)}' if missing else '')
-                     + '. Update the copies (or the sources), see the commands above.')
-        print(f'\n{os.path.relpath(project)}: the packages used are the sources, or identical to them.')
+        problems = ([f'{len(rows)} file(s) differ from the sources'] if rows else []) \
+                 + ([f'not found: {" ".join(missing)}'] if missing else []) \
+                 + ([f'linked to the sources, not from the registry: {" ".join(linked)}'] if linked else [])
+        if problems:
+            sys.stdout.flush()
+            sys.exit(f'\n{os.path.relpath(project)}: ' + ', '.join(problems) + '. See the notes above.')
+        print(f'\n{os.path.relpath(project)}: the packages installed are identical to the sources.')
         return
 
     code = shutil.which('code')
