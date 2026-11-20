@@ -18,6 +18,8 @@ Usage (in semantic-doc/src):
     python3 diff-anclient.py                         compare node_modules/@anclient/* with the sources
     python3 diff-anclient.py -p anreact
     python3 diff-anclient.py --src ~/github/anclient/js
+    python3 diff-anclient.py --check                 report only, exit 1 if what the build uses differs
+                                                     (jserv-album's tasks.py stops building)
     python3 diff-anclient.py -h
 
 The sources default to ../../anclient/js (or ../../Anclient/js), the checkout the
@@ -229,28 +231,36 @@ def compare(installed: str, source: str):
 
 # packages of the last scan whose copy is of another release line than the source
 other_lines = {}
+# packages of the last scan not found, or without their sources
+missing = []
 
 
-def scan(project: str, pkgs, src_root, pairs=None):
+def scan(project: str, pkgs, src_root, pairs=None, used_only=False):
+    '''
+    :param used_only: compare only what the build uses: no shadowed copies of a package built from its source
+    '''
     rows = []
     other_lines.clear()
+    missing.clear()
     print(f'\nProject {os.path.relpath(project)}')
     for pkg in pkgs:
         source = os.path.join(src_root, pkg)
         used, shadowed, note = locate(pkg, project)
         if not os.path.isdir(source):
             print(f'@anclient/{pkg}: source {source} not found, use --src <Anclient/js>.')
+            missing.append(pkg)
             continue
         if used is None:
             print(f'@anclient/{pkg}: not found by webpack alias or node_modules'
                   f'{" (" + note + ")" if note else ""}.')
+            missing.append(pkg)
             continue
         left = used
         if used.is_source(source):
             # built from the sources: nothing to compare, unless an installed copy is shadowed
             others = [s for s in shadowed if not s.is_source(source)]
             print(f'\n@anclient/{pkg}  built from the source: {used.label(source)}')
-            if not others:
+            if not others or used_only:
                 continue
             left = others[0]
             print(f'    comparing the shadowed copy instead: {left.label(source)}')
@@ -377,6 +387,8 @@ def main():
     ap.add_argument('-p', '--packages', nargs='+', default=packages, choices=packages,
                     help='packages under @anclient, default: anreact semantier')
     ap.add_argument('--src', help='folder of the package sources, default: ../../anclient/js')
+    ap.add_argument('--check', action='store_true',
+                    help='report only, no prompts; exit 1 if what the build uses differs from the sources, or is not found')
     args = ap.parse_args()
 
     src_root = os.path.abspath(os.path.expanduser(args.src)) if args.src else default_src()
@@ -385,6 +397,17 @@ def main():
     print(f'Sources: {src_root}  ' +
           '  '.join(f'{p} {version(os.path.join(src_root, p))}' for p in packages))
     project = here
+
+    if args.check:
+        rows = scan(project, args.packages, src_root, used_only=True)
+        if rows or missing:
+            sys.exit(f'\n{os.path.relpath(project)}: '
+                     + (f'{len(rows)} file(s) differ from the sources' if rows else '')
+                     + (', ' if rows and missing else '')
+                     + (f'not found: {" ".join(missing)}' if missing else '')
+                     + '. Update the copies (or the sources), see the commands above.')
+        print(f'\n{os.path.relpath(project)}: the packages used are the sources, or identical to them.')
+        return
 
     code = shutil.which('code')
     if not code:
