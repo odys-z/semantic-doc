@@ -22,6 +22,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import io.odysz.common.Configs;
+import io.odysz.common.Utils;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.DA.DatasetCfg;
 import io.odysz.semantic.jprotocol.AnsonHeader;
@@ -30,6 +31,7 @@ import io.odysz.semantic.jprotocol.AnsonMsg.Port;
 import io.odysz.semantic.jserv.JRobot;
 import io.odysz.semantic.jserv.x.SsException;
 import io.odysz.semantic.jsession.ISessionVerifier;
+import io.odysz.semantic.tier.docs.Docs206;
 import io.odysz.semantics.IUser;
 import io.oz.sdoc.DocInf;
 import io.oz.sdoc.DoctreeDBHelper;
@@ -88,6 +90,21 @@ class Doctree206ServTest {
 				};
 			}
 		};
+
+		// loaded here, by the first request otherwise: semantic.jserv's Docs206 creates its DATranscxt
+		// of the default connection, which the test's connects.xml doesn't have; Doctree206Serv doesn't use it
+		expectTrace("init", "NullPointerException: Can't find datasourse: null ... at Docs206.<clinit>",
+				"semantic.jserv's Docs206 loads without a default connection; not used here.");
+		Utils.logi("Docs206 loaded, its DATranscxt: %s", Docs206.st);
+	}
+
+	/** Tell the reader the stack trace printed next is expected, as ImporterTest does. */
+	static void expectTrace(String test, String trace, String why) {
+		Utils.warn("\n**************************************************************\n"
+				 + "* [Doctree206ServTest.%s] A stack trace is expected next:\n"
+				 + "*   %s\n"
+				 + "* IGNORE it: %s\n"
+				 + "**************************************************************", test, trace, why);
 	}
 
 	@Test
@@ -133,6 +150,8 @@ class Doctree206ServTest {
 		DoctreeReq q = new DoctreeReq("/sdoc").docId(docId);
 		q.a(DoctreeReq.A.docs);
 		assertEquals(400, call(false, anson64(q, "ss-ody"), null).status);
+		expectTrace("refused", "line 1:0 mismatched input 'not' expecting '{'",
+				"the request is \"not json\" (bm90IGpzb24=) on purpose; the parser complains, the servlet answers 400.");
 		assertEquals(400, call(false, "bm90IGpzb24=", null).status); // "not json"
 	}
 

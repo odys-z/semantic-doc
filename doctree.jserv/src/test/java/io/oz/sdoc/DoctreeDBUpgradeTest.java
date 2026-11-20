@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import io.odysz.common.Configs;
+import io.odysz.common.Utils;
 import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.DA.Connects;
 import io.odysz.semantic.DA.DatasetCfg;
@@ -146,6 +147,7 @@ class DoctreeDBUpgradeTest {
 		}
 		long size = dbf.length();
 
+		expectTrace("upgradeFails", "SQLiteException: [SQLITE_CONSTRAINT_NOTNULL] ... s_docnodes.docId");
 		String conn = DoctreeDBHelper.connect(webinf, volFail, "V");
 
 		assertEquals(0, dir.listFiles((d, n) -> n.endsWith(".bak") || n.endsWith(".new")).length);
@@ -157,6 +159,15 @@ class DoctreeDBUpgradeTest {
 		AnsonMsg<? extends AnsonResp> m = new DoctreeTier(Port.echo).conn(conn, "V").handle(docs());
 		assertEquals(MsgCode.exSemantic, m.code());
 		assertTrue(m.body(0).msg().contains("can't be upgraded"), m.body(0).msg());
+	}
+
+	/** Tell the reader the stack trace printed next is the test's own, as ImporterTest does. */
+	static void expectTrace(String test, String trace) {
+		Utils.warn("\n**************************************************************\n"
+				 + "* [DoctreeDBUpgradeTest.%s] A stack trace is expected next:\n"
+				 + "*   %s\n"
+				 + "* IGNORE it: the test makes the upgrade fail on purpose.\n"
+				 + "**************************************************************", test, trace);
 	}
 
 	static File fresh(String volume) {
