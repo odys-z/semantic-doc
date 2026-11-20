@@ -14,3 +14,5 @@ RemoteSystemsTempFiles
 !/src/test/res/rbuild/.keep
 /src/test/res/upgrade/
 /src/test/res/upgrade-fail/
+/src/test/res/upgrade-inits/
+/src/test/res/upgrade-nopicks/

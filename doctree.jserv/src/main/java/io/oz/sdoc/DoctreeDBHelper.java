@@ -62,7 +62,7 @@ public class DoctreeDBHelper {
 	/** conn id: folder of its db file, by {@link #connect(String, String, String)} */
 	static final HashMap<String, String> volumes = new HashMap<String, String>();
 
-	/** conn id: why its db file couldn't be upgraded, by {@link #connect(String, String, String)} */
+	/** conn id: why its db file couldn't be upgraded, by {@link #connect(String, String, String, String)} */
 	static final HashMap<String, String> upgradeErrors = new HashMap<String, String>();
 
 	DoctreeDBHelper(String conn, S_DocsMeta docm, S_DocNodeMeta nodem) throws Exception {
@@ -84,8 +84,8 @@ public class DoctreeDBHelper {
 	 * {@link #smtcs}; the db file is created if there is none. Not configured in connects.xml.
 	 * Call after Connects.init().
 	 *
-	 * <p>A db file of an earlier version is upgraded first ({@link DoctreeDBUpgrade}). If that fails,
-	 * the file is kept as it is, the synode starts, and {@link #setup(String, boolean)} answers why.</p>
+	 * <p>Without a picking list: a db file of an earlier version can't be upgraded, see
+	 * {@link #connect(String, String, String, String)}.</p>
 	 *
 	 * @param webinf
 	 * @param volume settings.json's volume, relative to webinf or absolute
@@ -94,16 +94,38 @@ public class DoctreeDBHelper {
 	 * @throws Exception
 	 */
 	public static String connect(String webinf, String volume, String synode) throws Exception {
+		return connect(webinf, volume, synode, null);
+	}
+
+	/**
+	 * Connect the doc-tree db of a synode, &lt;volume&gt;/{@link #dbfile}, with the semantics
+	 * {@link #smtcs}; the db file is created if there is none. Not configured in connects.xml.
+	 * Call after Connects.init().
+	 *
+	 * <p>A db file of an earlier version is upgraded first ({@link DoctreeDBUpgrade}), with the picking
+	 * list of the app's package. If that fails, the file is kept as it is, the synode starts, and
+	 * {@link #setup(String, boolean)} answers why.</p>
+	 *
+	 * @param webinf
+	 * @param volume settings.json's volume, relative to webinf or absolute
+	 * @param synode makes the conn id unique when several synodes share a JVM (tests)
+	 * @param picks the picking list, e.g. &lt;install&gt;/bin/db-picks.json, see {@link DbPicks}; null: none
+	 * @return conn id, "doctree." + synode
+	 * @throws Exception
+	 * @since 0.1.4
+	 */
+	public static String connect(String webinf, String volume, String synode, String picks) throws Exception {
 		String volpath = FilenameUtils.concat(new File(webinf).getAbsolutePath(), volume);
 		String dbpath = FilenameUtils.concat(volpath, dbfile);
 		String conn = "doctree." + synode;
 
 		upgradeErrors.remove(conn);
-		try { DoctreeDBUpgrade.upgrade(dbpath, new S_DocsMeta(), new S_DocNodeMeta()); }
+		try { DoctreeDBUpgrade.upgrade(dbpath, picks, new S_DocsMeta(), new S_DocNodeMeta()); }
 		catch (Exception e) {
 			e.printStackTrace();
-			upgradeErrors.put(conn, String.format("Doc-tree db %s can't be upgraded: %s. Its backup can be restored, or the file removed (all docs are lost).",
-					dbpath, e.getMessage()));
+			upgradeErrors.put(conn, String.format("Doc-tree db %s can't be upgraded: %s. "
+					+ "Check the package's picking list (%s), or restore a backup of the db.",
+					dbpath, e.getMessage(), picks));
 		}
 
 		Connects.addSqlite(conn, dbpath, smtcs);

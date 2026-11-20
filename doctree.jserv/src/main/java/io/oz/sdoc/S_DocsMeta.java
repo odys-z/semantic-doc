@@ -26,7 +26,12 @@ public class S_DocsMeta extends SemanticTableMeta {
 	public final String htmlUri;
 	public final String builtAt;
 	public final String builtBy;
-	/** id of the template the html package was built with, see {@link DocInf#template} */
+
+	/**
+	 * id of the template the html package was built with, see {@link DocInf#template}
+	 * 
+	 * DB-PICKING-0.8.2 s_docs.template
+	 */
 	public final String template;
 	/** url path published at html-service, see {@link DocInf#pubpath} */
 	public final String pubpath;

@@ -78,19 +78,19 @@ public class S_DocNodeMeta extends SemanticTableMeta implements ITreeMeta {
 		refId    = "refId";
 
 		ddlSqlite = "CREATE TABLE if not exists " + tbl + " (\n"
-			+ "  " + pk       + " varchar(48) NOT NULL, -- auto key; before 0.1.4: docId + '.' + n, the doc root: docId\n"
+			+ "  " + pk       + " varchar(48) NOT NULL, -- auto key; before 0.1.4: docId + '.' + n, the doc root: docId\n" // DB-PICKING-0.8.2 oz_autoseq:s_docnodes.nid
 			+ "  " + docId    + " varchar(32) NOT NULL,\n"
 			+ "  " + parentId + " varchar(48),\n"
 			+ "  " + sort     + " integer,\n"
 			+ "  " + fullpath + " varchar(512),         -- the doc root: its nid\n"
 			+ "  " + kind     + " varchar(8),\n"
-			+ "  " + tipjson  + " text,                 -- Tiptap JSON, \"type\" stored as \"contype\"\n"
-			+ "  " + rstext   + " text,\n"
+			+ "  " + tipjson  + " text,                 -- Tiptap JSON, \"type\" stored as \"contype\"\n" // DB-PICKING-0.8.2 s_docnodes.tipjson
+			+ "  " + rstext   + " text,\n" // DB-PICKING-0.8.2 s_docnodes.rstext
 			+ "  " + rstver   + " integer DEFAULT 0,\n"
 			+ "  " + ptext    + " text,\n"
 			+ "  " + facts    + " text,                 -- run facts, the client builds tipjson from them\n"
 			+ "  " + src      + " varchar(64),          -- docx origin, e.g. body/2\n"
-			+ "  " + docxstyle+ " varchar(64),\n"
+			+ "  " + docxstyle+ " varchar(64),\n" // DB-PICKING-0.8.2 s_docnodes.docxstyle
 			+ "  " + resId    + " text,                 -- image: file name in the doc's resource folder\n"
 			+ "  " + refId    + " varchar(64),\n"
 			+ "  PRIMARY KEY (" + pk + ")\n"
