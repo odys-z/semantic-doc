@@ -36,6 +36,7 @@ import Button from '@mui/material/Button';
 import Collapse from '@mui/material/Collapse';
 import Link from '@mui/material/Link';
 import Snackbar from '@mui/material/Snackbar';
+import TextField from '@mui/material/TextField';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 
@@ -103,6 +104,8 @@ interface DoctreeState {
 	publishing?: boolean;
 	/** dialog: the published doc's url */
 	publink?: string;
+	/** dialog: why the link couldn't be copied; the link is shown, selected, for the user to copy */
+	copyFail?: string;
 }
 
 /** an empty paragraph, stored form */
@@ -305,6 +308,33 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 			(msg) => this.setState({ publishing: false, snack: `Not published: ${msg}` }));
 	}
 
+	/** the published link's text field, shown when it can't be copied */
+	linkInput = React.createRef<HTMLInputElement>();
+
+	selectLink = () => {
+		const i = this.linkInput.current;
+		if (i) { i.focus(); i.select(); }
+	};
+
+	/**
+	 * "Copy link" of the published dialog, kept open (returns false): closed when the link is
+	 * copied; else the link is shown, selected, with why, e.g. a page of http (not a secure
+	 * context) and the browser's execCommand('copy') refused, for the user to copy it.
+	 */
+	copyLink = (publink: string): false => {
+		if (this.state.copyFail) {
+			this.selectLink();
+			return false;
+		}
+		copyToClipboard(publink).then(
+			() => this.setState({ publink: undefined, copyFail: undefined, snack: 'Link copied' }),
+			() => this.setState({ copyFail: window.isSecureContext
+					? 'The browser didn\'t let this page write to the clipboard.'
+					: 'This page isn\'t served over https (a secure connection), so the browser doesn\'t let it write to the clipboard.' },
+				this.selectLink));
+		return false;
+	};
+
 	pollBuild(build?: string | null) {
 		clearTimeout(this.building);
 		if (build !== DoctreeResp.Build.building || !this.props.doctier.build) return;
@@ -426,7 +456,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	}
 
 	render() {
-		const { committed, committedAt, saving, doc, alert, snack, previewing, rstFiles, build, publishing, publink } = this.state;
+		const { committed, committedAt, saving, doc, alert, snack, previewing, rstFiles, build, publishing, publink, copyFail } = this.state;
 		const preview = this.props.preview && previewing;
 		const wide = !!preview && !!this.state.wide;
 		const classes = this.props.classes || {};
@@ -495,13 +525,20 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 				{publink &&
 					<ConfirmDialog open={true} title='Published' msg={doc?.title ?? ''}
 						ok='Copy link' cancel='Close'
-						onOk={() => copyToClipboard(publink).then(
-							() => this.setState({ snack: 'Link copied' }),
-							() => this.setState({ snack: `Not copied: ${publink}` }))}
-						onClose={() => this.setState({ publink: undefined })}>
+						onOk={() => this.copyLink(publink)}
+						onClose={() => this.setState({ publink: undefined, copyFail: undefined })}>
 						{/* the doc at html-service, in a new tab */}
 						<Link href={publink} target='_blank' rel='noopener' underline='hover' variant='body1'
 							sx={{ display: 'block', mt: 1, wordBreak: 'break-all' }}>{publink}</Link>
+						{/* not copied: the link as text, selected, for the user to copy */}
+						{copyFail && <Box sx={{ mt: 2 }}>
+							<Typography variant='body2' color='text.secondary'>
+								{copyFail} The link below is selected: press Ctrl+C (⌘C on a Mac) to copy it, or long-press it on a phone.
+							</Typography>
+							<TextField inputRef={this.linkInput} value={publink} fullWidth multiline size='small' margin='dense'
+								slotProps={{ htmlInput: { readOnly: true } }}
+								onFocus={(e) => (e.target as HTMLTextAreaElement).select()} />
+						</Box>}
 					</ConfirmDialog>}
 
 				<Snackbar open={!!snack} message={snack} autoHideDuration={6000}
