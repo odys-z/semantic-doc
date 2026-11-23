@@ -32,7 +32,9 @@ import io.oz.sdoc.build.HtmlBuilder;
 import io.oz.sdoc.imports.DocxSource;
 import io.oz.sdoc.imports.IBlockParser;
 import io.oz.sdoc.imports.Importer;
+import io.oz.sdoc.imports.MediaSource;
 import io.oz.sdoc.publish.ResPublisher;
+import io.oz.sdoc.story.StoryPages;
 
 /**
  * The doc-tree tier: the service semantic-doc's editor (AnDoctreeditor) talks to.
@@ -121,6 +123,25 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 
 	public Importer importer() { return importer; }
 
+	MediaSource media;
+
+	/**
+	 * STUB (media story, WP3): enable stories' media: their files by io_oz_synuid, for the maps
+	 * html-service keeps of published stories (m/&lt;synuid&gt;), given at publish and refresh.
+	 *
+	 * @param media where the media files are, e.g. {@link MediaSource#extfiles(String, String)}
+	 * @return this
+	 */
+	public DoctreeTier media(MediaSource media) {
+		this.media = media;
+		return this;
+	}
+
+	public MediaSource media() { return media; }
+
+	/** STUB (media story, WP3): the stories' pages, created with {@link #db()} */
+	StoryPages stories;
+
 	ResPublisher publisher;
 
 	/**
@@ -205,6 +226,10 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 				rsp = publish(req, usr);
 			else if (DoctreeReq.A.unpublish.equals(a))
 				rsp = unpublish(req, usr);
+			else if (DoctreeReq.A.page.equals(a))
+				rsp = page(req);
+			else if (DoctreeReq.A.savePage.equals(a))
+				rsp = savePage(req, usr);
 			else
 				throw new SemanticException("Doc-tree tier: request.a, %s, can not be handled.", a);
 
@@ -285,6 +310,10 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 		if (db() == null || publisher == null)
 			throw new SemanticException("Doc-tree tier: publishing isn't configured.");
 
+		// TODO WP3 (media story): a story (DocInf.Kind.story) has no html package: its htmlUri is the
+		// committed page; ResPublisher sends it with the story's media map (PubMedia,
+		// StoryPages.mediaPaths()), html-service writing the shell, page.json and the map's json.
+
 		if (builder != null) {
 			DocInf doc = doc(req);
 			String state = builder.state(req.docId);
@@ -296,6 +325,25 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 					: "The doc's html isn't built since it's committed. Commit it again.");
 		}
 		return new DoctreeResp().doc(publisher.publish(db, req.docId, usr));
+	}
+
+	/**
+	 * STUB (media story, WP3) r/page: the story's page → doc, page (null: a new story).
+	 */
+	DoctreeResp page(DoctreeReq req) throws Exception {
+		DocInf doc = doc(req);
+		// TODO WP3: stories = new StoryPages(db), with db()
+		return new DoctreeResp().doc(doc).page(stories == null ? null : stories.page(req.docId));
+	}
+
+	/**
+	 * STUB (media story, WP3) u/page: save the story's page, and its media (s_docmedia) → doc.
+	 */
+	DoctreeResp savePage(DoctreeReq req, IUser usr) throws Exception {
+		doc(req);
+		if (stories == null)
+			throw new SemanticException("TODO: stories aren't supported yet.");
+		return new DoctreeResp().doc(stories.save(req.docId, req.page, usr));
 	}
 
 	/** d/publish: the doc is removed from html-service → doc, without pubpath */
@@ -311,6 +359,8 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 */
 	DoctreeResp commit(DoctreeReq req, IUser usr) throws Exception {
 		doc(req);
+		// TODO WP3 (media story): a story is committed by StoryPages.commit(): items' pid →
+		// io_oz_synuid, the committed page, s_docmedia; no html build
 		DocInf doc = db.commit(req.docId, robot);
 		DoctreeResp rsp = new DoctreeResp().doc(doc);
 		if (builder != null && !isNull(req.rstFiles)) {

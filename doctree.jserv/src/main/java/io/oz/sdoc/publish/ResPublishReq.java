@@ -36,6 +36,13 @@ public class ResPublishReq extends AnsonBody {
 	@AnsonField(valType="io.oz.sdoc.DocInf")
 	public ArrayList<DocInf> respubs;
 
+	/**
+	 * STUB (media story): for {@link A#deploy}, the media maps of the stories in {@link #respubs}
+	 * (a story's htmlUri is its committed page, written as page.json, no package to unzip).
+	 */
+	@AnsonField(valType="io.oz.sdoc.publish.PubMedia")
+	public ArrayList<PubMedia> media;
+
 	public ResPublishReq respubs(DocInf... docs) {
 		respubs = new ArrayList<DocInf>();
 		for (DocInf d : docs)

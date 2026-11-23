@@ -55,6 +55,8 @@ public class ResPublisher {
 		if (isblank(doc.htmlUri))
 			throw new SemanticException("Doc %s has no html package. Build it first.", docId);
 
+		// TODO WP3 (media story): for a story (DocInf.Kind.story), the request's media, its PubMedia
+		// (StoryPages.mediaPaths()); html-service keeps it as the story's json map
 		ResPublishResp resp = post(A.deploy, doc);
 		if (len(resp.respubs) != 1 || isblank(resp.respubs.get(0).pubpath))
 			throw new SemanticException("Html-service doesn't reply the published path of doc %s.", docId);

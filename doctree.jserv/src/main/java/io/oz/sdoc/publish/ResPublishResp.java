@@ -21,6 +21,13 @@ public class ResPublishResp extends AnsonResp {
 	@AnsonField(valType="io.oz.sdoc.DocInf")
 	public ArrayList<DocInf> respubs;
 
+	/**
+	 * STUB (media story): from the synode, {@link ResPublishReq.A#refresh}: the media maps of the
+	 * published stories in {@link #respubs}, html-service rewriting its json file of each.
+	 */
+	@AnsonField(valType="io.oz.sdoc.publish.PubMedia")
+	public ArrayList<PubMedia> media;
+
 	public ResPublishResp() { }
 
 	public ResPublishResp respubs(ArrayList<DocInf> docs) {

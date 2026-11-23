@@ -33,7 +33,19 @@ public class DoctreeResp extends AnDatasetResp {
 	/** output of the build tool (warnings, or why it failed) */
 	public String buildlog;
 
+	/**
+	 * for {@link DoctreeReq.A#page}: the story's page, json of semantic-doc/story StoryData
+	 * (Puck's Data); null: a new story.
+	 */
+	public String page;
+
 	public DoctreeResp() { }
+
+	/** for {@link DoctreeReq.A#page} */
+	public DoctreeResp page(String json) {
+		this.page = json;
+		return this;
+	}
 
 	public DoctreeResp doc(DocInf d) {
 		this.doc = d;

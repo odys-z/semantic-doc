@@ -9,12 +9,14 @@
   "exports": {
     ".": "./editor/index.ts",
     "./doctree": "./doctree/index.ts",
-    "./preview": "./preview/index.ts"
+    "./preview": "./preview/index.ts",
+    "./story": "./story/index.ts"
   },
   "files": [
     "editor",
     "doctree",
     "preview",
+    "story",
     "README.md"
   ],
   "engines": {
@@ -28,6 +30,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@puckeditor/core": "^0.24.1",
     "@tiptap/core": "^3.32.2",
     "@tiptap/extension-document": "^3.32.2",
     "@tiptap/extension-mathematics": "^3.32.2",

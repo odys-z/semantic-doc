@@ -52,6 +52,19 @@ export class DocInf extends Anson {
 	dirty?: boolean;
 	/** time of the last commit, null if never committed */
 	committedAt?: string | null;
+	/**
+	 * What the doc's content is, see {@link DocInf.Kind}; null: a doc tree (RST).
+	 * STUB (media story, WP3): s_docs.kind, not yet in the table.
+	 */
+	kind?: string | null;
+
+	/** values of {@link DocInf.kind} */
+	static Kind = {
+		/** a doc tree, paragraphs in RST, published as a Sphinx html package */
+		doctree: 'doctree',
+		/** a media story, a Puck page (page.json), published as a boilerplate at html-service */
+		story: 'story',
+	} as const;
 
 	constructor(opts: { docId?: string, title?: string, creator?: string } = {}) {
 		super(DocInf.__type__);
@@ -179,6 +192,10 @@ export class DoctreeReq extends AnDatasetReq {
 		importDocx: 'c/import',
 		/** a doc's resource file, res: a GET of Doctree206Serv (doctree206.serv), e.g. an img's src */
 		res: 'r/res',
+		/** STUB (media story): load a story's page, the Puck data → doc, page */
+		page: 'r/page',
+		/** STUB (media story): save a story's page, page; the synode updates the story's media (s_docmedia) → doc */
+		savePage: 'u/page',
 	} as const;
 
 	docId?: string;
@@ -192,8 +209,10 @@ export class DoctreeReq extends AnDatasetReq {
 	res?: string;
 	/** for commit: the doc as RST files; absent: committed without a html build */
 	rstFiles?: RstFile[];
+	/** for savePage: the story's page, json of semantic-doc/story StoryData */
+	page?: string;
 
-	constructor(uri: string, a: Doctree_A, opts: { docId?: string, doc?: DocInf, srcId?: string, node?: DocNode, mod?: TreeModify, res?: string, rstFiles?: RstFile[] } = {}) {
+	constructor(uri: string, a: Doctree_A, opts: { docId?: string, doc?: DocInf, srcId?: string, node?: DocNode, mod?: TreeModify, res?: string, rstFiles?: RstFile[], page?: string } = {}) {
 		super({ uri, type: DoctreeReq.__type__ });
 		this.a = a; // after super: AnDatasetReq's TA() is for its own A
 		Object.assign(this, opts);
@@ -218,6 +237,8 @@ export class DoctreeResp extends AnDatasetResp {
 	build?: string | null;
 	/** output of the build tool: warnings, or why it failed */
 	buildlog?: string | null;
+	/** r/page: the story's page, json of semantic-doc/story StoryData; null: a new story */
+	page?: string | null;
 
 	constructor(json: any) {
 		super({ ...json, forest: json.forest, type: DoctreeResp.__type__ });
@@ -225,6 +246,7 @@ export class DoctreeResp extends AnDatasetResp {
 		this.docs = json.docs;
 		this.build = json.build;
 		this.buildlog = json.buildlog;
+		this.page = json.page;
 	}
 }
 Protocol.registerBody(DoctreeResp.__type__, (json) => new DoctreeResp(json));
@@ -324,6 +346,16 @@ export class StreeDoctier extends StreeTier {
 	/** d/publish: the doc is removed from html-service; answers the header without pubpath */
 	unpublish(docId: string, ok: OnOk, err?: OnErr) {
 		this.send(DoctreeReq.A.unpublish, { docId }, ok, err);
+	}
+
+	/** STUB (media story) r/page: the story's page → resp.page */
+	page(docId: string, ok: OnOk, err?: OnErr) {
+		this.send(DoctreeReq.A.page, { docId }, ok, err);
+	}
+
+	/** STUB (media story) u/page: save the story's page (json of StoryData) */
+	savePage(docId: string, page: string, ok: OnOk, err?: OnErr) {
+		this.send(DoctreeReq.A.savePage, { docId, page }, ok, err);
 	}
 
 	/**

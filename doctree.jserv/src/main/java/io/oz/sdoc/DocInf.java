@@ -61,6 +61,20 @@ public class DocInf extends Anson {
 	/** time of the last commit, null if never committed */
 	public String committedAt;
 
+	/** Values of {@link DocInf#kind}, the same as semantic-doc's TS DocInf.Kind. */
+	public static class Kind {
+		/** a doc tree, paragraphs in RST, published as a Sphinx html package */
+		public static final String doctree = "doctree";
+		/** a media story, a Puck page (page.json), published as a boilerplate at html-service */
+		public static final String story = "story";
+	}
+
+	/**
+	 * What the doc's content is, see {@link Kind}; null: a doc tree.
+	 * STUB (media story, WP3): s_docs.kind, to be added by DoctreeDBUpgrade (S_DocsMeta).
+	 */
+	public String kind;
+
 	public DocInf() { }
 
 	public DocInf(String docId, String title, String creator) {

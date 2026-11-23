@@ -75,6 +75,8 @@ public class ResPublishTier extends ServPort<ResPublishReq> {
 				throw new SemanticException("Res-publish tier: request.a, %s, can not be handled.", req.a());
 
 			DoctreeDBHelper db = doctree.db();
+			// TODO WP3 (media story): resp.media, the published stories' maps, StoryPages.mediaPaths()
+			// with doctree.media()
 			return ok(new ResPublishResp().respubs(db == null ? new ArrayList<DocInf>() : db.published()));
 		} catch (SemanticException e) {
 			return err(MsgCode.exSemantic, e.getMessage());

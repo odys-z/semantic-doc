@@ -55,6 +55,14 @@ public class DoctreeReq extends AnDatasetReq {
 		 * {@link Doctree206Serv}, e.g. an img's src, with break points (http 206)
 		 */
 		public static final String res = "r/res";
+
+		/** STUB (media story): load a story's page → {@link DoctreeResp#doc}, {@link DoctreeResp#page} */
+		public static final String page = "r/page";
+		/**
+		 * STUB (media story): save a story's page, {@link DoctreeReq#page}; the story's media
+		 * (s_docmedia) are updated with it → {@link DoctreeResp#doc}
+		 */
+		public static final String savePage = "u/page";
 	}
 
 	public String docId;
@@ -76,6 +84,9 @@ public class DoctreeReq extends AnDatasetReq {
 	 */
 	@AnsonField(valType="io.oz.sdoc.build.RstFile")
 	public ArrayList<RstFile> rstFiles;
+
+	/** for {@link A#savePage}: the story's page, json of semantic-doc/story StoryData, kept as is */
+	public String page;
 
 	public DoctreeReq() {
 		super(null, null);
@@ -113,6 +124,13 @@ public class DoctreeReq extends AnDatasetReq {
 	public DoctreeReq res(String docId, String name) {
 		this.docId = docId;
 		this.res = name;
+		return this;
+	}
+
+	/** for {@link A#savePage} */
+	public DoctreeReq page(String docId, String json) {
+		this.docId = docId;
+		this.page = json;
 		return this;
 	}
 
