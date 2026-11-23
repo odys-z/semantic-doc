@@ -7,9 +7,10 @@
  *     <div id="story"></div>
  *     <script src="/pub/_story/viewer.js" data-page="page.json"></script>
  *
- * The script fetches the committed page and renders it with the editor's blocks (storyConfig,
- * Puck's Render); the media files are m/<uid>, relative to the story's path, served by
- * html-service from its map of the story's media (uid → the synode's volume path).
+ * page.json is the committed page, a tree of PuckNode whose media (AnTreeNode) have node.synuid.
+ * The script renders it with the editor's config (storyConfig, Puck's Render); the media files
+ * are m/<synuid>, relative to the story's path, served by html-service from its map of the
+ * story's media (synuid → the synode's volume path).
  *
  * TODO WP5: a webpack entry (and html-service's web assets list) for this bundle.
  */
@@ -17,13 +18,8 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Render } from '@puckeditor/core';
 
-import { storyConfig } from '../storytree/story-config';
-import type { StoryData, StoryMetadata } from '../storytree/page';
-
-/** published media: html-service's mapping, relative to the story's path */
-const metadata: StoryMetadata = {
-	mediaSrc: (it) => `m/${encodeURIComponent(it.uid ?? '')}`,
-};
+import { storyConfig, toPuck, viewerMetadata } from '../storytree/story-config';
+import type { PuckNode } from '../storytree/templates';
 
 async function main() {
 	const script = document.currentScript as HTMLScriptElement | null;
@@ -31,9 +27,9 @@ async function main() {
 	if (!el) return;
 
 	// TODO WP5: errors shown in the page
-	const data = await fetch(script?.dataset.page ?? 'page.json').then((r) => r.json()) as StoryData;
+	const page = await fetch(script?.dataset.page ?? 'page.json').then((r) => r.json()) as PuckNode;
 
-	createRoot(el).render(<Render config={storyConfig} data={data} metadata={metadata} />);
+	createRoot(el).render(<Render config={storyConfig} data={toPuck(page)} metadata={viewerMetadata()} />);
 }
 
 main();

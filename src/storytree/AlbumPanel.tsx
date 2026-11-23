@@ -4,7 +4,8 @@
  *
  * The tree is anreact's (AnTreegrid), loaded by the app's tier as a StreeTier with the app's
  * semantics key, e.g. album-web's GalleryTier with 'tree-album-family-folder': semantic-doc
- * knows nothing of the album. Nodes are dragged with anreact's treeDragPayload().
+ * knows nothing of the album. Its 'p' and 'gallery' nodes are dragged as they are, AnTreeNodes
+ * (anreact's TreegridProps.draggable).
  */
 import React from 'react';
 import type { StreeTier } from '@anclient/semantier';
@@ -18,6 +19,6 @@ export interface AlbumPanelProps {
 
 export function AlbumPanel(_props: AlbumPanelProps) {
 	// TODO WP2: albumtier.stree({ sk: albumsk, ... }) → forest;
-	// <AnTreegrid forest dragPayload={treeDragPayload} ... />
+	// <AnTreegrid forest draggable={(n) => n.node.nodetype === 'p' || n.node.nodetype === 'gallery'} ... />
 	return <div className='sdoc-story-album'>TODO: album tree</div>;
 }

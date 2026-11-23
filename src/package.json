@@ -1,6 +1,6 @@
 {
   "name": "semantic-doc",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "Paragraph editor for semantic content trees; paragraphs stored as RST",
   "license": "Apache-2.0",
@@ -10,13 +10,13 @@
     ".": "./editor/index.ts",
     "./doctree": "./doctree/index.ts",
     "./preview": "./preview/index.ts",
-    "./story": "./story/index.ts"
+    "./storytree": "./storytree/index.ts"
   },
   "files": [
     "editor",
     "doctree",
     "preview",
-    "story",
+    "storytree",
     "README.md"
   ],
   "engines": {
@@ -30,6 +30,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anclient/anreact": "^0.8.4",
     "@puckeditor/core": "^0.24.1",
     "@tiptap/core": "^3.32.2",
     "@tiptap/extension-document": "^3.32.2",
@@ -44,14 +45,10 @@
   "peerDependencies": {
     "katex": "^0.16.4 || ^0.17.0 || ^0.18.0",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "@anclient/anreact": "^0.8.1",
-    "@anclient/semantier": "^1.1.1"
+    "react-dom": "^19.3.1"
   },
   "//peerDependencies": "@anclient/* are imported by the editor but never installed by or packed into semantic-doc: the app (e.g. Anclient album-web) provides them. Optional, so npm 7+ won't auto-install a registry copy beside the app's. For building and testing semantic-doc itself, the devDependencies below install published versions from the npm registry (never packed); diff-anclient.py copies unpublished changes of the Anclient sources into them (s a), and --check fails while a copy differs from its source.",
   "devDependencies": {
-    "@anclient/anreact": "^0.8.2",
-    "@anclient/semantier": "^1.1.1",
     "@babel/core": "^8.0.10",
     "@babel/preset-env": "^8.0.7",
     "@babel/preset-react": "^8.0.1",
@@ -74,7 +71,6 @@
     "js-beautify": "^2.0.3",
     "js-sha256": "^1.0.0",
     "katex": "^0.18.10",
-    "mime-types-no-nodejs": "^0.9.2",
     "qrcode": "^1.5.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

@@ -9,7 +9,7 @@ export type StoryTemplate = {
 	data: PuckNode;
 };
 
-export const templates: PuckNode[] = [
+export const templates: StoryTemplate[] = [
 	{
 		id: 'pm-0',
 		name: '12 Video Seedings',
