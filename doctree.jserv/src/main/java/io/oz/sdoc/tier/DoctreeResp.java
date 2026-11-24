@@ -22,19 +22,19 @@ public class DoctreeResp extends AnDatasetResp {
 	public SDocRef doc;
 
 	/** for {@link DoctreeReq.A#docs} */
-	@AnsonField(valType="io.oz.sdoc.DocInf")
+	@AnsonField(valType="io.oz.sdoc.SDocRef")
 	public ArrayList<SDocRef> docs;
 
 	/**
 	 * for {@link DoctreeReq.A#commit}, {@link DoctreeReq.A#build}: the state of the doc's html build,
-	 * a value of io.oz.sdoc.build.HtmlBuilder.State; null: no build since the synode started.
+	 * a value of io.oz.sdoc.rst.HtmlBuilder.State; null: no build since the synode started.
 	 */
 	public String build;
 
 	/** output of the build tool (warnings, or why it failed) */
 	public String buildlog;
 
-	/** for {@link DoctreeReq.A#page}: the story's page, see io.oz.sdoc.story.StoryPages#page() */
+	/** for {@link DoctreeReq.A#page}: the story's page, see io.oz.sdoc.puck.StoryPages#page() */
 	public PuckNode page;
 
 	public DoctreeResp() { }

@@ -5,6 +5,7 @@ import static io.odysz.common.LangExt.isNull;
 import static io.odysz.common.LangExt.isblank;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
@@ -26,6 +27,7 @@ import io.odysz.semantic.jserv.x.SsException;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.x.TransException;
+import io.odysz.semantic.meta.DocRef;
 import io.oz.sdoc.SDocRef;
 import io.oz.sdoc.docx.RstreeDBHelper;
 import io.oz.sdoc.docx.IBlockParser;
@@ -44,7 +46,7 @@ import io.oz.sdoc.rst.HtmlBuilder;
  * <p>The working copy is in its own db ({@link RstreeDBHelper}), connection {@link #conn(String, String)},
  * set up at the first request.
  * Served: every action of {@link DoctreeReq.A}; {@link DoctreeReq.A#importDocx} with
- * {@link #importer(DocxSource, IBlockParser)}. Tree changes are SemanticTree.onModifyTree()'s,
+ * {@link #importer(DocRef, IBlockParser)}. Tree changes are SemanticTree.onModifyTree()'s,
  * with the doc's rules in {@link S_DocNodeMeta}.</p>
  *
  * <p>The session is verified ({@link #onPost(AnsonMsg, HttpServletResponse)}); its user is the
@@ -68,7 +70,8 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	String conn;
 	/** for doc ids */
 	String synode;
-	SDocRef source;
+	/** the album, the doc table of the docx files and the stories' media, {@link DocRef#docm} */
+	DocRef source;
 	IBlockParser parser;
 
 	/** created by {@link #db()} at the first request needing it */
@@ -100,11 +103,11 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	/**
 	 * Enable {@link DoctreeReq.A#importDocx}.
 	 * 
-	 * @param source where the docx files are, e.g. {@link DocxSource#extfiles(String, String)}
-	 * @param parser e.g. {@link io.oz.sdoc.imports.DocxWalker#blocks(String)}
+	 * @param source the doc table the docx files are uploaded to, {@link DocRef#docm}, e.g. h_photos' meta
+	 * @param parser e.g. {@link io.oz.sdoc.docx.DocxWalker#blocks(String)}
 	 * @return this
 	 */
-	public DoctreeTier importer(SDocRef source, IBlockParser parser) {
+	public DoctreeTier importer(DocRef source, IBlockParser parser) {
 		this.source = source;
 		this.parser = parser;
 		return this;
@@ -120,7 +123,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 		if (db == null && conn != null) {
 			db = RstreeDBHelper.setup(conn, false);
 			if (parser != null)
-				importer = new Importer(conn, db, parser);
+				importer = new Importer(conn, db, source, parser);
 		}
 		return db;
 	}
@@ -137,7 +140,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 */
 	public synchronized PucktreeDBHelper puck() throws Exception {
 		if (puck == null && db() != null)
-			puck = PucktreeDBHelper.setup(conn);
+			puck = PucktreeDBHelper.setup(conn, source);
 		return puck;
 	}
 
@@ -187,8 +190,18 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	protected void onPost(AnsonMsg<DoctreeReq> msg, HttpServletResponse resp)
 			throws ServletException, IOException {
 		try {
+			// the local html-service's query: no session, localhost only
+			DoctreeReq req = msg.body(0);
+			if (req != null && DoctreeReq.A.published.equals(req.a())) {
+				if (InetAddress.getByName(msg.addr()).isLoopbackAddress())
+					write(resp, handle(req, robot));
+				else
+					write(resp, err(MsgCode.exSession, "Doc-tree tier: %s is for the local html-service only.", req.a()));
+				return;
+			}
+
 			IUser usr = verifier().verify(msg.header());
-			write(resp, handle(msg.body(0), usr));
+			write(resp, handle(req, usr));
 		} catch (SsException e) {
 			write(resp, err(MsgCode.exSession, e.getMessage()));
 		} finally {
@@ -240,6 +253,8 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 				rsp = page(req);
 			else if (DoctreeReq.A.savePage.equals(a))
 				rsp = savePage(req, usr);
+			else if (DoctreeReq.A.published.equals(a))
+				rsp = published();
 			else
 				throw new SemanticException("Doc-tree tier: request.a, %s, can not be handled.", a);
 
@@ -361,6 +376,19 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 		if (db() == null || publisher == null)
 			throw new SemanticException("Doc-tree tier: publishing isn't configured.");
 		return new DoctreeResp().doc(publisher.unpublish(tree(req.docId), req.docId, usr));
+	}
+
+	/**
+	 * r/published: the pages published at html-service, of both trees → docs;
+	 * empty if the working copy isn't configured. All of them: html-service removes the pages not in it.
+	 */
+	DoctreeResp published() throws Exception {
+		ArrayList<SDocRef> pubs = new ArrayList<SDocRef>();
+		if (db() != null) {
+			pubs.addAll(puck().published());
+			pubs.addAll(db.published());
+		}
+		return new DoctreeResp().docs(pubs);
 	}
 
 	/** r/stories: the stories' headers → docs (empty if the working copy isn't configured) */

@@ -29,6 +29,7 @@ import io.oz.sdoc.htmlsrv.HtmlPubReq;
 import io.oz.sdoc.htmlsrv.HtmlPubResp;
 import io.oz.sdoc.SDocRef;
 import io.oz.sdoc.docx.DocxWalker;
+import io.oz.sdoc.docx.T_PhotoMeta;
 import io.oz.sdoc.puck.ResPublisher;
 import io.oz.sdoc.rst.HtmlBuilder;
 import io.oz.sdoc.rst.RstFile;
@@ -89,7 +90,7 @@ class HtmlBuildTest {
 		builder = new HtmlBuilder(template);
 		tier = new DoctreeTier(Port.echo)
 				.conn(conn, "B")
-				.importer((srcId) -> "src/test/res/media.docx", DocxWalker::blocks)
+				.importer(T_PhotoMeta.album(webinf, conn, "0001", "media", "src/test/res/media.docx"), DocxWalker::blocks)
 				.publisher(htmlsrv)
 				.builder(builder);
 

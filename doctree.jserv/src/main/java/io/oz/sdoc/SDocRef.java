@@ -1,5 +1,8 @@
 package io.oz.sdoc;
 
+import java.util.ArrayList;
+
+import io.odysz.anson.AnsonField;
 import io.odysz.semantic.meta.DocRef;
 
 /**
@@ -73,7 +76,7 @@ public class SDocRef extends DocRef {
 
 	/**
 	 * What the doc's content is, see {@link Kind}: {@link Kind#story} for the rows of s_stories
-	 * (io.oz.sdoc.story.S_StoriesMeta); null: a doc tree, of s_docs.
+	 * (io.oz.sdoc.puck.S_StoriesMeta); null: a doc tree, of s_docs.
 	 * @since 0.1.5
 	 */
 	public String mime;
@@ -83,6 +86,17 @@ public class SDocRef extends DocRef {
 
 	/** a story's cover media, its io_oz_synuid, set when committed; null for doc trees */
 	public String cover;
+
+	/**
+	 * The page's resources on this synode, a story's media: the album's records (h_photos), each with
+	 * {@link DocRef#uids}, the io_oz_synuid, and {@link DocRef#uri64}, resolved by the synode to the
+	 * file's absolute path. Only exchanged with the local html-service (loopback), which serves them
+	 * as m/&lt;synuid&gt; of the published page: deploying it, and its query r/published. Null otherwise,
+	 * and for a doc tree, whose html package has its resources.
+	 * @since 0.1.5
+	 */
+	@AnsonField(valType="io.odysz.semantic.meta.DocRef")
+	public ArrayList<DocRef> resources;
 
 	public SDocRef() { }
 

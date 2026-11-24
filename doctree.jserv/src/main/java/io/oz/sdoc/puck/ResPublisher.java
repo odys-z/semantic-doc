@@ -17,13 +17,12 @@ import io.oz.sdoc.docx.RstreeDBHelper;
 import io.oz.sdoc.htmlsrv.HtmlPubReq;
 import io.oz.sdoc.htmlsrv.HtmlPubResp;
 import io.oz.sdoc.htmlsrv.HtmlPubReq.A;
-import io.oz.sdoc.tier.PucktreeReq;
 
 /**
  * Publishes / removes docs at the local html-service, by requests to its port respaths
  * (io.oz.srv.ResPathsTier), and keeps the docs' context paths ({@link SDocRef#pubpath}).
  *
- * <p>The synode's records are what html-service finally follows (it queries io.oz.sdoc.tier.PucktreeTier
+ * <p>The synode's records are what html-service finally follows (it queries io.oz.sdoc.tier.DoctreeTier, r/published,
  * when started and from time to time), so the requests here only make a change effective at once.</p>
  * 
  * @since 0.1.2
@@ -52,24 +51,15 @@ public class ResPublisher {
 	 * @throws IOException html-service isn't reachable: nothing changed
 	 */
 	public SDocRef publish(RstreeDBHelper db, String docId, IUser usr) throws Exception {
-		return publish(db, docId, usr, null);
-	}
-
-	/**
-	 * Publish a doc, or a story with its media's map ({@link PubMedia}), which html-service keeps
-	 * as the story's json map for serving m/&lt;synuid&gt;.
-	 *
-	 * @param media the stories' media, see io.oz.sdoc.tier.DoctreeTier#media(MediaSource); for a story
-	 * @return the doc's header, with pubpath
-	 * @since 0.1.5
-	 */
-	public SDocRef publish(RstreeDBHelper db, String docId, IUser usr, PucktreeReq req) throws Exception {
 		SDocRef doc = db.doc(docId);
 		if (doc == null)
 			throw new SemanticException("Can't find doc %s.", docId);
 		if (isblank(doc.htmlUri))
 			throw new SemanticException("Doc %s has no html package. Build it first.", docId);
 
+
+		// a story's media, served by html-service as m/<synuid>
+		doc.resources = db.resources(docId);
 
 		HtmlPubResp resp = post(A.deploy, doc);
 		if (len(resp.respubs) != 1 || isblank(resp.respubs.get(0).pubpath))

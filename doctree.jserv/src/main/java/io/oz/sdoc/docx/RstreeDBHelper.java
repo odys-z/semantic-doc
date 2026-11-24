@@ -24,6 +24,7 @@ import io.odysz.transact.sql.parts.Logic.op;
 import io.odysz.transact.sql.parts.condition.Condit;
 import io.odysz.transact.sql.parts.condition.Funcall;
 import io.odysz.transact.x.TransException;
+import io.odysz.semantic.meta.DocRef;
 import io.oz.sdoc.DocResHelper;
 import io.oz.sdoc.DoctreeDBUpgrade;
 import io.oz.sdoc.SDocRef;
@@ -371,6 +372,14 @@ public class RstreeDBHelper {
 		while (rs.next())
 			docs.add(doc(rs));
 		return docs;
+	}
+
+	/**
+	 * The page's resources served by html-service besides its html package, see {@link SDocRef#resources}.
+	 * @return null: a doc tree's html package has its resources
+	 */
+	public ArrayList<DocRef> resources(String docId) throws Exception {
+		return null;
 	}
 
 	/**

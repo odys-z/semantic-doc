@@ -75,7 +75,7 @@ class ResIndexTest {
 				+ "\"dynaResource\": {\"handler\": \"io.oz.sdoc.htmlsrv.ResPathsTier\", \"syn_jserv\": \"http://127.0.0.1:8964/jserv-album\", \"pollInterval_snd\": 0,"
 				+ "                   \"resource\": \"" + tmpdir + "/unzip\", \"danyroot\": \"pub\"}"
 				+ "}");
-		tier = new ResPathsTier(HtmlTestPort.respaths, HtmlTestPort.pucktree, server) {
+		tier = new ResPathsTier(HtmlTestPort.respaths, HtmlTestPort.doctree, server) {
 			private static final long serialVersionUID = 1L;
 			@Override
 			DoctreeResp queryPublishs() throws IOException {

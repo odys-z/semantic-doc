@@ -49,7 +49,7 @@ public class PuckNode extends Anson {
 	public ArrayList<AnTreeNode> items;
 
 	/** page: the blocks */
-	@AnsonField(valType="io.oz.sdoc.story.PuckNode")
+	@AnsonField(valType="io.oz.sdoc.puck.PuckNode")
 	public ArrayList<PuckNode> children;
 
 	public PuckNode() { }

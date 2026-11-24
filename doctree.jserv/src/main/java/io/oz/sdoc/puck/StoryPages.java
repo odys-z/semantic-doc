@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 
@@ -25,6 +26,9 @@ import io.odysz.transact.sql.parts.Resulving;
 import io.odysz.transact.sql.parts.condition.Condit;
 import io.odysz.transact.sql.parts.condition.Funcall;
 import io.odysz.transact.x.TransException;
+import io.odysz.semantic.meta.DocRef;
+import io.odysz.semantic.meta.ExpDocTableMeta;
+import io.odysz.semantic.DASemantics.ShExtFilev2;
 import io.oz.sdoc.DocResHelper;
 import io.oz.sdoc.SDocRef;
 
@@ -35,9 +39,9 @@ import io.oz.sdoc.SDocRef;
  *
  * <ul>
  * <li>{@link #save(String, String, PuckNode, IUser)}: a new story, or the page replacing its blocks;</li>
- * <li>{@link #commit(String, MediaSource, IUser)}: the media's pids mapped to their io_oz_synuid, the
- *     committed page written to {@link DocResHelper#storypage(String, String)} (the story's htmlUri);</li>
- * <li>{@link #mediaPaths(String, MediaSource)}: the committed page's media, synuid → file, the map
+ * <li>{@link #commit(String, IUser)}: the media's pids mapped to their io_oz_synuid, by the album's records
+ *     ({@link #album}), the committed page written to {@link DocResHelper#storypage(String, String)} (the story's htmlUri);</li>
+ * <li>{@link #resources(String)}: the committed page's media, synuid → file, the resources
  *     html-service keeps of a published story.</li>
  * </ul>
  *
@@ -54,6 +58,18 @@ public class StoryPages {
 
 	public final S_StoriesMeta storym;
 	public final S_StoryNodesMeta nodem;
+
+	/**
+	 * The album, the doc table of the media, {@link DocRef#docm}, e.g. h_photos' meta, the same as the
+	 * docx files' (io.oz.sdoc.tier.DoctreeTier#importer(DocRef, ...)); null: committing a story with
+	 * media fails.
+	 */
+	DocRef album;
+
+	public StoryPages album(DocRef album) {
+		this.album = album;
+		return this;
+	}
 
 	public StoryPages(String conn, DATranscxt st, DocResHelper res, IUser robot,
 			S_StoriesMeta storym, S_StoryNodesMeta nodem) {
@@ -244,7 +260,7 @@ public class StoryPages {
 		for (AnTreeNode n : all)
 			pids.add(n.id());
 
-		HashMap<String, String> ids = null; //media.synuids(pids);
+		HashMap<String, String> ids = synuids(pids);
 		ArrayList<String> missing = new ArrayList<String>();
 		for (String pid : pids)
 			if (!ids.containsKey(pid))
@@ -279,24 +295,85 @@ public class StoryPages {
 	}
 
 	/**
-	 * The media of a story's committed page, synuid → the file on this synode: the map html-service
-	 * keeps of the published story. Media whose files aren't here are left out.
+	 * The resources of a story's committed page on this synode, its media: the album's records, each
+	 * with its synuid ({@link DocRef#uids}) and file, the uri resolved to an absolute path
+	 * ({@link DocRef#uri64}), what html-service serves as m/&lt;synuid&gt;.
+	 * 
+	 * <p>A media not synchronized to this synode yet, its record's uri still a doc-ref (an envelope),
+	 * or whose record isn't here at all yet, is kept as a reference, the synuid without a path
+	 * ({@link DocRef#uri64} null), never resolved here: as html-service queries
+	 * again (r/published, by its polling), this is called again and the path is there once the
+	 * synchronizing has resolved the record. Nothing else is needed, from the user or the synode.</p>
+	 *
+	 * @return null if the story isn't committed
 	 */
-	public HashMap<String, String> mediaPaths(String storyId) throws Exception {
-		HashMap<String, String> paths = new HashMap<String, String>();
+	public ArrayList<DocRef> resources(String storyId) throws Exception {
 		SDocRef d = story(storyId);
+		if (d == null || isblank(d.htmlUri) || !new File(d.htmlUri).isFile())
+			return null;
 
 		PuckNode page = (PuckNode) Anson.fromJson(new String(
 				Files.readAllBytes(new File(d.htmlUri).toPath()), StandardCharsets.UTF_8));
-		for (AnTreeNode n : media(page)) {
-			String uid = (String) n.get("synuid");
-			if (!isblank(uid) && !paths.containsKey(uid)) {
-				String p = null; // media.path(uid);
-				if (p != null)
-					paths.put(uid, p);
+		LinkedHashSet<String> uids = new LinkedHashSet<String>();
+		for (AnTreeNode n : media(page))
+			if (!isblank((String) n.get("synuid")))
+				uids.add((String) n.get("synuid"));
+
+		ArrayList<DocRef> res = new ArrayList<DocRef>();
+		if (uids.isEmpty() || album == null || album.docm == null)
+			return res;
+
+		ExpDocTableMeta m = album.docm;
+		DATranscxt ast = new DATranscxt(m.conn());
+		AnResultset rs = (AnResultset) ast.select(m.tbl)
+				.col(m.pk).col(m.io_oz_synuid).col(m.resname).col(m.uri)
+				.col(Funcall.isEnvelope(m.uri), ExpDocTableMeta.isDocRef)
+				.whereIn(m.io_oz_synuid, new ArrayList<String>(uids))
+				.orderby(m.pk)
+				.rs(ast.instancontxt(m.conn(), robot))
+				.rs(0);
+		while (rs.next()) {
+			DocRef r = new DocRef()
+					.syntabl(m.tbl)
+					.uids(rs.getString(m.io_oz_synuid))
+					.docId(rs.getString(m.pk))
+					.resname(rs.getString(m.resname));
+			// a doc-ref, not synchronized yet: the reference only
+			if (rs.getInt(ExpDocTableMeta.isDocRef, 0) == 0) {
+				String path = ShExtFilev2.resolvUri(rs.getString(m.uri));
+				r.uri64 = !isblank(path) && new File(path).isFile() ? path : null;
 			}
+			res.add(r);
+			uids.remove(r.uids);
 		}
-		return paths;
+		// a media whose record isn't here yet: the reference only, too
+		for (String uid : uids)
+			res.add(new DocRef().syntabl(m.tbl).uids(uid));
+		return res;
+	}
+
+	/**
+	 * The album's records of the media, by the pids of the album tree's nodes.
+	 * @return pid → io_oz_synuid; a pid without a record isn't in it
+	 * @throws SemanticException there are media but no {@link #album}
+	 */
+	HashMap<String, String> synuids(Collection<String> pids) throws Exception {
+		HashMap<String, String> ids = new HashMap<String, String>();
+		if (pids.isEmpty())
+			return ids;
+		if (album == null || album.docm == null)
+			throw new SemanticException("The album (the media's doc table) isn't configured for stories.");
+
+		ExpDocTableMeta m = album.docm;
+		DATranscxt ast = new DATranscxt(m.conn());
+		AnResultset rs = (AnResultset) ast.select(m.tbl)
+				.col(m.pk).col(m.io_oz_synuid)
+				.whereIn(m.pk, new ArrayList<String>(pids))
+				.rs(ast.instancontxt(m.conn(), robot))
+				.rs(0);
+		while (rs.next())
+			ids.put(rs.getString(m.pk), rs.getString(m.io_oz_synuid));
+		return ids;
 	}
 
 	/** Keep the story's url path at html-service; null: no longer published. */

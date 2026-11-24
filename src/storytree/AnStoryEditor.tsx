@@ -1,7 +1,7 @@
 /**
  * The story editor (WP2, being built).
  *
- * A story is a doc of the doc-tree tier with kind 'story' (DocInf.Kind.story), its content a
+ * A story is a doc of the doc-tree tier with mime 'story' (DocInf.Kind.story), its content a
  * page, a tree of PuckNode (templates.ts), instead of RST nodes:
  *  - a new story starts from a template;
  *  - the album tree beside the page (AlbumPanel), its media and folders dropped into the blocks

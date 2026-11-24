@@ -82,7 +82,7 @@ class ResPathsTierTest {
 				+ "\"dynaResource\": {\"handler\": \"io.oz.sdoc.htmlsrv.ResPathsTier\", \"syn_jserv\": \"http://127.0.0.1:8964/jserv-album\", \"pollInterval_snd\": 3600,"
 				+ "                   \"resource\": \"" + tmpdir + "/unzip\", \"danyroot\": \"pub\"}"
 				+ "}");
-		tier = new ResPathsTier(HtmlTestPort.respaths, HtmlTestPort.pucktree, server) {
+		tier = new ResPathsTier(HtmlTestPort.respaths, HtmlTestPort.doctree, server) {
 			private static final long serialVersionUID = 1L;
 			@Override
 			DoctreeResp queryPublishs() { return new DoctreeResp().docs(synodocs); }
@@ -177,8 +177,12 @@ class ResPathsTierTest {
 	@Test
 	void testPortUrl() {
 		SemanticException e = assertThrows(SemanticException.class,
-				() -> new ResPathsTier(HtmlTestPort.wrong, HtmlTestPort.pucktree, server));
+				() -> new ResPathsTier(HtmlTestPort.wrong, HtmlTestPort.doctree, server));
 		assertTrue(e.getMessage().contains(ResPathsTier.url), e.getMessage());
+
+		e = assertThrows(SemanticException.class,
+				() -> new ResPathsTier(HtmlTestPort.respaths, HtmlTestPort.wrong, server));
+		assertTrue(e.getMessage().contains(io.oz.sdoc.tier.DoctreeTier.url), e.getMessage());
 	}
 
 	/** Post a request to the port, as a synode does. */

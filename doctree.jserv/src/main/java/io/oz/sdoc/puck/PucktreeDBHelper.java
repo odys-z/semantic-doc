@@ -3,6 +3,7 @@ package io.oz.sdoc.puck;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+import io.odysz.semantic.meta.DocRef;
 import io.odysz.semantics.IUser;
 import io.odysz.transact.x.TransException;
 import io.oz.sdoc.SDocRef;
@@ -34,9 +35,19 @@ public class PucktreeDBHelper extends RstreeDBHelper {
 	 * @return the db
 	 */
 	public static PucktreeDBHelper setup(String conn) throws Exception {
+		return setup(conn, null);
+	}
+
+	/**
+	 * @param album the doc table of the media, see {@link StoryPages#album}
+	 * @see #setup(String)
+	 */
+	public static PucktreeDBHelper setup(String conn, DocRef album) throws Exception {
 		RstreeDBHelper.setup(conn, false);
-		return new PucktreeDBHelper(conn, new S_DocsMeta(conn), new S_DocNodeMeta(conn),
+		PucktreeDBHelper db = new PucktreeDBHelper(conn, new S_DocsMeta(conn), new S_DocNodeMeta(conn),
 				new S_StoriesMeta(conn), new S_StoryNodesMeta(conn));
+		db.stories.album(album);
+		return db;
 	}
 
 	/** Headers of all stories. */
@@ -51,10 +62,25 @@ public class PucktreeDBHelper extends RstreeDBHelper {
 		return stories.story(storyId);
 	}
 
-	/** Stories published at html-service. */
+	/** Stories published at html-service, each with its {@link SDocRef#resources}. */
 	@Override
 	public ArrayList<SDocRef> published() throws TransException, SQLException {
-		return stories.published();
+		ArrayList<SDocRef> pubs = stories.published();
+		for (SDocRef d : pubs)
+			try {
+				d.resources = stories.resources(d.docId);
+			} catch (TransException | SQLException e) {
+				throw e;
+			} catch (Exception e) {
+				throw new TransException("Story %s's resources: %s", d.docId, e.getMessage());
+			}
+		return pubs;
+	}
+
+	/** see {@link StoryPages#resources(String)} */
+	@Override
+	public ArrayList<DocRef> resources(String storyId) throws Exception {
+		return stories.resources(storyId);
 	}
 
 	@Override

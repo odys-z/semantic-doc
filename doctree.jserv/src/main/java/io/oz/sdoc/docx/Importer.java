@@ -2,6 +2,7 @@ package io.oz.sdoc.docx;
 
 import static io.odysz.common.LangExt.ifnull;
 import static io.odysz.common.LangExt.isblank;
+import static io.odysz.common.LangExt.mustnonull;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -12,8 +13,12 @@ import java.util.concurrent.Future;
 import io.odysz.common.Utils;
 import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.jserv.JRobot;
+import io.odysz.semantic.meta.DocRef;
+import io.odysz.semantic.meta.ExpDocTableMeta;
+import io.odysz.semantic.tier.docs.DocUtils;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
+import io.odysz.semantics.x.SemanticException;
 import io.oz.sdoc.SDocRef;
 import io.oz.sdoc.docx.Outliner.Outline;
 
@@ -21,7 +26,7 @@ import io.oz.sdoc.docx.Outliner.Outline;
  * Imports a docx into the working copy, in the background:
  *
  * <pre>
- * start():  resolve the docx → insert the header (state parsing) → answer it
+ * start():  resolve the docx, a record of the doc table (h_photos) → insert the header (state parsing) → answer it
  * worker:   parse → outline, inserting the nodes section by section and saving the pictures as
  *           the doc's resource files ({@link Outliner}) → header ready
  *           | nodes and resources deleted, header failed + msg (not a transaction)
@@ -35,7 +40,8 @@ public class Importer {
 
 	final RstreeDBHelper db;
 	final String conn;
-//	final DocxSource source;
+	/** the doc table of the docx files, {@link DocRef#docm}, e.g. h_photos' meta */
+	final DocRef source;
 	final IBlockParser parser;
 	final ExecutorService worker;
 	final IUser robot;
@@ -43,10 +49,17 @@ public class Importer {
 	/** last submitted import, for tests */
 	Future<?> last;
 
-	public Importer(String conn, RstreeDBHelper db, IBlockParser parser) {
+	/**
+	 * @param conn the doc-tree db
+	 * @param db the working copy
+	 * @param source the doc table of the docx files, {@link DocRef#docm}, e.g. h_photos' meta
+	 * @param parser e.g. {@link DocxWalker#blocks(String)}
+	 */
+	public Importer(String conn, RstreeDBHelper db, DocRef source, IBlockParser parser) {
 		this.conn = conn;
 		this.db = db;
-//		this.source = source;
+		this.source = mustnonull(source, "The docx source, the doc table's DocRef, is required by the importer.");
+		mustnonull(source.docm, "The docx source's doc table meta (DocRef.docm) is required by the importer.");
 		this.parser = parser;
 		this.robot = new JRobot();
 		this.worker = Executors.newSingleThreadExecutor((r) -> {
@@ -60,19 +73,16 @@ public class Importer {
 	 * Create the doc header and start parsing.
 	 *
 	 * @param synode for the doc id
-	 * @param originRefId the docx's record id
+	 * @param originRefId the docx's record, its io_oz_synuid in the doc table
 	 * @param title null: the docx's Title, else its file name
 	 * @param creator the session's user, the owner of the doc's resource folder; blank: the robot
 	 * @return the header, state {@link SDocRef.State#parsing}
 	 * @throws Exception the docx can't be found (nothing created)
 	 */
 	public SDocRef start(String synode, String originRefId, String title, String creator) throws Exception {
-//		String path = source.path(originRefId);
-//		if (isblank(path) || !Path.of(path).toFile().isFile())
-//			throw new IllegalArgumentException(String.format("Docx not found: %s, %s", originRefId, path));
-
-		// User ExtFile path (semantic.Da) for this
-		String path = null;
+		String path = path(originRefId);
+		if (isblank(path) || !Path.of(path).toFile().isFile())
+			throw new IllegalArgumentException(String.format("Docx not found: %s, %s", originRefId, path));
 
 		String uid = isblank(creator) ? robot.uid() : creator;
 
@@ -91,6 +101,20 @@ public class Importer {
 		last = worker.submit(() -> run(docId, path, title, filename, uid));
 
 		return db.doc(docId);
+	}
+
+	/**
+	 * The docx's file: the record's uri in the doc table, an ext-file path (semantic.DA's ShExtFilev2).
+	 * @param synuid the record's io_oz_synuid
+	 * @return absolute path, null if there's no such record
+	 */
+	String path(String synuid) throws Exception {
+		ExpDocTableMeta m = source.docm;
+		try {
+			return DocUtils.resolvExtpath_byuid(new DATranscxt(m.conn()), m.conn(), synuid, robot, m);
+		} catch (SemanticException e) {
+			return null;
+		}
 	}
 
 	/** Wait for the last submitted import, for tests. */

@@ -69,6 +69,13 @@ public class DoctreeReq extends AnDatasetReq {
 		public static final String page = "r/page";
 		/** save a story's page, {@link DoctreeReq#page}; a new story if docId is null → {@link DoctreeResp#doc}; since 0.1.5 */
 		public static final String savePage = "u/page";
+
+		/**
+		 * The local html-service's query, by io.oz.sdoc.htmlsrv.ResPathsTier: the pages published there,
+		 * of both trees, the rst tree's and the puck tree's → {@link DoctreeResp#docs}.
+		 * Localhost only, no session.
+		 */
+		public static final String published = "r/published";
 	}
 
 	public String docId;
@@ -88,7 +95,7 @@ public class DoctreeReq extends AnDatasetReq {
 	 * for {@link A#commit}: the doc as RST files, assembled by the client; the synode builds the
 	 * doc's html package from them, in the background. Null: committed without a build.
 	 */
-	@AnsonField(valType="io.oz.sdoc.build.RstFile")
+	@AnsonField(valType="io.oz.sdoc.rst.RstFile")
 	public ArrayList<RstFile> rstFiles;
 
 	/** for {@link A#savePage}: the story's page; docId null: a new story */

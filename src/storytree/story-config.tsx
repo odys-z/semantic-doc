@@ -73,8 +73,8 @@ export const storyConfig: Config = {
 	components: { Hero, Text, Gallery } as Config['components'],
 };
 
-/** Anson's type of a story's page root, the envelope the synode parses (io.oz.sdoc.story.PuckNode) */
-export const PUCKNODE = 'io.oz.sdoc.story.PuckNode';
+/** Anson's type of a story's page root, the envelope the synode parses (io.oz.sdoc.puck.PuckNode) */
+export const PUCKNODE = 'io.oz.sdoc.puck.PuckNode';
 
 /** A story's page as Puck's Data: the root's fields as root props, its children as content. */
 export function toPuck(page: PuckNode): Data {

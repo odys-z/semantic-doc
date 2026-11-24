@@ -13,12 +13,12 @@ import io.odysz.semantics.x.SemanticException;
 
 /**
  * Ports of the tests, as html-service's (io.oz.srv.respaths.HtmlPort), which this module can't depend on:
- * {@link ResPathsTier}'s, and the local synode's it queries, io.oz.sdoc.tier.PucktreeTier.
+ * {@link ResPathsTier}'s, and the local synode's it queries, io.oz.sdoc.tier.DoctreeTier.
  */
 public enum HtmlTestPort implements IPort {
 	respaths(ResPathsTier.url),
-	pucktree(io.oz.sdoc.tier.PucktreeTier.url),
-	/** a port of a wrong url, rejected by {@link ResPathsTier} */
+	doctree(io.oz.sdoc.tier.DoctreeTier.url),
+	/** a port of a wrong url, rejected by {@link ResPathsTier}, as its or the synode's */
 	wrong("paths.serv");
 
 	static {

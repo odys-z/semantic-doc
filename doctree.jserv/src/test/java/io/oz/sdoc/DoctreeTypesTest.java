@@ -94,7 +94,7 @@ class DoctreeTypesTest {
 	/** c/commit as the client sends it (semantic-doc/src/test/cases/doc-stree.ts): the RST files */
 	@Test
 	void commitFromClient() throws Exception {
-		String json = "{\"type\":\"io.oz.sdoc.tier.DoctreeReq\",\"a\":\"c/commit\",\"docId\":\"d\",\"rstFiles\":[{\"type\":\"io.oz.sdoc.build.RstFile\","
+		String json = "{\"type\":\"io.oz.sdoc.tier.DoctreeReq\",\"a\":\"c/commit\",\"docId\":\"d\",\"rstFiles\":[{\"type\":\"io.oz.sdoc.rst.RstFile\","
 				+ "\"nid\":\"d\",\"path\":\"index.rst\",\"name\":\"index\",\"rst\":\"Doc\\n===\\n\",\"media\":[\"image1.png\"]}]}";
 
 		DoctreeReq req = (DoctreeReq) Anson.fromJson(json);

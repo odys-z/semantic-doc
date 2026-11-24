@@ -22,11 +22,11 @@ import {
 } from '@anclient/semantier';
 import type { PuckNode } from '../storytree/templates';
 
-/** io.oz.sdoc.DocInf: doc header */
+/** io.oz.sdoc.SDocRef: doc header, of a doc tree or a story */
 export class DocInf extends Anson {
-	static __type__ = 'io.oz.sdoc.DocInf';
+	static __type__ = 'io.oz.sdoc.SDocRef';
 
-	/** io.oz.sdoc.DocInf.State */
+	/** io.oz.sdoc.SDocRef.State */
 	static State = { parsing: 'parsing', ready: 'ready', failed: 'failed' } as const;
 
 	docId?: string;
@@ -54,13 +54,13 @@ export class DocInf extends Anson {
 	/** time of the last commit, null if never committed */
 	committedAt?: string | null;
 	/** What the doc's content is, see {@link DocInf.Kind}: story for a story (s_stories); null: a doc tree (s_docs). */
-	kind?: string | null;
+	mime?: string | null;
 	/** a story's subtitle */
 	subtitle?: string | null;
 	/** a story's cover media, its io_oz_synuid, set when committed */
 	cover?: string | null;
 
-	/** values of {@link DocInf.kind} */
+	/** values of {@link DocInf.mime} */
 	static Kind = {
 		/** a doc tree, paragraphs in RST, published as a Sphinx html package */
 		doctree: 'doctree',
@@ -75,12 +75,12 @@ export class DocInf extends Anson {
 }
 
 /**
- * io.oz.sdoc.build.RstFile: one file of a doc's Sphinx source, assembled by rst-assembler.ts.
+ * io.oz.sdoc.rst.RstFile: one file of a doc's Sphinx source, assembled by rst-assembler.ts.
  * The files are the preview's source, and go with c/commit: the synode builds the doc's html
  * package from them (it never generates RST).
  */
 export class RstFile extends Anson {
-	static __type__ = 'io.oz.sdoc.build.RstFile';
+	static __type__ = 'io.oz.sdoc.rst.RstFile';
 
 	/** the section (or doc root) the file is built from */
 	nid!: string;
@@ -99,13 +99,13 @@ export class RstFile extends Anson {
 }
 
 /**
- * io.oz.sdoc.DocNode: one node of a doc.
+ * io.oz.sdoc.docx.DocxNode: one node of a doc.
  *
  * tipjson is the Tiptap document serialized, with every "type" key stored as "contype":
  * Anson reads "type" as a class name. Read with {@link toTiptap}, write with {@link fromTiptap}.
  */
 export class DocNode extends Anson {
-	static __type__ = 'io.oz.sdoc.DocNode';
+	static __type__ = 'io.oz.sdoc.docx.DocxNode';
 
 	/** io.oz.sdoc.DocNode.Kind */
 	static Kind = {
@@ -213,7 +213,7 @@ export class DoctreeReq extends AnDatasetReq {
 	res?: string;
 	/** for commit: the doc as RST files; absent: committed without a html build */
 	rstFiles?: RstFile[];
-	/** for savePage: the story's page, fromPuck()'s, "type" on the root (io.oz.sdoc.story.PuckNode) */
+	/** for savePage: the story's page, fromPuck()'s, "type" on the root (io.oz.sdoc.puck.PuckNode) */
 	page?: PuckNode;
 
 	constructor(uri: string, a: Doctree_A, opts: { docId?: string, doc?: DocInf, srcId?: string, node?: DocNode, mod?: TreeModify, res?: string, rstFiles?: RstFile[], page?: PuckNode } = {}) {
@@ -231,7 +231,7 @@ export class DoctreeResp extends AnDatasetResp {
 	static __type__ = 'io.oz.sdoc.tier.DoctreeResp';
 
 	doc?: DocInf;
-	/** io.oz.sdoc.build.HtmlBuilder.State */
+	/** io.oz.sdoc.rst.HtmlBuilder.State */
 	static Build = { building: 'building', built: 'built', failed: 'failed' } as const;
 
 	/** r/docs: the docs' headers */

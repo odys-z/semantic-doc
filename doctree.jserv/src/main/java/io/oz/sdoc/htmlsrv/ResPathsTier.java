@@ -18,6 +18,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.Executors;
@@ -30,6 +31,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.eclipse.jetty.ee10.servlet.DefaultServlet;
+import org.eclipse.jetty.ee10.servlet.FilterHolder;
 import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
 import org.eclipse.jetty.ee10.servlet.ServletHolder;
 import org.eclipse.jetty.server.Server;
@@ -52,7 +54,8 @@ import io.oz.sdoc.SDocRef;
 import io.oz.sdoc.puck.PuckNode;
 import io.oz.sdoc.tier.DoctreeReq;
 import io.oz.sdoc.tier.DoctreeResp;
-import io.oz.sdoc.tier.PucktreeReq;
+import io.oz.sdoc.tier.DoctreeTier;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -139,9 +142,12 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 
 	ScheduledExecutorService scheduler;
 
+	/** the media of the published stories, /{pubroot}/{story}/m/{synuid}, by their {@link SDocRef#resources} */
+	StoryMedia storyMedia;
+
 	/** html-service's port, with {@link #url} */
 	final IPort port;
-	/** the local synode's port for html-service, queried for the docs published, e.g. HtmlPort.respub */
+	/** the local synode's doc-tree port, queried for the pages published ({@link DoctreeReq.A#published}), e.g. HtmlPort.doctree */
 	final IPort synport;
 	/** html-service's server, not started yet */
 	final Server server;
@@ -150,17 +156,20 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 	 * Created by html-service (io.oz.srv.HtmlServer) if {@link WebConfig#dynaResource} is configured.
 	 * 
 	 * @param port html-service's port of this tier, url must be {@link #url}
-	 * @param synport the local synode's port, queried for the docs published
+	 * @param synport the local synode's port, queried for the docs published, url must be {@link DoctreeTier#url}
 	 * @param server html-service's server, not started yet
-	 * @throws SemanticException the port's url is not {@link #url}
+	 * @throws SemanticException a port's url is not as expected
 	 */
 	public ResPathsTier(IPort port, IPort synport, Server server) throws SemanticException {
 		super(port);
 		if (port == null || !eq(url, port.url()))
 			throw new SemanticException("The port of ResPathsTier must be at url %s, but is %s.",
 					url, port == null ? null : port.url());
+		if (synport == null || !eq(DoctreeTier.url, synport.url()))
+			throw new SemanticException("The synode's port queried by ResPathsTier must be at url %s, but is %s.",
+					DoctreeTier.url, synport == null ? null : synport.url());
 		this.port    = port;
-		this.synport = mustnonull(synport, "The synode's port is required by ResPathsTier.");
+		this.synport = synport;
 		this.server  = server;
 	}
 
@@ -193,7 +202,8 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 		Files.createDirectories(staging);
 		// the viewer of stories, installed with the web assets: never a published doc's folder
 		Files.createDirectories(resroot.resolve(StoryShell.viewer));
-		// TODO the stories' media, as DocRef, replacing StoryMedia's maps (decision pending)
+		// the stories' resources, kept when restarted (the staging folder is not), not served
+		storyMedia = new StoryMedia(resroot.resolveSibling(resroot.getFileName() + ".res"), pubroot);
 
 		AnsonMsg.understandPorts(port);
 
@@ -201,7 +211,9 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 		ServletContextHandler ctx0 = (ServletContextHandler) server.getHandler();
 		ctx0.addServlet(new ServletHolder(this), "/" + url);
 
-		// 2. the published docs, a static resource path as the configured ones (HtmlServer.multiReserver())
+		// 2. the published docs, a static resource path as the configured ones (HtmlServer.multiReserver()),
+		// after the stories' media, /pub/<story>/m/<synuid> (a servlet mapping can't match the middle of a path)
+		ctx0.addFilter(new FilterHolder(storyMedia), "/" + pubroot + "/*", EnumSet.of(DispatcherType.REQUEST));
 		ServletHolder holder = staticHolder("respaths-pub", resroot.toString());
 		holder.setInitParameter("dirAllowed", String.valueOf(res.allowDir));
 		ctx0.addServlet(holder, "/" + pubroot + "/*");
@@ -211,6 +223,9 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 		ServletHolder index = new ServletHolder("respaths-index", new ResIndex(this));
 		for (String path : new String[] {"", "/", "/index.html"})
 			ctx0.addServlet(index, "/" + pubroot + path);
+
+		// the stories' resources kept from before a restart
+		storyMedia.report();
 
 		// 3. polling, also restores the docs when started
 		if (seconds > 0 && !isblank(synode))
@@ -286,7 +301,8 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 	}
 
 	/**
-	 * Query the local synode's {@link io.oz.sdoc.tier.PucktreeTier} ({@link #synport}) for all the published pages.
+	 * Query the local synode's {@link io.oz.sdoc.tier.DoctreeTier} ({@link #synport}) for all the published pages,
+	 * {@link DoctreeReq.A#published}.
 	 * @return docs: the pages
 	 * @throws IOException the synode isn't reachable
 	 * @throws SemanticException the synode refused
@@ -295,8 +311,8 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 		if (isblank(synode))
 			throw new SemanticException("The synode's jserv root, WebConfig (html-service.json)/dynaResource.syn_jserv, is not configured.");
 
-		AnsonMsg<PucktreeReq> req = new AnsonMsg<PucktreeReq>(synport)
-				.body(new PucktreeReq().a(DoctreeReq.A.docs));
+		AnsonMsg<DoctreeReq> req = new AnsonMsg<DoctreeReq>(synport)
+				.body(new DoctreeReq().a(DoctreeReq.A.published));
 		DoctreeResp resp = (DoctreeResp) new HttpServClient()
 				.post(synport.url(synode), req)
 				.body(0);
@@ -411,6 +427,9 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 			pubs.add(doc.pubpath);
 			try {
 				deploy(doc, false);
+				// a story's resources, written if changed, e.g. a media synchronized since
+				if (eq(SDocRef.Kind.story, doc.mime))
+					storyMedia.write(doc);
 			}
 			catch (Exception e) {
 				// a bad record must not block the others
@@ -430,10 +449,12 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 				String path = pubroot + "/" + d.getFileName();
 				if (!pubs.contains(path)) {
 					retire(d);
+					storyMedia.remove(path);
 					Utils.logi("[ResPathsTier] removed /%s", path);
 				}
 			}
 		}
+		storyMedia.report();
 	}
 
 	/** @return the request's docs, with pubpaths */
@@ -442,6 +463,9 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 		if (req.respubs != null)
 			for (SDocRef doc : req.respubs) {
 				deploy(doc, true);
+				// a story's resources, at the pubpath just assigned
+				if (eq(SDocRef.Kind.story, doc.mime))
+					storyMedia.write(doc);
 				docs.add(doc);
 			}
 		return docs;
@@ -498,6 +522,7 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 			return;
 
 		retire(folder(pubpath));
+		storyMedia.remove(pubpath);
 		Utils.logi("[ResPathsTier] removed /%s", pubpath);
 	}
 

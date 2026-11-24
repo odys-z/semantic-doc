@@ -36,6 +36,7 @@ import io.odysz.semantics.IUser;
 import io.oz.sdoc.docx.RstreeDBHelper;
 import io.oz.sdoc.SDocRef;
 import io.oz.sdoc.docx.DocxWalker;
+import io.oz.sdoc.docx.T_PhotoMeta;
 
 /**
  * GETs of a doc's picture, imported from media.docx by "ody", through {@link Doctree206Serv},
@@ -66,7 +67,7 @@ class Doctree206ServTest {
 
 		DoctreeTier tier = new DoctreeTier(Port.echo)
 				.conn(conn, "R")
-				.importer((srcId) -> "src/test/res/media.docx", DocxWalker::blocks);
+				.importer(T_PhotoMeta.album(webinf, conn, "0001", "media", "src/test/res/media.docx"), DocxWalker::blocks);
 		DoctreeReq imp = new DoctreeReq("/sdoc");
 		imp.srcId = "media";
 		imp.doc = new SDocRef(null, null, null);

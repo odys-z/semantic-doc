@@ -3,7 +3,7 @@
  * have facts but no tipjson yet (a newly imported doc). Mapping to the editor's schema lives
  * here, beside the schema (editor/rst/marks.ts), so a palette change needs no re-import.
  *
- * Facts (doctree.jserv io.oz.sdoc.imports.Run), version 1:
+ * Facts (doctree.jserv io.oz.sdoc.docx.Facts), version 1:
  *   {"v":1,"runs":[{"t":"Revenue grew "},{"t":"12%","b":1,"color":"1E8449"}]}
  *   t text; b i u s: bold, italic, underline, strike; va: "sup" | "sub";
  *   color, shd: hex RRGGBB; hl: highlight name; sz: half-points; href: link target

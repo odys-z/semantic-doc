@@ -20,7 +20,7 @@ import { joinRst, serializeBlockMath, serializeDoc, textRst, type RstResult } fr
 import { DocNode, RstFile, fromTiptap, toTiptap, type DocTreeNode } from './doc-stree';
 import { markersToTiptap } from '../editor/rst/table';
 
-/** one file of the Sphinx source, the same as doctree.jserv's (io.oz.sdoc.build.RstFile) */
+/** one file of the Sphinx source, the same as doctree.jserv's (io.oz.sdoc.rst.RstFile) */
 export { RstFile };
 
 /** a node's columns, as the tree carries them */

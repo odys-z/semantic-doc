@@ -37,7 +37,7 @@ const cases: { name: string; actual: () => string; expected: string }[] = [
 			const r = JSON.parse(JSON.stringify(new DoctreeReq('/sdoc', DoctreeReq.A.commit, { docId: 'd', rstFiles: files })));
 			return json({ type: r.type, a: r.a, docId: r.docId, rstFiles: r.rstFiles });
 		},
-		expected: '{"type":"io.oz.sdoc.tier.DoctreeReq","a":"c/commit","docId":"d","rstFiles":[{"type":"io.oz.sdoc.build.RstFile",'
+		expected: '{"type":"io.oz.sdoc.tier.DoctreeReq","a":"c/commit","docId":"d","rstFiles":[{"type":"io.oz.sdoc.rst.RstFile",'
 				+ '"nid":"d","path":"index.rst","name":"index","rst":"Doc\\n===\\n","media":["image1.png"]}]}',
 	},
 	{
@@ -62,7 +62,7 @@ const cases: { name: string; actual: () => string; expected: string }[] = [
 		name: 'doc-stree: u/node request, a DocNode',
 		actual: () => json(new DoctreeReq('/sdoc', DoctreeReq.A.update,
 				{ docId: 'd', node: new DocNode({ nid: 'p1', tipjson: '{}', rstext: '{}', rstver: 1 }) }).node),
-		expected: '{"type":"io.oz.sdoc.DocNode","nid":"p1","tipjson":"{}","rstext":"{}","rstver":1}',
+		expected: '{"type":"io.oz.sdoc.docx.DocxNode","nid":"p1","tipjson":"{}","rstext":"{}","rstver":1}',
 	},
 	{
 		name: 'doc-stree: r/res url, for an img (GET of doctree206.serv, the request as anson64)',
