@@ -52,6 +52,7 @@ import io.oz.sdoc.SDocRef;
 import io.oz.sdoc.puck.PuckNode;
 import io.oz.sdoc.tier.DoctreeReq;
 import io.oz.sdoc.tier.DoctreeResp;
+import io.oz.sdoc.tier.PucktreeReq;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -285,17 +286,17 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 	}
 
 	/**
-	 * Query the local synode ({@link #synport}) for all the published docs.
-	 * @return respubs: docs
+	 * Query the local synode's {@link io.oz.sdoc.tier.PucktreeTier} ({@link #synport}) for all the published pages.
+	 * @return docs: the pages
 	 * @throws IOException the synode isn't reachable
-	 * @throws SemanticException the synode refusee
+	 * @throws SemanticException the synode refused
 	 */
 	DoctreeResp queryPublishs() throws Exception {
 		if (isblank(synode))
 			throw new SemanticException("The synode's jserv root, WebConfig (html-service.json)/dynaResource.syn_jserv, is not configured.");
 
-		AnsonMsg<DoctreeReq> req = new AnsonMsg<DoctreeReq>(synport)
-				.body(new DoctreeReq().a(DoctreeReq.A.docs));
+		AnsonMsg<PucktreeReq> req = new AnsonMsg<PucktreeReq>(synport)
+				.body(new PucktreeReq().a(DoctreeReq.A.docs));
 		DoctreeResp resp = (DoctreeResp) new HttpServClient()
 				.post(synport.url(synode), req)
 				.body(0);

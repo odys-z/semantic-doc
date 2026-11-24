@@ -41,6 +41,13 @@ public class HtmlPubReq extends AnsonBody {
 	public String synode;
 	public ArrayList<SDocRef> respubs;
 
+	public HtmlPubReq respubs(SDocRef... docs) {
+		respubs = new ArrayList<SDocRef>();
+		for (SDocRef d : docs)
+			respubs.add(d);
+		return this;
+	}
+
 	public HtmlPubReq() {
 		super(null, null);
 	}

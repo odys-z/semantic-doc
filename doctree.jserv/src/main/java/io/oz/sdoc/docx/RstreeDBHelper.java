@@ -58,9 +58,9 @@ import io.oz.syn.dbpicks.DbPicks;
  */
 public class RstreeDBHelper {
 
-	final String conn;
-	final DATranscxt st;
-	final IUser robot;
+	protected final String conn;
+	public final DATranscxt st;
+	protected final IUser robot;
 
 	public final S_DocsMeta docm;
 	public final S_DocNodeMeta nodem;
@@ -329,7 +329,7 @@ public class RstreeDBHelper {
 	 * The doc's work is finished: not dirty, committedAt = now.
 	 * @return the doc's header
 	 */
-	public SDocRef commit(String docId, IUser usr) throws TransException, SQLException {
+	public SDocRef commit(String docId, IUser usr) throws Exception {
 		st.update(docm.tbl, usr)
 			.nv(docm.dirty, 0)
 			.nv(docm.committedAt, Funcall.now())
@@ -355,38 +355,34 @@ public class RstreeDBHelper {
 		return doc(docId);
 	}
 
-//	/**
-//	 * Docs published at html-service, i. e. with a {@link DocxInf#pubpath}.
-//	 * @return docs
-//	 */
-//	public ArrayList<DocxInf> published() throws TransException, SQLException {
-//		AnResultset rs = (AnResultset) st.select(docm.tbl)
-//				.where(new Condit(op.isNotnull, docm.pubpath, "null"))
-//				.orderby(docm.pk)
-//				.rs(st.instancontxt(conn, robot))
-//				.rs(0);
-//
-//		ArrayList<DocxInf> docs = new ArrayList<DocxInf>();
-//		while (rs.next())
-//			docs.add(doc(rs));
-//		// and the stories (since 0.1.5)
-//		docs.addAll(stories.published());
-//		return docs;
-//	}
-//
-//	/**
-//	 * Keep the doc's context path at html-service.
-//	 * @param pubpath null: the doc is no longer published
-//	 * @return the doc's header
-//	 */
-//	public DocxInf pubpath(String docId, String pubpath, IUser usr) throws TransException, SQLException {
-//		if (stories.story(docId) != null)
-//			return stories.pubpath(docId, pubpath, usr);
-//
-//		st.update(docm.tbl, usr)
-//			.nv(docm.pubpath, pubpath)
-//			.whereEq(docm.pk, docId)
-//			.u(st.instancontxt(conn, usr));
-//		return doc(docId);
-//	}
+	/**
+	 * Docs published at html-service, i. e. with a {@link SDocRef#pubpath}.
+	 * The puck tree's are its own, see io.oz.sdoc.puck.PucktreeDBHelper#published().
+	 * @return docs
+	 */
+	public ArrayList<SDocRef> published() throws TransException, SQLException {
+		AnResultset rs = (AnResultset) st.select(docm.tbl)
+				.where(new Condit(op.isNotnull, docm.pubpath, "null"))
+				.orderby(docm.pk)
+				.rs(st.instancontxt(conn, robot))
+				.rs(0);
+
+		ArrayList<SDocRef> docs = new ArrayList<SDocRef>();
+		while (rs.next())
+			docs.add(doc(rs));
+		return docs;
+	}
+
+	/**
+	 * Keep the doc's context path at html-service.
+	 * @param pubpath null: the doc is no longer published
+	 * @return the doc's header
+	 */
+	public SDocRef pubpath(String docId, String pubpath, IUser usr) throws TransException, SQLException {
+		st.update(docm.tbl, usr)
+			.nv(docm.pubpath, pubpath)
+			.whereEq(docm.pk, docId)
+			.u(st.instancontxt(conn, usr));
+		return doc(docId);
+	}
 }

@@ -31,6 +31,7 @@ import io.oz.sdoc.docx.RstreeDBHelper;
 import io.oz.sdoc.docx.IBlockParser;
 import io.oz.sdoc.docx.Importer;
 import io.oz.sdoc.puck.PuckNode;
+import io.oz.sdoc.puck.PucktreeDBHelper;
 import io.oz.sdoc.puck.ResPublisher;
 import io.oz.sdoc.rst.HtmlBuilder;
 
@@ -126,6 +127,42 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 
 	public Importer importer() { return importer; }
 
+	/** the puck tree, the stories, in the same db: created by {@link #puck()} at the first request needing it */
+	PucktreeDBHelper puck;
+
+	/**
+	 * The puck tree of the working copy, set up at the first call.
+	 * 
+	 * @return null if not configured
+	 */
+	public synchronized PucktreeDBHelper puck() throws Exception {
+		if (puck == null && db() != null)
+			puck = PucktreeDBHelper.setup(conn);
+		return puck;
+	}
+
+	/**
+	 * @return the tree the doc is of: the puck tree if it's a story, the rst tree otherwise
+	 * @throws SemanticException the working copy isn't configured
+	 */
+	RstreeDBHelper tree(String docId) throws Exception {
+		if (db() == null)
+			throw new SemanticException("Doc-tree tier: the working copy isn't configured.");
+		return puck().doc(docId) != null ? puck : db;
+	}
+
+	ResPublisher publisher;
+
+	/**
+	 * Enable {@link DoctreeReq.A#publish}, {@link DoctreeReq.A#unpublish}.
+	 * @param publisher requests to the local html-service
+	 * @return this
+	 */
+	public DoctreeTier publisher(ResPublisher publisher) {
+		this.publisher = publisher;
+		return this;
+	}
+
 	HtmlBuilder builder;
 
 	/**
@@ -190,7 +227,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 			else if (DoctreeReq.A.modify.equals(a))
 				rsp = modify(req);
 			else if (DoctreeReq.A.commit.equals(a))
-				rsp = commit(req, usr);
+				rsp = commitDoc(req, usr);
 			else if (DoctreeReq.A.build.equals(a))
 				rsp = build(req);
 			else if (DoctreeReq.A.publish.equals(a))
@@ -276,20 +313,77 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	}
 
 
+	/**
+	 * c/commit: the doc's work is finished → doc;
+	 * a doc tree's html package is built with its {@link DoctreeReq#rstFiles};
+	 * a story's page is committed by its tree, {@link PucktreeDBHelper#commit(String, IUser)}.
+	 */
+	DoctreeResp commitDoc(DoctreeReq req, IUser usr) throws Exception {
+		RstreeDBHelper tree = tree(req.docId);
+		if (tree.doc(req.docId) == null)
+			throw new SemanticException("Doc-tree tier: no such doc: %s", req.docId);
+
+		SDocRef doc = tree.commit(req.docId, robot);
+		DoctreeResp rsp = new DoctreeResp().doc(doc);
+		if (tree == puck)
+			return rsp;
+
+		if (builder != null && !isNull(req.rstFiles)) {
+			builder.start(db, doc, req.rstFiles, usr);
+			rsp.build(builder.state(req.docId), null);
+		}
+		else if (builder != null)
+			builder.forget(req.docId);
+		return rsp;
+	}
+
+	/** c/publish: publish the doc at html-service → doc, with pubpath */
+	DoctreeResp publish(DoctreeReq req, IUser usr) throws Exception {
+		if (db() == null || publisher == null)
+			throw new SemanticException("Doc-tree tier: publishing isn't configured.");
+
+		RstreeDBHelper tree = tree(req.docId);
+		if (builder != null && tree == db) {
+			SDocRef doc = doc(req);
+			String state = builder.state(req.docId);
+			if (eq(HtmlBuilder.State.building, state))
+				throw new SemanticException("The doc's html is still building. Try again later.");
+			if (isblank(doc.builtAt) || !isblank(doc.committedAt) && doc.builtAt.compareTo(doc.committedAt) < 0)
+				throw new SemanticException(eq(HtmlBuilder.State.failed, state)
+					? "The doc's html build failed. " + builder.log(req.docId)
+					: "The doc's html isn't built since it's committed. Commit it again.");
+		}
+		return new DoctreeResp().doc(publisher.publish(tree, req.docId, usr));
+	}
+
+	/** d/publish: the doc is no longer published → doc, without pubpath */
+	DoctreeResp unpublish(DoctreeReq req, IUser usr) throws Exception {
+		if (db() == null || publisher == null)
+			throw new SemanticException("Doc-tree tier: publishing isn't configured.");
+		return new DoctreeResp().doc(publisher.unpublish(tree(req.docId), req.docId, usr));
+	}
+
 	/** r/stories: the stories' headers → docs (empty if the working copy isn't configured) */
-//	DoctreeResp stories(DoctreeReq req) throws Exception {
-//		return new DoctreeResp().docs(db() == null ? new ArrayList<DocxInf>() : db.stories.stories());
-//	}
-//
-//	/** r/page: the story's page → doc, page */
-//	DoctreeResp page(DoctreeReq req) throws Exception {
-//		if (db() == null)
-//			throw new SemanticException("Doc-tree tier: the working copy isn't configured.");
-//		PuckNode page = db.stories.page(req.docId);
-//		if (page == null)
-//			throw new SemanticException("Doc-tree tier: no such story: %s", req.docId);
-//		return new DoctreeResp().doc(db.stories.story(req.docId)).page(page);
-//	}
+	DoctreeResp stories(DoctreeReq req) throws Exception {
+		return new DoctreeResp().docs(puck() == null ? new ArrayList<SDocRef>() : puck.docs());
+	}
+
+	/** r/page: the story's page → doc, page */
+	DoctreeResp page(DoctreeReq req) throws Exception {
+		if (puck() == null)
+			throw new SemanticException("Doc-tree tier: the working copy isn't configured.");
+		PuckNode page = puck.stories.page(req.docId);
+		if (page == null)
+			throw new SemanticException("Doc-tree tier: no such story: %s", req.docId);
+		return new DoctreeResp().doc(puck.doc(req.docId)).page(page);
+	}
+
+	/** u/page: save the story's page, {@link DoctreeReq#page}; docId null: a new story → doc */
+	DoctreeResp savePage(DoctreeReq req, IUser usr) throws Exception {
+		if (puck() == null)
+			throw new SemanticException("Doc-tree tier: the working copy isn't configured.");
+		return new DoctreeResp().doc(puck.stories.save(synode, req.docId, req.page, usr));
+	}
 
 
 	/** r/build: the state of the doc's html build → doc (with builtAt, htmlUri), build, buildlog */

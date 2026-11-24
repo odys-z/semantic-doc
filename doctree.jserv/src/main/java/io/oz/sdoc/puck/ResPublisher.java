@@ -7,11 +7,14 @@ import java.io.IOException;
 
 import io.odysz.anson.AnsonException;
 import io.odysz.common.Utils;
+import io.odysz.jclient.HttpServClient;
+import io.odysz.semantic.jprotocol.AnsonMsg;
 import io.odysz.semantic.jprotocol.IPort;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.x.SemanticException;
 import io.oz.sdoc.SDocRef;
 import io.oz.sdoc.docx.RstreeDBHelper;
+import io.oz.sdoc.htmlsrv.HtmlPubReq;
 import io.oz.sdoc.htmlsrv.HtmlPubResp;
 import io.oz.sdoc.htmlsrv.HtmlPubReq.A;
 import io.oz.sdoc.tier.PucktreeReq;
@@ -20,7 +23,7 @@ import io.oz.sdoc.tier.PucktreeReq;
  * Publishes / removes docs at the local html-service, by requests to its port respaths
  * (io.oz.srv.ResPathsTier), and keeps the docs' context paths ({@link SDocRef#pubpath}).
  *
- * <p>The synode's records are what html-service finally follows (it queries {@link ResPublishTier}
+ * <p>The synode's records are what html-service finally follows (it queries io.oz.sdoc.tier.PucktreeTier
  * when started and from time to time), so the requests here only make a change effective at once.</p>
  * 
  * @since 0.1.2
@@ -81,7 +84,7 @@ public class ResPublisher {
 	 * 
 	 * @return the doc's header, without pubpath
 	 */
-	public SDocRef unpublish(PucktreeDBHelper db, String docId, IUser usr) throws Exception {
+	public SDocRef unpublish(RstreeDBHelper db, String docId, IUser usr) throws Exception {
 		SDocRef doc = db.doc(docId);
 		if (doc == null)
 			throw new SemanticException("Can't find doc %s.", docId);
@@ -101,7 +104,10 @@ public class ResPublisher {
 	/** Post to html-service. */
 	protected HtmlPubResp post(String a, SDocRef doc)
 			throws IOException, SemanticException, AnsonException {
-				return null;
-
+		AnsonMsg<HtmlPubReq> req = new AnsonMsg<HtmlPubReq>(respaths)
+				.body(new HtmlPubReq().respubs(doc).a(a));
+		return (HtmlPubResp) new HttpServClient()
+				.post(respaths.url(htmlroot), req)
+				.body(0);
 	}
 }
