@@ -13,25 +13,15 @@ import java.util.zip.ZipFile;
 import org.apache.commons.io.FileUtils;
 
 import io.odysz.anson.Anson;
-import io.oz.sdoc.docx.DocxInf;
+import io.odysz.semantic.meta.DocRef;
 import io.oz.sdoc.docx.DocxNode;
 
 /**
- * Resources (pictures) of the docs in the working copy: files in
- * &lt;volume&gt;/&lt;uid&gt;/{@link #folder}/&lt;docId&gt;/, the volume: where the doc-tree db is.
- *
- * <p>The uid is the doc's creator ({@link DocxInf#creator}), not a session id: the user goes on
- * with his work in another session, and the folder is found by the doc.</p>
- *
- * <p>A node's {@link DocxNode#resId} is the file's name in its doc's folder, e.g. "image1.png":
- * a reference relative to the doc, as a relative src of a html page.</p>
- *
- * <p>Temporary but persisted: not a session's temp folder, the files are there for the user's
- * next visit. They are to be packed into the doc's zip and deleted when the doc is committed (TODO).</p>
- *
+ * Resources (pictures/html-page) of the synode in the working copy
+ * 
  * @author ody
  */
-public class DocRes extends Anson {
+public class DocResHelper {
 	/** the resources' folder of a user, in his folder of the synode's volume */
 	public static final String folder = "doctree.temp";
 
@@ -40,7 +30,7 @@ public class DocRes extends Anson {
 	/**
 	 * @param volume the folder of the doc-tree db
 	 */
-	public DocRes(String volume) {
+	public DocResHelper(String volume) {
 		this.volume = new File(volume);
 	}
 

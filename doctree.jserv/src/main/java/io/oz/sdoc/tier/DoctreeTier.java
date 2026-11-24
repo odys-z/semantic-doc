@@ -26,8 +26,8 @@ import io.odysz.semantic.jserv.x.SsException;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.x.TransException;
-import io.oz.sdoc.docx.DocxtreeDBHelper;
-import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.SDocRef;
+import io.oz.sdoc.docx.RstreeDBHelper;
 import io.oz.sdoc.docx.IBlockParser;
 import io.oz.sdoc.docx.Importer;
 import io.oz.sdoc.puck.PuckNode;
@@ -40,14 +40,14 @@ import io.oz.sdoc.rst.HtmlBuilder;
  * <p>The port is the app's, e.g. jserv-album's AlbumPort.doctree, so this lib
  * doesn't depend on the app's port enum. Its url must be {@link #url}.</p>
  *
- * <p>The working copy is in its own db ({@link DocxtreeDBHelper}), connection {@link #conn(String, String)},
+ * <p>The working copy is in its own db ({@link RstreeDBHelper}), connection {@link #conn(String, String)},
  * set up at the first request.
  * Served: every action of {@link DoctreeReq.A}; {@link DoctreeReq.A#importDocx} with
  * {@link #importer(DocxSource, IBlockParser)}. Tree changes are SemanticTree.onModifyTree()'s,
  * with the doc's rules in {@link S_DocNodeMeta}.</p>
  *
  * <p>The session is verified ({@link #onPost(AnsonMsg, HttpServletResponse)}); its user is the
- * creator of the docs he imports, the owner of their resource folders ({@link DocRes}).</p>
+ * creator of the docs he imports, the owner of their resource folders ({@link DocResHelper}).</p>
  *
  * TODO Rename to RstreeTier
  * TODO
@@ -67,11 +67,11 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	String conn;
 	/** for doc ids */
 	String synode;
-	DocxInf source;
+	SDocRef source;
 	IBlockParser parser;
 
 	/** created by {@link #db()} at the first request needing it */
-	DocxtreeDBHelper db;
+	RstreeDBHelper db;
 	Importer importer;
 
 	/** the user of {@link #handle(DoctreeReq)}, without a session (tests), and of the db's logs */
@@ -86,7 +86,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 * needing them ({@link #db()}), so a synode never editing doc trees keeps an empty db file,
 	 * and a failure here never stops the synode.
 	 * 
-	 * @param conn connection of the doc-tree db, see {@link DocxtreeDBHelper#connect(String, String, String)}
+	 * @param conn connection of the doc-tree db, see {@link RstreeDBHelper#connect(String, String, String)}
 	 * @param synode id of this synode, the prefix of doc ids
 	 * @return this
 	 */
@@ -103,7 +103,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 * @param parser e.g. {@link io.oz.sdoc.imports.DocxWalker#blocks(String)}
 	 * @return this
 	 */
-	public DoctreeTier importer(DocxInf source, IBlockParser parser) {
+	public DoctreeTier importer(SDocRef source, IBlockParser parser) {
 		this.source = source;
 		this.parser = parser;
 		return this;
@@ -115,11 +115,11 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 * @return null if not configured
 	 * @throws Exception
 	 */
-	public synchronized DocxtreeDBHelper db() throws Exception {
+	public synchronized RstreeDBHelper db() throws Exception {
 		if (db == null && conn != null) {
-			db = DocxtreeDBHelper.setup(conn, false);
+			db = RstreeDBHelper.setup(conn, false);
 			if (parser != null)
-				importer = new Importer(conn, db, source, parser);
+				importer = new Importer(conn, db, parser);
 		}
 		return db;
 	}
@@ -189,20 +189,20 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 				rsp = update(req);
 			else if (DoctreeReq.A.modify.equals(a))
 				rsp = modify(req);
-//			else if (DoctreeReq.A.commit.equals(a))
-//				rsp = commit(req, usr);
+			else if (DoctreeReq.A.commit.equals(a))
+				rsp = commit(req, usr);
 			else if (DoctreeReq.A.build.equals(a))
 				rsp = build(req);
-//			else if (DoctreeReq.A.publish.equals(a))
-//				rsp = publish(req, usr);
-//			else if (DoctreeReq.A.unpublish.equals(a))
-//				rsp = unpublish(req, usr);
+			else if (DoctreeReq.A.publish.equals(a))
+				rsp = publish(req, usr);
+			else if (DoctreeReq.A.unpublish.equals(a))
+				rsp = unpublish(req, usr);
 			else if (DoctreeReq.A.stories.equals(a))
 				rsp = stories(req);
 			else if (DoctreeReq.A.page.equals(a))
 				rsp = page(req);
-//			else if (DoctreeReq.A.savePage.equals(a))
-//				rsp = savePage(req, usr);
+			else if (DoctreeReq.A.savePage.equals(a))
+				rsp = savePage(req, usr);
 			else
 				throw new SemanticException("Doc-tree tier: request.a, %s, can not be handled.", a);
 
@@ -220,7 +220,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 
 	/** r/docs: the docs' headers → docs (empty if the working copy isn't configured) */
 	DoctreeResp docs(DoctreeReq req) throws Exception {
-		return new DoctreeResp().docs(db() == null ? new ArrayList<DocxInf>() : db.docs());
+		return new DoctreeResp().docs(db() == null ? new ArrayList<SDocRef>() : db.docs());
 	}
 
 	/** c/import: the doc header (state parsing) at once; the nodes are parsed in the background → doc */
@@ -233,7 +233,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 
 	/** r/tree: the doc root {@link DoctreeReq#docId} with its subtree → doc, forest */
 	DoctreeResp tree(DoctreeReq req) throws Exception {
-		DocxInf doc = doc(req);
+		SDocRef doc = doc(req);
 
 		// while importing (state parsing), the forest is empty; the client asks again
 		DoctreeResp rsp = new DoctreeResp().doc(doc);
@@ -277,24 +277,24 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 
 
 	/** r/stories: the stories' headers → docs (empty if the working copy isn't configured) */
-	DoctreeResp stories(DoctreeReq req) throws Exception {
-		return new DoctreeResp().docs(db() == null ? new ArrayList<DocxInf>() : db.stories.stories());
-	}
-
-	/** r/page: the story's page → doc, page */
-	DoctreeResp page(DoctreeReq req) throws Exception {
-		if (db() == null)
-			throw new SemanticException("Doc-tree tier: the working copy isn't configured.");
-		PuckNode page = db.stories.page(req.docId);
-		if (page == null)
-			throw new SemanticException("Doc-tree tier: no such story: %s", req.docId);
-		return new DoctreeResp().doc(db.stories.story(req.docId)).page(page);
-	}
+//	DoctreeResp stories(DoctreeReq req) throws Exception {
+//		return new DoctreeResp().docs(db() == null ? new ArrayList<DocxInf>() : db.stories.stories());
+//	}
+//
+//	/** r/page: the story's page → doc, page */
+//	DoctreeResp page(DoctreeReq req) throws Exception {
+//		if (db() == null)
+//			throw new SemanticException("Doc-tree tier: the working copy isn't configured.");
+//		PuckNode page = db.stories.page(req.docId);
+//		if (page == null)
+//			throw new SemanticException("Doc-tree tier: no such story: %s", req.docId);
+//		return new DoctreeResp().doc(db.stories.story(req.docId)).page(page);
+//	}
 
 
 	/** r/build: the state of the doc's html build → doc (with builtAt, htmlUri), build, buildlog */
 	DoctreeResp build(DoctreeReq req) throws Exception {
-		DocxInf doc = doc(req);
+		SDocRef doc = doc(req);
 		DoctreeResp rsp = new DoctreeResp().doc(doc);
 		if (builder != null)
 			rsp.build(builder.state(req.docId), builder.log(req.docId));
@@ -302,10 +302,10 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	}
 
 	/** the doc of the request; the working copy must be configured */
-	DocxInf doc(DoctreeReq req) throws Exception {
+	SDocRef doc(DoctreeReq req) throws Exception {
 		if (db() == null)
 			throw new SemanticException("Doc-tree tier: the working copy isn't configured.");
-		DocxInf doc = db.doc(req.docId);
+		SDocRef doc = db.doc(req.docId);
 		if (doc == null)
 			throw new SemanticException("Doc-tree tier: no such doc: %s", req.docId);
 		return doc;

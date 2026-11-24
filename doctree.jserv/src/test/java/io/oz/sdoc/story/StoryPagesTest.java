@@ -24,13 +24,13 @@ import io.odysz.semantic.jprotocol.AnsonMsg.Port;
 import io.odysz.semantic.jprotocol.AnsonResp;
 import io.odysz.semantic.jserv.JRobot;
 import io.odysz.semantics.IUser;
-import io.oz.sdoc.docx.DocxtreeDBHelper;
-import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.SDocRef;
+import io.oz.sdoc.docx.RstreeDBHelper;
 import io.oz.sdoc.docx.MediaSource;
-import io.oz.sdoc.publish.PubMedia;
-import io.oz.sdoc.publish.PuckPubReq;
-import io.oz.sdoc.publish.PuckPubResp;
-import io.oz.sdoc.publish.ResPublishTier;
+import io.oz.sdoc.htmlsrv.PubMedia;
+import io.oz.sdoc.htmlsrv.HtmlPubReq;
+import io.oz.sdoc.htmlsrv.HtmlPubResp;
+import io.oz.sdoc.htmlsrv.ResPublishTier;
 import io.oz.sdoc.puck.PuckNode;
 import io.oz.sdoc.puck.StoryPages;
 import io.oz.sdoc.tier.DoctreeReq;
@@ -44,7 +44,7 @@ import io.oz.sdoc.tier.DoctreeTier;
 class StoryPagesTest {
 	static final String webinf = "src/test/res/WEB-INF";
 	static String conn;
-	static DocxtreeDBHelper db;
+	static RstreeDBHelper db;
 	static DoctreeTier tier;
 	static final IUser usr = new JRobot();
 
@@ -78,12 +78,12 @@ class StoryPagesTest {
 
 	@BeforeAll
 	static void init() throws Exception {
-		new File("src/test/res/story", DocxtreeDBHelper.dbfile).delete();
+		new File("src/test/res/story", RstreeDBHelper.dbfile).delete();
 		Configs.init(webinf);
 		Connects.init(webinf);
-		conn = DocxtreeDBHelper.connect(webinf, "../story", "S");
+		conn = RstreeDBHelper.connect(webinf, "../story", "S");
 		DatasetCfg.init(webinf);
-		db = DocxtreeDBHelper.setup(conn, true);
+		db = RstreeDBHelper.setup(conn, true);
 		tier = new DoctreeTier(Port.echo).conn(conn, "X29").media(media);
 	}
 
@@ -116,10 +116,10 @@ class StoryPagesTest {
 		// a new story
 		DoctreeReq save = new DoctreeReq("/sdoc").page(null, page("Spring Trip", "00A3F1", "00A3F2"));
 		save.a(DoctreeReq.A.savePage);
-		DocxInf s = ok(save).doc;
+		SDocRef s = ok(save).doc;
 		assertNotNull(s.docId);
 		assertTrue(s.docId.startsWith("X29.S"), s.docId);
-		assertEquals(DocxInf.Kind.story, s.kind);
+		assertEquals(SDocRef.Kind.story, s.kind);
 		assertTrue(s.dirty);
 
 		// listed as a story, not as a doc tree
@@ -161,10 +161,10 @@ class StoryPagesTest {
 
 		// published (pubpath kept as html-service would answer): the map html-service gets at refresh
 		db.pubpath(s.docId, "pub/er3cou", usr);
-		assertEquals(DocxInf.Kind.story, db.doc(s.docId).kind);
-		PuckPubReq refresh = new PuckPubReq();
-		refresh.a(PuckPubReq.A.refresh);
-		PuckPubResp resp = (PuckPubResp) new ResPublishTier(Port.echo, tier).handle(refresh).body(0);
+		assertEquals(SDocRef.Kind.story, db.doc(s.docId).kind);
+		HtmlPubReq refresh = new HtmlPubReq();
+		refresh.a(HtmlPubReq.A.refresh);
+		HtmlPubResp resp = (HtmlPubResp) new ResPublishTier(Port.echo, tier).handle(refresh).body(0);
 		assertEquals(1, resp.respubs.size());
 		assertEquals(1, resp.media.size());
 		PubMedia m = resp.media.get(0);
@@ -183,7 +183,7 @@ class StoryPagesTest {
 	void missingMedia() throws Exception {
 		DoctreeReq save = new DoctreeReq("/sdoc").page(null, page("Lost", "00A3F9"));
 		save.a(DoctreeReq.A.savePage);
-		DocxInf s = ok(save).doc;
+		SDocRef s = ok(save).doc;
 
 		DoctreeReq commit = new DoctreeReq("/sdoc").docId(s.docId);
 		commit.a(DoctreeReq.A.commit);

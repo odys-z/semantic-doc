@@ -24,8 +24,9 @@ import io.odysz.transact.sql.parts.Logic.op;
 import io.odysz.transact.sql.parts.condition.Condit;
 import io.odysz.transact.sql.parts.condition.Funcall;
 import io.odysz.transact.x.TransException;
-import io.oz.sdoc.DocRes;
+import io.oz.sdoc.DocResHelper;
 import io.oz.sdoc.DoctreeDBUpgrade;
+import io.oz.sdoc.SDocRef;
 import io.oz.sdoc.puck.S_StoriesMeta;
 import io.oz.sdoc.puck.S_StoryNodesMeta;
 import io.oz.sdoc.puck.StoryPages;
@@ -46,7 +47,7 @@ import io.oz.syn.dbpicks.DbPicks;
  *
  * <p>A db file of an earlier version is upgraded by {@link DoctreeDBUpgrade} when connected.</p>
  *
- * <p>The docs' resources (pictures) are files beside the db file, see {@link DocRes}.</p>
+ * <p>The docs' resources (pictures) are files beside the db file, see {@link DocResHelper}.</p>
  *
  * <p>Not a syntity: nothing here is synchronized.</p>
  *
@@ -55,7 +56,7 @@ import io.oz.syn.dbpicks.DbPicks;
  *
  * @author ody
  */
-public class DocxtreeDBHelper {
+public class RstreeDBHelper {
 
 	final String conn;
 	final DATranscxt st;
@@ -66,7 +67,7 @@ public class DocxtreeDBHelper {
 //	/** the stories (media stories, Puck pages), in their own tables; since 0.1.5 */
 //	public final StoryPages stories;
 	/** the docs' resource files, beside the db file; null if not connected by {@link #connect(String, String, String)} */
-	public final DocRes res;
+	public final DocResHelper res;
 
 	/** conn id: folder of its db file, by {@link #connect(String, String, String)} */
 	static final HashMap<String, String> volumes = new HashMap<String, String>();
@@ -77,10 +78,10 @@ public class DocxtreeDBHelper {
 	/** conn id: the picking list of its db, by {@link #connect(String, String, String, String)}, for {@link #setup(String, boolean)} */
 	static final HashMap<String, DbPicks> picklists = new HashMap<String, DbPicks>();
 
-	DocxtreeDBHelper(String conn, S_DocsMeta docm, S_DocNodeMeta nodem,
+	protected RstreeDBHelper(String conn, S_DocsMeta docm, S_DocNodeMeta nodem,
 			S_StoriesMeta storym, S_StoryNodesMeta snodem) throws Exception {
 		this.conn = conn;
-		this.res = volumes.containsKey(conn) ? new DocRes(volumes.get(conn)) : null;
+		this.res = volumes.containsKey(conn) ? new DocResHelper(volumes.get(conn)) : null;
 		this.docm = docm;
 		this.nodem = nodem;
 		this.st = new DATranscxt(conn);
@@ -165,7 +166,7 @@ public class DocxtreeDBHelper {
 	 * @return the db
 	 * @throws Exception
 	 */
-	public static DocxtreeDBHelper setup(String conn, boolean forceDrop) throws Exception {
+	public static RstreeDBHelper setup(String conn, boolean forceDrop) throws Exception {
 		if (upgradeErrors.containsKey(conn))
 			throw new SemanticException(upgradeErrors.get(conn));
 
@@ -181,7 +182,7 @@ public class DocxtreeDBHelper {
 		Connects.commit(conn, new JRobot(), snodem.ddlIndex);
 
 		// loads the connection's semantics
-		DocxtreeDBHelper db = new DocxtreeDBHelper(conn, docm, nodem, storym, snodem);
+		RstreeDBHelper db = new RstreeDBHelper(conn, docm, nodem, storym, snodem);
 		checkSemantics(conn, docm, nodem);
 		checkSemantics(conn, storym, snodem);
 
@@ -237,13 +238,13 @@ public class DocxtreeDBHelper {
 	 *
 	 * @return docs
 	 */
-	public ArrayList<DocxInf> docs() throws TransException, SQLException {
+	public ArrayList<SDocRef> docs() throws TransException, SQLException {
 		AnResultset rs = (AnResultset) st.select(docm.tbl)
 				.orderby(docm.pk)
 				.rs(st.instancontxt(conn, robot))
 				.rs(0);
 
-		ArrayList<DocxInf> docs = new ArrayList<DocxInf>();
+		ArrayList<SDocRef> docs = new ArrayList<SDocRef>();
 		while (rs.next())
 			docs.add(doc(rs));
 		return docs;
@@ -254,7 +255,7 @@ public class DocxtreeDBHelper {
 	 * @param docId
 	 * @return the header, null if not found
 	 */
-	public DocxInf doc(String docId) throws TransException, SQLException {
+	public SDocRef doc(String docId) throws TransException, SQLException {
 		AnResultset rs = (AnResultset) st.select(docm.tbl)
 				.whereEq(docm.pk, docId)
 				.rs(st.instancontxt(conn, robot))
@@ -263,11 +264,11 @@ public class DocxtreeDBHelper {
 		return rs.next() ? doc(rs) : null;// stories.story(docId);
 	}
 
-	DocxInf doc(AnResultset rs) throws SQLException {
-		DocxInf d = new DocxInf(rs.getString(docm.pk), rs.getString(docm.title), rs.getString(docm.creator));
+	SDocRef doc(AnResultset rs) throws SQLException {
+		SDocRef d = new SDocRef(rs.getString(docm.pk), rs.getString(docm.title), rs.getString(docm.creator));
 		d.state   = rs.getString(docm.state);
 		d.msg     = rs.getString(docm.msg);
-		d.srcId   = rs.getString(docm.refId);
+//		d.srcId   = rs.getString(docm.refId);
 		d.htmlUri = rs.getString(docm.htmlUri);
 		d.builtAt = rs.getString(docm.builtAt);
 		d.builtBy = rs.getString(docm.builtBy);
@@ -300,7 +301,7 @@ public class DocxtreeDBHelper {
 	 * @return the doc's header
 	 * @throws SemanticException the node isn't in the doc
 	 */
-	public DocxInf update(DocxNode n, IUser usr) throws TransException, SQLException {
+	public SDocRef update(DocxNode n, IUser usr) throws TransException, SQLException {
 		SemanticObject res = (SemanticObject) st.update(nodem.tbl, usr)
 				.nv(nodem.tipjson, n.tipjson)
 				.nv(nodem.rstext, n.rstext)
@@ -328,7 +329,7 @@ public class DocxtreeDBHelper {
 	 * The doc's work is finished: not dirty, committedAt = now.
 	 * @return the doc's header
 	 */
-	public DocxInf commit(String docId, IUser usr) throws TransException, SQLException {
+	public SDocRef commit(String docId, IUser usr) throws TransException, SQLException {
 		st.update(docm.tbl, usr)
 			.nv(docm.dirty, 0)
 			.nv(docm.committedAt, Funcall.now())
@@ -339,11 +340,11 @@ public class DocxtreeDBHelper {
 
 	/**
 	 * The doc's html package is (re)built: htmlUri, builtAt = now, builtBy, template.
-	 * @param htmlUri the zip's local path, see {@link DocxInf#htmlUri}
-	 * @param template id of the template it was built with, see {@link DocxInf#template}
+	 * @param htmlUri the zip's local path, see {@link SDocRef#htmlUri}
+	 * @param template id of the template it was built with, see {@link SDocRef#template}
 	 * @return the doc's header
 	 */
-	public DocxInf built(String docId, String htmlUri, String template, IUser usr) throws TransException, SQLException {
+	public SDocRef built(String docId, String htmlUri, String template, IUser usr) throws TransException, SQLException {
 		st.update(docm.tbl, usr)
 			.nv(docm.htmlUri, htmlUri)
 			.nv(docm.builtAt, Funcall.now())

@@ -26,13 +26,13 @@ import io.odysz.transact.sql.Query;
 import io.odysz.transact.sql.parts.condition.ExprPart;
 import io.odysz.transact.sql.parts.condition.Funcall;
 import io.odysz.transact.x.TransException;
-import io.oz.sdoc.docx.DocxtreeDBHelper;
+import io.oz.sdoc.docx.RstreeDBHelper;
 import io.oz.syn.dbpicks.DbInitRow;
 import io.oz.syn.dbpicks.DbPick;
 import io.oz.syn.dbpicks.DbPicks;
 
 /**
- * Upgrade a doc-tree db file ({@link DocxtreeDBHelper#dbfile}) of an earlier version, the same way
+ * Upgrade a doc-tree db file ({@link RstreeDBHelper#dbfile}) of an earlier version, the same way
  * as the synode upgrader's config picks (semanticshare ConfigPicks): the new version's db is the
  * template, with the installed values picked, as the app's picking list ({@link DbPicks},
  * e.g. &lt;install&gt;/bin/doctree-picks.json) says. All through semantic.DA, the sql built by semantic.transact.
@@ -79,7 +79,7 @@ public class DoctreeDBUpgrade {
 	 * @param conn the db's connection id, e.g. "doctree.X"; the old and new dbs are connected
 	 * as conn + ".old", conn + ".new" while upgrading
 	 * @param dbpath the db file; nothing is done if there is none (a new db)
-	 * @param smtcs the semantics of the db, e.g. {@link DocxtreeDBHelper#smtcs}
+	 * @param smtcs the semantics of the db, e.g. {@link RstreeDBHelper#smtcs}
 	 * @param picks null: none, a db needing to be copied isn't upgraded
 	 * @param metas the tables of the current version, with ddlSqlite
 	 * @return the backup of the old file; null if not copied

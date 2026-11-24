@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import io.odysz.anson.AnsonField;
 import io.odysz.semantic.jprotocol.AnsonBody;
 import io.odysz.semantic.jprotocol.AnsonMsg;
-import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.SDocRef;
 import io.oz.sdoc.docx.DocxNode;
 import io.oz.sdoc.puck.PuckNode;
 import io.oz.sdoc.rst.RstFile;
@@ -73,7 +73,7 @@ public class DoctreeReq extends AnDatasetReq {
 
 	public String docId;
 	/** for {@link A#createDoc}, {@link A#importDocx}: title etc. */
-	public DocxInf doc;
+	public SDocRef doc;
 
 	/** for {@link A#importDocx}: the docx's record id in the doc table (h_photos) */
 	public String srcId;

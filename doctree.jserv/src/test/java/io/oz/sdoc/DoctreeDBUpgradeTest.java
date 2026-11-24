@@ -30,10 +30,9 @@ import io.odysz.semantic.meta.AutoSeqMeta;
 import io.odysz.semantic.util.DAHelper;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.x.SemanticException;
-import io.oz.sdoc.docx.DocxtreeDBHelper;
+import io.oz.sdoc.docx.RstreeDBHelper;
 import io.oz.sdoc.docx.S_DocNodeMeta;
 import io.oz.sdoc.docx.S_DocsMeta;
-import io.oz.sdoc.docx.DocxInf;
 import io.oz.sdoc.tier.DoctreeReq;
 import io.oz.sdoc.tier.DoctreeResp;
 import io.oz.sdoc.tier.DoctreeTier;
@@ -80,7 +79,7 @@ class DoctreeDBUpgradeTest {
 	@Test
 	void upgrade() throws Exception {
 		File dir = fresh(vol);
-		DATranscxt fx = fixture("fixture.U", new File(dir, DocxtreeDBHelper.dbfile), ddlDocs012, ddlNodes010,
+		DATranscxt fx = fixture("fixture.U", new File(dir, RstreeDBHelper.dbfile), ddlDocs012, ddlNodes010,
 				new AutoSeqMeta().ddlSqlite);
 		fx.insert("s_docs", robot)
 			.nv("docId", "U.0001").nv("synode", "U").nv("title", "Old doc").nv("creator", "ody")
@@ -109,15 +108,15 @@ class DoctreeDBUpgradeTest {
 		int pg = DoctreeDBUpgrade.pgSize;
 		DoctreeDBUpgrade.pgSize = 2;
 		String conn;
-		try { conn = DocxtreeDBHelper.connect(webinf, vol, "U", picks); }
+		try { conn = RstreeDBHelper.connect(webinf, vol, "U", picks); }
 		finally { DoctreeDBUpgrade.pgSize = pg; }
 
 		// the old file is kept as a backup
-		File[] baks = dir.listFiles((d, n) -> n.startsWith(DocxtreeDBHelper.dbfile + ".") && n.endsWith(".bak"));
+		File[] baks = dir.listFiles((d, n) -> n.startsWith(RstreeDBHelper.dbfile + ".") && n.endsWith(".bak"));
 		assertEquals(1, baks.length);
-		assertFalse(new File(dir, DocxtreeDBHelper.dbfile + ".new").exists());
+		assertFalse(new File(dir, RstreeDBHelper.dbfile + ".new").exists());
 
-		DocxtreeDBHelper db = DocxtreeDBHelper.setup(conn, false);
+		RstreeDBHelper db = RstreeDBHelper.setup(conn, false);
 
 		// the current tables: new columns, renamed ones picked, nextNid dropped
 		Set<String> dcols = Connects.getMeta(conn, "s_docs").ftypes().keySet();
@@ -132,7 +131,7 @@ class DoctreeDBUpgradeTest {
 		assertEquals("0", seq(db.st, conn, "s_docnodes.nid"));
 
 		// the docs and nodes, as they were
-		ArrayList<DocxInf> docs = db.docs();
+		ArrayList<SDocRef> docs = db.docs();
 		assertEquals(2, docs.size());
 		assertEquals("U.0001", docs.get(0).docId);
 		assertEquals("ody", docs.get(0).creator);
@@ -163,7 +162,7 @@ class DoctreeDBUpgradeTest {
 		assertEquals("2", seq(db.st, conn, "s_docs.docId"));
 
 		// upgraded once: connected again, the file isn't copied
-		DocxtreeDBHelper.connect(webinf, vol, "U", picks);
+		RstreeDBHelper.connect(webinf, vol, "U", picks);
 		assertEquals(1, dir.listFiles((d, n) -> n.endsWith(".bak")).length);
 	}
 
@@ -171,7 +170,7 @@ class DoctreeDBUpgradeTest {
 	@Test
 	void upgradeFails() throws Exception {
 		File dir = fresh(volFail);
-		File dbf = new File(dir, DocxtreeDBHelper.dbfile);
+		File dbf = new File(dir, RstreeDBHelper.dbfile);
 		DATranscxt fx = fixture("fixture.V", dbf,
 				"create table s_docs (docId varchar(32), synode varchar(12), title varchar(256), nextNid integer)",
 				// a node without a docId, now NOT NULL
@@ -181,12 +180,12 @@ class DoctreeDBUpgradeTest {
 		long size = dbf.length();
 
 		expectTrace("upgradeFails", "NOT NULL constraint failed: s_docnodes.docId");
-		String conn = DocxtreeDBHelper.connect(webinf, volFail, "V", picks);
+		String conn = RstreeDBHelper.connect(webinf, volFail, "V", picks);
 
 		assertEquals(0, dir.listFiles((d, n) -> n.endsWith(".bak") || n.endsWith(".new")).length);
 		assertEquals(size, dbf.length());
 
-		SemanticException e = assertThrows(SemanticException.class, () -> DocxtreeDBHelper.setup(conn, false));
+		SemanticException e = assertThrows(SemanticException.class, () -> RstreeDBHelper.setup(conn, false));
 		assertTrue(e.getMessage().contains("can't be upgraded"), e.getMessage());
 
 		AnsonMsg<? extends AnsonResp> m = new DoctreeTier(Port.echo).conn(conn, "V").handle(docs());
@@ -211,7 +210,7 @@ class DoctreeDBUpgradeTest {
 	@Test
 	void initsInPlace() throws Exception {
 		File dir = fresh(volInits);
-		DATranscxt fx = fixture("fixture.I", new File(dir, DocxtreeDBHelper.dbfile),
+		DATranscxt fx = fixture("fixture.I", new File(dir, RstreeDBHelper.dbfile),
 				new S_DocsMeta().ddlSqlite, new S_DocNodeMeta().ddlSqlite, new AutoSeqMeta().ddlSqlite);
 		fx.insert("oz_autoseq", robot).nv("sid", "s_docs.docId").nv("seq", "3").nv("remarks", "by ShAutoKPrefix")
 			.post(fx.insert("s_docs", robot).nv("docId", "I.0001").nv("synode", "I"))
@@ -220,10 +219,10 @@ class DoctreeDBUpgradeTest {
 			.ins(fx.basictx());
 		Connects.removeSqlite("fixture.I");
 
-		String conn = DocxtreeDBHelper.connect(webinf, volInits, "I", picks);
+		String conn = RstreeDBHelper.connect(webinf, volInits, "I", picks);
 		assertEquals(0, dir.listFiles((d, n) -> n.endsWith(".bak") || n.endsWith(".new")).length);
 
-		DocxtreeDBHelper db = DocxtreeDBHelper.setup(conn, false);
+		RstreeDBHelper db = RstreeDBHelper.setup(conn, false);
 		assertEquals("0", seq(db.st, conn, "s_docnodes.nid"));
 		assertEquals("3", seq(db.st, conn, "s_docs.docId"));
 
@@ -253,17 +252,17 @@ class DoctreeDBUpgradeTest {
 	@Test
 	void noPicks() throws Exception {
 		File dir = fresh(volNopicks);
-		File dbf = new File(dir, DocxtreeDBHelper.dbfile);
+		File dbf = new File(dir, RstreeDBHelper.dbfile);
 		fixture("fixture.N", dbf, "create table s_docs (docId varchar(32), synode varchar(12), title varchar(256), nextNid integer)");
 		Connects.removeSqlite("fixture.N");
 		long size = dbf.length();
 
 		expectTrace("noPicks", "IOException: The tables of ... are of an earlier version, but there's no picking list to upgrade it.");
-		String conn = DocxtreeDBHelper.connect(webinf, volNopicks, "N", "src/test/res/no-such-picks.json");
+		String conn = RstreeDBHelper.connect(webinf, volNopicks, "N", "src/test/res/no-such-picks.json");
 
 		assertEquals(0, dir.listFiles((d, n) -> n.endsWith(".bak") || n.endsWith(".new")).length);
 		assertEquals(size, dbf.length());
-		SemanticException e = assertThrows(SemanticException.class, () -> DocxtreeDBHelper.setup(conn, false));
+		SemanticException e = assertThrows(SemanticException.class, () -> RstreeDBHelper.setup(conn, false));
 		assertTrue(e.getMessage().contains("no picking list"), e.getMessage());
 		assertTrue(e.getMessage().contains("no-such-picks.json"), e.getMessage());
 	}
@@ -275,7 +274,7 @@ class DoctreeDBUpgradeTest {
 	 * @return a basic transact builder (no semantics) for the rows
 	 */
 	static DATranscxt fixture(String conn, File dbf, String... ddls) throws Exception {
-		Connects.addSqlite(conn, dbf.getAbsolutePath(), DocxtreeDBHelper.smtcs);
+		Connects.addSqlite(conn, dbf.getAbsolutePath(), RstreeDBHelper.smtcs);
 		for (String ddl : ddls)
 			Connects.commit(conn, robot, ddl);
 		return (DATranscxt) DATranscxt.getBasicTrans(conn);

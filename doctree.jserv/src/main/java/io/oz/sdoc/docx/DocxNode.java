@@ -1,7 +1,7 @@
 package io.oz.sdoc.docx;
 
 import io.odysz.anson.Anson;
-import io.oz.sdoc.DocRes;
+import io.oz.sdoc.DocResHelper;
 
 /**
  * Content record: one tree node of a doc, an element of "nodes" in
@@ -51,7 +51,7 @@ public class DocxNode extends Anson {
 
 	/**
 	 * resource id, for {@link Kind#image}: of an imported picture, the file's name in the doc's
-	 * resource folder ({@link DocRes}), e.g. "image1.png"
+	 * resource folder ({@link DocResHelper}), e.g. "image1.png"
 	 */
 	public String resId;
 	/** referenced node id (subtree root, may be in another doc), for {@link Kind#docref} */

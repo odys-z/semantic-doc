@@ -1,9 +1,10 @@
 package io.oz.sdoc.docx;
 
 import io.odysz.semantic.meta.SemanticTableMeta;
+import io.oz.sdoc.SDocRef;
 
 /**
- * Table s_docs: doc headers ({@link DocxInf}) of the working copy, in the doc-tree db.
+ * Table s_docs: doc headers ({@link SDocRef}) of the working copy, in the doc-tree db.
  * DDL built from the column names, as jserv-album's PhotoMeta does.
  *
  * <p>Semantics (semantics-doctree.xml): {@link #pk} is an auto key prefixed with {@link #synode},
@@ -17,7 +18,7 @@ public class S_DocsMeta extends SemanticTableMeta {
 	public final String synode;
 	public final String title;
 	public final String creator;
-	/** {@link DocxInf.State} */
+	/** {@link SDocRef.State} */
 	public final String state;
 	/** why the import failed */
 	public final String msg;
@@ -28,12 +29,12 @@ public class S_DocsMeta extends SemanticTableMeta {
 	public final String builtBy;
 
 	/**
-	 * id of the template the html package was built with, see {@link DocxInf#template}
+	 * id of the template the html package was built with, see {@link SDocRef#template}
 	 * 
 	 * DB-PICKING-0.8.2 s_docs.template
 	 */
 	public final String template;
-	/** url path published at html-service, see {@link DocxInf#pubpath} */
+	/** url path published at html-service, see {@link SDocRef#pubpath} */
 	public final String pubpath;
 	/** 1: changed since the last commit */
 	public final String dirty;

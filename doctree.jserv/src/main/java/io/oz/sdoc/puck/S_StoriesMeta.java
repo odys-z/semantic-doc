@@ -4,7 +4,7 @@ import io.odysz.semantic.meta.SemanticTableMeta;
 
 /**
  * Table s_stories: story headers in the doc-tree db, as s_docs is of doc trees ({@link io.oz.sdoc.docx.S_DocsMeta}),
- * read as {@link io.oz.sdoc.docx.DocxInf} of kind {@link io.oz.sdoc.docx.DocxInf.Kind#story}. Created if missing,
+ * read as {@link io.oz.sdoc.SDocRef} of kind {@link io.oz.sdoc.SDocRef.Kind#story}. Created if missing,
  * when the db is set up.
  *
  * <p>Semantics (semantics-doctree.xml): {@link #pk} is an auto key prefixed with {@link #synode} and "S",

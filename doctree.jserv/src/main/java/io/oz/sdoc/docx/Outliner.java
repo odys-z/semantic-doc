@@ -16,7 +16,7 @@ import io.odysz.semantics.SemanticObject;
 import io.odysz.transact.sql.parts.Resulving;
 import io.odysz.transact.sql.parts.condition.ExprPart;
 import io.odysz.transact.x.TransException;
-import io.oz.sdoc.DocRes;
+import io.oz.sdoc.DocResHelper;
 
 /**
  * Builds a doc tree from {@link Block}s and inserts it into the nodes table, subtree by subtree.
@@ -85,7 +85,7 @@ public class Outliner {
 	final IdentityHashMap<DocxNode, DocxNode> parents = new IdentityHashMap<DocxNode, DocxNode>();
 
 	/** where the pictures are saved; null: not saved, an image's resId is its part in the docx */
-	DocRes res;
+	DocResHelper res;
 	/** the doc's creator, the owner of the resource folder */
 	String uid;
 	/** path of the docx being imported */
@@ -99,7 +99,7 @@ public class Outliner {
 	 * @param docx path of the docx the blocks are parsed from
 	 * @return this
 	 */
-	public Outliner resources(DocRes res, String uid, String docx) {
+	public Outliner resources(DocResHelper res, String uid, String docx) {
 		this.res = res;
 		this.uid = uid;
 		this.docx = docx;

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 import io.odysz.anson.AnsonField;
 import io.odysz.semantic.ext.AnDatasetResp;
-import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.SDocRef;
 import io.oz.sdoc.puck.PuckNode;
 
 /**
@@ -19,11 +19,11 @@ import io.oz.sdoc.puck.PuckNode;
 public class DoctreeResp extends AnDatasetResp {
 
 	/** the doc's header */
-	public DocxInf doc;
+	public SDocRef doc;
 
 	/** for {@link DoctreeReq.A#docs} */
 	@AnsonField(valType="io.oz.sdoc.DocInf")
-	public ArrayList<DocxInf> docs;
+	public ArrayList<SDocRef> docs;
 
 	/**
 	 * for {@link DoctreeReq.A#commit}, {@link DoctreeReq.A#build}: the state of the doc's html build,
@@ -45,7 +45,7 @@ public class DoctreeResp extends AnDatasetResp {
 		return this;
 	}
 
-	public DoctreeResp doc(DocxInf d) {
+	public DoctreeResp doc(SDocRef d) {
 		this.doc = d;
 		return this;
 	}
@@ -56,7 +56,7 @@ public class DoctreeResp extends AnDatasetResp {
 		return this;
 	}
 
-	public DoctreeResp docs(ArrayList<DocxInf> ds) {
+	public DoctreeResp docs(ArrayList<SDocRef> ds) {
 		this.docs = ds;
 		return this;
 	}

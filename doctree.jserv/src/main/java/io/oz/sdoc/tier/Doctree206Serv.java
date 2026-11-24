@@ -18,16 +18,16 @@ import io.odysz.semantic.jprotocol.IPort;
 import io.odysz.semantic.jserv.ServPort;
 import io.odysz.semantic.jserv.x.SsException;
 import io.odysz.semantics.IUser;
-import io.oz.sdoc.DocRes;
-import io.oz.sdoc.docx.DocxtreeDBHelper;
-import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.DocResHelper;
+import io.oz.sdoc.SDocRef;
+import io.oz.sdoc.docx.RstreeDBHelper;
 import io.oz.sdoc.tier.DoctreeReq.A;
 
 /**
  * The docs' resource files (pictures, videos) for the doc-tree editor and its preview, with
  * break points (http 206): a GET of {@link DoctreeReq.A#res}, as anson64, e.g. an img's src.
  *
- * <p>For editing only: the files are in the creator's temp folder ({@link DocRes}), read by the
+ * <p>For editing only: the files are in the creator's temp folder ({@link DocResHelper}), read by the
  * creator's sessions. A published doc's html links its resources as static, relative files.</p>
  *
  * <p>Independent of jserv's 206 service: doGet() and doHead() are this port's, a Range header
@@ -96,8 +96,8 @@ public class Doctree206Serv extends ServPort<DoctreeReq> {
 				return;
 			}
 
-			DocxtreeDBHelper db = tier.db();
-			DocxInf doc = db == null || db.res == null ? null : db.doc(r.docId);
+			RstreeDBHelper db = tier.db();
+			SDocRef doc = db == null || db.res == null ? null : db.doc(r.docId);
 			if (doc == null) {
 				resp.sendError(HttpServletResponse.SC_NOT_FOUND);
 				return;

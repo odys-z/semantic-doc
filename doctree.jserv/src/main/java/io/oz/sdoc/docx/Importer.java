@@ -14,6 +14,7 @@ import io.odysz.semantic.DATranscxt;
 import io.odysz.semantic.jserv.JRobot;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
+import io.oz.sdoc.SDocRef;
 import io.oz.sdoc.docx.Outliner.Outline;
 
 /**
@@ -32,7 +33,7 @@ import io.oz.sdoc.docx.Outliner.Outline;
  */
 public class Importer {
 
-	final DocxtreeDBHelper db;
+	final RstreeDBHelper db;
 	final String conn;
 //	final DocxSource source;
 	final IBlockParser parser;
@@ -42,7 +43,7 @@ public class Importer {
 	/** last submitted import, for tests */
 	Future<?> last;
 
-	public Importer(String conn, DocxtreeDBHelper db, IBlockParser parser) {
+	public Importer(String conn, RstreeDBHelper db, IBlockParser parser) {
 		this.conn = conn;
 		this.db = db;
 //		this.source = source;
@@ -62,15 +63,17 @@ public class Importer {
 	 * @param originRefId the docx's record id
 	 * @param title null: the docx's Title, else its file name
 	 * @param creator the session's user, the owner of the doc's resource folder; blank: the robot
-	 * @return the header, state {@link DocxInf.State#parsing}
+	 * @return the header, state {@link SDocRef.State#parsing}
 	 * @throws Exception the docx can't be found (nothing created)
 	 */
-	public DocxInf start(String synode, String originRefId, String title, String creator) throws Exception {
+	public SDocRef start(String synode, String originRefId, String title, String creator) throws Exception {
 //		String path = source.path(originRefId);
 //		if (isblank(path) || !Path.of(path).toFile().isFile())
 //			throw new IllegalArgumentException(String.format("Docx not found: %s, %s", originRefId, path));
 
+		// User ExtFile path (semantic.Da) for this
 		String path = null;
+
 		String uid = isblank(creator) ? robot.uid() : creator;
 
 		DATranscxt st = new DATranscxt(conn);
@@ -79,7 +82,7 @@ public class Importer {
 			.nv(docm.synode, synode) // docId: autopk, prefixed with the synode
 			.nv(docm.title, title)
 			.nv(docm.creator, uid)
-			.nv(docm.state, DocxInf.State.parsing)
+			.nv(docm.state, SDocRef.State.parsing)
 			.nv(docm.refId, originRefId)
 			.ins(st.instancontxt(conn, robot));
 		String docId = res.resulve(docm.tbl, docm.pk, -1);
@@ -110,7 +113,7 @@ public class Importer {
 
 			st.update(docm.tbl, robot)
 				.nv(docm.title, o.title)
-				.nv(docm.state, DocxInf.State.ready)
+				.nv(docm.state, SDocRef.State.ready)
 				.whereEq(docm.pk, docId)
 				.u(st.instancontxt(conn, robot));
 		} catch (Throwable e) {
@@ -125,7 +128,7 @@ public class Importer {
 					.whereEq(db.nodem.docId, docId)
 					.d(st.instancontxt(conn, robot));
 				st.update(db.docm.tbl, robot)
-					.nv(db.docm.state, DocxInf.State.failed)
+					.nv(db.docm.state, SDocRef.State.failed)
 					.nv(db.docm.msg, ifnull(e.getMessage(), e.getClass().getName()))
 					.whereEq(db.docm.pk, docId)
 					.u(st.instancontxt(conn, robot));

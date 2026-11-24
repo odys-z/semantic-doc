@@ -25,18 +25,18 @@ import io.odysz.transact.sql.parts.Resulving;
 import io.odysz.transact.sql.parts.condition.Condit;
 import io.odysz.transact.sql.parts.condition.Funcall;
 import io.odysz.transact.x.TransException;
-import io.oz.sdoc.DocRes;
-import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.DocResHelper;
+import io.oz.sdoc.SDocRef;
 
 /**
  * The stories of the working copy (doctree.db): headers in s_stories ({@link S_StoriesMeta}), read as
- * {@link DocxInf} of kind story; pages as blocks in s_storynodes ({@link S_StoryNodesMeta}), read and
+ * {@link SDocRef} of kind story; pages as blocks in s_storynodes ({@link S_StoryNodesMeta}), read and
  * written as a {@link PuckNode} tree. All through semantic.DA, sql built by semantic.transact.
  *
  * <ul>
  * <li>{@link #save(String, String, PuckNode, IUser)}: a new story, or the page replacing its blocks;</li>
  * <li>{@link #commit(String, MediaSource, IUser)}: the media's pids mapped to their io_oz_synuid, the
- *     committed page written to {@link DocRes#storypage(String, String)} (the story's htmlUri);</li>
+ *     committed page written to {@link DocResHelper#storypage(String, String)} (the story's htmlUri);</li>
  * <li>{@link #mediaPaths(String, MediaSource)}: the committed page's media, synuid → file, the map
  *     html-service keeps of a published story.</li>
  * </ul>
@@ -49,13 +49,13 @@ public class StoryPages {
 
 	final String conn;
 	final DATranscxt st;
-	final DocRes res;
+	final DocResHelper res;
 	final IUser robot;
 
 	public final S_StoriesMeta storym;
 	public final S_StoryNodesMeta nodem;
 
-	public StoryPages(String conn, DATranscxt st, DocRes res, IUser robot,
+	public StoryPages(String conn, DATranscxt st, DocResHelper res, IUser robot,
 			S_StoriesMeta storym, S_StoryNodesMeta nodem) {
 		this.conn = conn;
 		this.st = st;
@@ -66,7 +66,7 @@ public class StoryPages {
 	}
 
 	/** The story's header, null if the id isn't a story's (stories' ids have an "S" part, docs' don't). */
-	public DocxInf story(String storyId) throws TransException, SQLException {
+	public SDocRef story(String storyId) throws TransException, SQLException {
 		if (isblank(storyId))
 			return null;
 		AnResultset rs = (AnResultset) st.select(storym.tbl)
@@ -77,7 +77,7 @@ public class StoryPages {
 	}
 
 	/** Headers of all stories. */
-	public ArrayList<DocxInf> stories() throws TransException, SQLException {
+	public ArrayList<SDocRef> stories() throws TransException, SQLException {
 		return stories((AnResultset) st.select(storym.tbl)
 				.orderby(storym.pk)
 				.rs(st.instancontxt(conn, robot))
@@ -85,7 +85,7 @@ public class StoryPages {
 	}
 
 	/** Stories published at html-service, i. e. with a pubpath. */
-	public ArrayList<DocxInf> published() throws TransException, SQLException {
+	public ArrayList<SDocRef> published() throws TransException, SQLException {
 		return stories((AnResultset) st.select(storym.tbl)
 				.where(new Condit(op.isNotnull, storym.pubpath, "null"))
 				.orderby(storym.pk)
@@ -93,16 +93,16 @@ public class StoryPages {
 				.rs(0));
 	}
 
-	ArrayList<DocxInf> stories(AnResultset rs) throws SQLException {
-		ArrayList<DocxInf> docs = new ArrayList<DocxInf>();
+	ArrayList<SDocRef> stories(AnResultset rs) throws SQLException {
+		ArrayList<SDocRef> docs = new ArrayList<SDocRef>();
 		while (rs.next())
 			docs.add(story(rs));
 		return docs;
 	}
 
-	DocxInf story(AnResultset rs) throws SQLException {
-		DocxInf d = new DocxInf(rs.getString(storym.pk), rs.getString(storym.title), rs.getString(storym.creator));
-		d.kind     = DocxInf.Kind.story;
+	SDocRef story(AnResultset rs) throws SQLException {
+		SDocRef d = new SDocRef(rs.getString(storym.pk), rs.getString(storym.title), rs.getString(storym.creator));
+		d.mime     = SDocRef.Kind.story;
 		d.subtitle = rs.getString(storym.subtitle);
 		d.template = rs.getString(storym.template);
 		d.cover    = rs.getString(storym.cover);
@@ -112,7 +112,7 @@ public class StoryPages {
 		d.pubpath  = rs.getString(storym.pubpath);
 		d.dirty    = rs.getInt(storym.dirty, 0) != 0;
 		d.committedAt = rs.getString(storym.committedAt);
-		d.state    = DocxInf.State.ready;
+		d.state    = SDocRef.State.ready;
 		return d;
 	}
 
@@ -121,7 +121,7 @@ public class StoryPages {
 	 * @return null if there's no such story
 	 */
 	public PuckNode page(String storyId) throws Exception {
-		DocxInf d = story(storyId);
+		SDocRef d = story(storyId);
 		if (d == null)
 			return null;
 
@@ -158,7 +158,7 @@ public class StoryPages {
 	 * @param page the page root, its children the blocks
 	 * @return the story's header
 	 */
-	public DocxInf save(String synode, String storyId, PuckNode page, IUser usr) throws Exception {
+	public SDocRef save(String synode, String storyId, PuckNode page, IUser usr) throws Exception {
 		if (page == null)
 			throw new SemanticException("Saving story %s: no page.", storyId);
 
@@ -226,15 +226,15 @@ public class StoryPages {
 	/**
 	 * Commit a story: every media's pid (the album node's id) mapped to the record's io_oz_synuid
 	 * (node.synuid), the blocks saved so, and the committed page written to
-	 * {@link DocRes#storypage(String, String)}, the story's htmlUri; the cover is the first hero's media.
+	 * {@link DocResHelper#storypage(String, String)}, the story's htmlUri; the cover is the first hero's media.
 	 *
 	 * @param media where the media are, see {@link MediaSource#extfiles(String, String)}
 	 * @return the story's header
 	 * @throws SemanticException a media not found, listing them
 	 */
-	public DocxInf commit(String storyId, IUser usr) throws Exception {
+	public SDocRef commit(String storyId, IUser usr) throws Exception {
 
-		DocxInf d = story(storyId);
+		SDocRef d = story(storyId);
 		PuckNode page = page(storyId);
 		if (d == null || page == null)
 			throw new SemanticException("Can't find story %s.", storyId);
@@ -284,7 +284,7 @@ public class StoryPages {
 	 */
 	public HashMap<String, String> mediaPaths(String storyId) throws Exception {
 		HashMap<String, String> paths = new HashMap<String, String>();
-		DocxInf d = story(storyId);
+		SDocRef d = story(storyId);
 
 		PuckNode page = (PuckNode) Anson.fromJson(new String(
 				Files.readAllBytes(new File(d.htmlUri).toPath()), StandardCharsets.UTF_8));
@@ -300,7 +300,7 @@ public class StoryPages {
 	}
 
 	/** Keep the story's url path at html-service; null: no longer published. */
-	public DocxInf pubpath(String storyId, String pubpath, IUser usr) throws TransException, SQLException {
+	public SDocRef pubpath(String storyId, String pubpath, IUser usr) throws TransException, SQLException {
 		st.update(storym.tbl, usr)
 			.nv(storym.pubpath, pubpath)
 			.whereEq(storym.pk, storyId)

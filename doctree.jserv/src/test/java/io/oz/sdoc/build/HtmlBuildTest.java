@@ -24,11 +24,11 @@ import io.odysz.semantic.jprotocol.AnsonMsg.Port;
 import io.odysz.semantic.jprotocol.AnsonResp;
 import io.odysz.semantic.jserv.JRobot;
 import io.odysz.semantics.IUser;
-import io.oz.sdoc.docx.DocxtreeDBHelper;
-import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.docx.RstreeDBHelper;
+import io.oz.sdoc.htmlsrv.HtmlPubReq;
+import io.oz.sdoc.htmlsrv.HtmlPubResp;
+import io.oz.sdoc.SDocRef;
 import io.oz.sdoc.docx.DocxWalker;
-import io.oz.sdoc.publish.PuckPubReq;
-import io.oz.sdoc.publish.PuckPubResp;
 import io.oz.sdoc.puck.ResPublisher;
 import io.oz.sdoc.rst.HtmlBuilder;
 import io.oz.sdoc.rst.RstFile;
@@ -58,10 +58,10 @@ class HtmlBuildTest {
 	/** Html-service: gives a first published doc the path "pub/x7k2p0". */
 	static final ResPublisher htmlsrv = new ResPublisher("http://127.0.0.1:8900", Port.echo) {
 		@Override
-		protected PuckPubResp post(String a, DocxInf doc) {
+		protected HtmlPubResp post(String a, SDocRef doc) {
 			if (doc.pubpath == null)
 				doc.pubpath = "pub/x7k2p0";
-			return new PuckPubResp().respubs(new PuckPubReq().respubs(doc).respubs);
+			return new HtmlPubResp().respubs(new HtmlPubReq().respubs(doc).respubs);
 		}
 	};
 
@@ -77,14 +77,14 @@ class HtmlBuildTest {
 	static void init() throws Exception {
 		assumeTrue(hasSphinx(), "sphinx-build is not installed");
 
-		new File("src/test/res/rbuild", DocxtreeDBHelper.dbfile).delete();
+		new File("src/test/res/rbuild", RstreeDBHelper.dbfile).delete();
 
 		AnsonMsg.understandPorts(Port.echo);
 		Configs.init(webinf);
 		Connects.init(webinf);
-		String conn = DocxtreeDBHelper.connect(webinf, "../rbuild", "B");
+		String conn = RstreeDBHelper.connect(webinf, "../rbuild", "B");
 		DatasetCfg.init(webinf);
-		DocxtreeDBHelper.setup(conn, true);
+		RstreeDBHelper.setup(conn, true);
 
 		builder = new HtmlBuilder(template);
 		tier = new DoctreeTier(Port.echo)
@@ -95,7 +95,7 @@ class HtmlBuildTest {
 
 		DoctreeReq imp = new DoctreeReq("/sdoc");
 		imp.srcId = "media";
-		imp.doc = new DocxInf(null, null, null);
+		imp.doc = new SDocRef(null, null, null);
 		imp.a(DoctreeReq.A.importDocx);
 		docId = ((DoctreeResp) tier.handle(imp, ody).body(0)).doc.docId;
 		tier.importer().await();
@@ -147,7 +147,7 @@ class HtmlBuildTest {
 		assertTrue(entries.contains("_static/theme-roles.css"));
 
 		// and it can be published
-		DocxInf doc = resp(tier.handle(req(DoctreeReq.A.publish), ody)).doc;
+		SDocRef doc = resp(tier.handle(req(DoctreeReq.A.publish), ody)).doc;
 		assertEquals("pub/x7k2p0", doc.pubpath);
 		assertNotNull(doc.htmlUri);
 	}

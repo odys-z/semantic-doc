@@ -1,24 +1,26 @@
-package io.oz.sdoc.docx;
+package io.oz.sdoc;
 
-import io.odysz.anson.Anson;
+import io.odysz.semantic.meta.DocRef;
 
 /**
+ * This is a helper. The data type is now DocRef.
+ * 
  * Document header record, the "doc" part of semantic-doc's doc-a.json / doc-b.json.
  *
  * @author ody
  */
-public class DocxInf extends Anson {
+public class SDocRef extends DocRef {
 
-	/** Values of {@link DocxInf#state}. */
+	/** Values of {@link SDocRef#state}. */
 	public static class State {
 		/** importing: the header is there, nodes are being parsed */
 		public static final String parsing = "parsing";
 		public static final String ready = "ready";
-		/** importing failed, see {@link DocxInf#msg} */
+		/** importing failed, see {@link SDocRef#msg} */
 		public static final String failed = "failed";
 	}
 
-	public String docId;
+//	public String docId;
 	public String title;
 	public String creator;
 
@@ -26,8 +28,8 @@ public class DocxInf extends Anson {
 	public String state;
 	/** why the import failed */
 	public String msg;
-	/** the source docx, its record id in the doc table (h_photos); null if created in the editor */
-	public String srcId;
+//	/** the source docx, its record id in the doc table (h_photos); null if created in the editor */
+//	public String srcId;
 
 	/**
 	 * The built html package (RST -&gt; html, zipped): a local file path, null if never built.
@@ -61,7 +63,7 @@ public class DocxInf extends Anson {
 	/** time of the last commit, null if never committed */
 	public String committedAt;
 
-	/** Values of {@link DocxInf#kind}, the same as semantic-doc's TS DocInf.Kind. */
+	/** Values of {@link SDocRef#kind}, the same as semantic-doc's TS DocInf.Kind. */
 	public static class Kind {
 		/** a doc tree, paragraphs in RST, published as a Sphinx html package */
 		public static final String doctree = "doctree";
@@ -74,7 +76,7 @@ public class DocxInf extends Anson {
 	 * (io.oz.sdoc.story.S_StoriesMeta); null: a doc tree, of s_docs.
 	 * @since 0.1.5
 	 */
-	public String kind;
+	public String mime;
 
 	/** a story's subtitle; null for doc trees */
 	public String subtitle;
@@ -82,9 +84,9 @@ public class DocxInf extends Anson {
 	/** a story's cover media, its io_oz_synuid, set when committed; null for doc trees */
 	public String cover;
 
-	public DocxInf() { }
+	public SDocRef() { }
 
-	public DocxInf(String docId, String title, String creator) {
+	public SDocRef(String docId, String title, String creator) {
 		this.docId = docId;
 		this.title = title;
 		this.creator = creator;

@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 
 import io.odysz.anson.Anson;
 import io.odysz.semantic.ext.TreeModify;
-import io.oz.sdoc.docx.DocxInf;
 import io.oz.sdoc.docx.DocxNode;
 import io.oz.sdoc.tier.DoctreeReq;
 import io.oz.sdoc.tier.DoctreeResp;
@@ -22,7 +21,7 @@ class DoctreeTypesTest {
 
 	@Test
 	void respRoundTrip() throws Exception {
-		DocxInf doc = new DocxInf("doc-a", "Annual Report 2026", "ody");
+		SDocRef doc = new SDocRef("doc-a", "Annual Report 2026", "ody");
 		doc.dirty = true;
 		DoctreeResp resp = new DoctreeResp().doc(doc);
 		resp.root("a1").rejected(TreeModify.Rejected.noop).newId("a1.2");
@@ -39,9 +38,9 @@ class DoctreeTypesTest {
 
 	@Test
 	void docsRoundTrip() throws Exception {
-		ArrayList<DocxInf> docs = new ArrayList<DocxInf>();
-		docs.add(new DocxInf("doc-a", "Annual Report 2026", "ody"));
-		docs.add(new DocxInf("doc-b", "Glossary", "ody"));
+		ArrayList<SDocRef> docs = new ArrayList<SDocRef>();
+		docs.add(new SDocRef("doc-a", "Annual Report 2026", "ody"));
+		docs.add(new SDocRef("doc-b", "Glossary", "ody"));
 
 		DoctreeResp back = (DoctreeResp) Anson.fromJson(new DoctreeResp().docs(docs).toBlock());
 

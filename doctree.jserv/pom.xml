@@ -35,9 +35,13 @@
 
   <dependencies>
     <dependency>
+      <!-- ResPathsTier and ResIndex (io.oz.sdoc.tier) are html-service's servlets, ServPort6 (jakarta, ee10);
+           html-service provides the container. Provided, so a synode (ServPort, javax, ee8) doesn't get
+           the ee10 jars: those two classes are only loaded by html-service. -->
       <groupId>org.eclipse.jetty.ee10</groupId>
       <artifactId>jetty-ee10-servlet</artifactId>
       <version>${jetty.version}</version>
+      <scope>provided</scope>
     </dependency>
 
   	<dependency>
@@ -89,7 +93,7 @@
     </dependency>
 
    	<dependency>
-		<!-- DoctreeTier is a servlet; the container (Jetty in the synodes) provides the api -->
+		<!-- DoctreeTier is a servlet, ServPort (javax, ee8); the container (Jetty in the synodes) provides the api -->
 		<groupId>javax.servlet</groupId>
 		<artifactId>javax.servlet-api</artifactId>
 		<version>3.1.0</version>
