@@ -1,4 +1,4 @@
-package io.oz.sdoc;
+package io.oz.sdoc.docx;
 
 import java.sql.SQLException;
 import java.util.Set;
@@ -14,7 +14,7 @@ import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.x.TransException;
 
 /**
- * Table s_docnodes: nodes ({@link DocNode}) of all docs in the working copy.
+ * Table s_docnodes: nodes ({@link DocxNode}) of all docs in the working copy.
  * DDL built from the column names, as jserv-album's PhotoMeta does.
  *
  * <p>Semantics (semantics-doctree.xml): {@link #pk} is an auto key (autopk, oz_autoseq, Radix32 of
@@ -33,14 +33,14 @@ import io.odysz.transact.x.TransException;
 public class S_DocNodeMeta extends SemanticTableMeta implements ITreeMeta {
 
 	/** node kinds that may have children */
-	static final Set<String> holders = Set.of(DocNode.Kind.doc, DocNode.Kind.section);
+	static final Set<String> holders = Set.of(DocxNode.Kind.doc, DocxNode.Kind.section);
 
 	public final String docId;
 	public final String parentId;
 	/** sibling sort */
 	public final String sort;
 	public final String fullpath;
-	/** {@link DocNode.Kind} */
+	/** {@link DocxNode.Kind} */
 	public final String kind;
 	/** Tiptap json, "type" stored as "contype" */
 	public final String tipjson;

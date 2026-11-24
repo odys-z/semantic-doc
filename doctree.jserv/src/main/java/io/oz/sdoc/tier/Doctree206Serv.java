@@ -18,9 +18,9 @@ import io.odysz.semantic.jprotocol.IPort;
 import io.odysz.semantic.jserv.ServPort;
 import io.odysz.semantic.jserv.x.SsException;
 import io.odysz.semantics.IUser;
-import io.oz.sdoc.DocInf;
 import io.oz.sdoc.DocRes;
-import io.oz.sdoc.DoctreeDBHelper;
+import io.oz.sdoc.docx.DocxtreeDBHelper;
+import io.oz.sdoc.docx.DocxInf;
 import io.oz.sdoc.tier.DoctreeReq.A;
 
 /**
@@ -96,8 +96,8 @@ public class Doctree206Serv extends ServPort<DoctreeReq> {
 				return;
 			}
 
-			DoctreeDBHelper db = tier.db();
-			DocInf doc = db == null || db.res == null ? null : db.doc(r.docId);
+			DocxtreeDBHelper db = tier.db();
+			DocxInf doc = db == null || db.res == null ? null : db.doc(r.docId);
 			if (doc == null) {
 				resp.sendError(HttpServletResponse.SC_NOT_FOUND);
 				return;

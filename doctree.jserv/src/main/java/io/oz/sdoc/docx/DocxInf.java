@@ -1,4 +1,4 @@
-package io.oz.sdoc;
+package io.oz.sdoc.docx;
 
 import io.odysz.anson.Anson;
 
@@ -7,14 +7,14 @@ import io.odysz.anson.Anson;
  *
  * @author ody
  */
-public class DocInf extends Anson {
+public class DocxInf extends Anson {
 
-	/** Values of {@link DocInf#state}. */
+	/** Values of {@link DocxInf#state}. */
 	public static class State {
 		/** importing: the header is there, nodes are being parsed */
 		public static final String parsing = "parsing";
 		public static final String ready = "ready";
-		/** importing failed, see {@link DocInf#msg} */
+		/** importing failed, see {@link DocxInf#msg} */
 		public static final String failed = "failed";
 	}
 
@@ -61,7 +61,7 @@ public class DocInf extends Anson {
 	/** time of the last commit, null if never committed */
 	public String committedAt;
 
-	/** Values of {@link DocInf#kind}, the same as semantic-doc's TS DocInf.Kind. */
+	/** Values of {@link DocxInf#kind}, the same as semantic-doc's TS DocInf.Kind. */
 	public static class Kind {
 		/** a doc tree, paragraphs in RST, published as a Sphinx html package */
 		public static final String doctree = "doctree";
@@ -70,14 +70,21 @@ public class DocInf extends Anson {
 	}
 
 	/**
-	 * What the doc's content is, see {@link Kind}; null: a doc tree.
-	 * STUB (media story, WP3): s_docs.kind, to be added by DoctreeDBUpgrade (S_DocsMeta).
+	 * What the doc's content is, see {@link Kind}: {@link Kind#story} for the rows of s_stories
+	 * (io.oz.sdoc.story.S_StoriesMeta); null: a doc tree, of s_docs.
+	 * @since 0.1.5
 	 */
 	public String kind;
 
-	public DocInf() { }
+	/** a story's subtitle; null for doc trees */
+	public String subtitle;
 
-	public DocInf(String docId, String title, String creator) {
+	/** a story's cover media, its io_oz_synuid, set when committed; null for doc trees */
+	public String cover;
+
+	public DocxInf() { }
+
+	public DocxInf(String docId, String title, String creator) {
 		this.docId = docId;
 		this.title = title;
 		this.creator = creator;

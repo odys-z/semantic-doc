@@ -20,6 +20,7 @@ import {
 	AnDatasetReq, AnDatasetResp, Anson, Protocol, TreeModify, StreeTier,
 	type AnTreeNode, type AnsonMsg, type AnsonResp, type SessionClient,
 } from '@anclient/semantier';
+import type { PuckNode } from '../storytree/templates';
 
 /** io.oz.sdoc.DocInf: doc header */
 export class DocInf extends Anson {
@@ -52,11 +53,12 @@ export class DocInf extends Anson {
 	dirty?: boolean;
 	/** time of the last commit, null if never committed */
 	committedAt?: string | null;
-	/**
-	 * What the doc's content is, see {@link DocInf.Kind}; null: a doc tree (RST).
-	 * STUB (media story, WP3): s_docs.kind, not yet in the table.
-	 */
+	/** What the doc's content is, see {@link DocInf.Kind}: story for a story (s_stories); null: a doc tree (s_docs). */
 	kind?: string | null;
+	/** a story's subtitle */
+	subtitle?: string | null;
+	/** a story's cover media, its io_oz_synuid, set when committed */
+	cover?: string | null;
 
 	/** values of {@link DocInf.kind} */
 	static Kind = {
@@ -192,9 +194,11 @@ export class DoctreeReq extends AnDatasetReq {
 		importDocx: 'c/import',
 		/** a doc's resource file, res: a GET of Doctree206Serv (doctree206.serv), e.g. an img's src */
 		res: 'r/res',
-		/** STUB (media story): load a story's page, the Puck data → doc, page */
+		/** the stories' headers (kind story) → docs */
+		stories: 'r/stories',
+		/** load a story's page → doc, page */
 		page: 'r/page',
-		/** STUB (media story): save a story's page, page; the synode updates the story's media (s_docmedia) → doc */
+		/** save a story's page, page; docId absent: a new story → doc */
 		savePage: 'u/page',
 	} as const;
 
@@ -209,10 +213,10 @@ export class DoctreeReq extends AnDatasetReq {
 	res?: string;
 	/** for commit: the doc as RST files; absent: committed without a html build */
 	rstFiles?: RstFile[];
-	/** for savePage: the story's page, json of semantic-doc/story StoryData */
-	page?: string;
+	/** for savePage: the story's page, fromPuck()'s, "type" on the root (io.oz.sdoc.story.PuckNode) */
+	page?: PuckNode;
 
-	constructor(uri: string, a: Doctree_A, opts: { docId?: string, doc?: DocInf, srcId?: string, node?: DocNode, mod?: TreeModify, res?: string, rstFiles?: RstFile[], page?: string } = {}) {
+	constructor(uri: string, a: Doctree_A, opts: { docId?: string, doc?: DocInf, srcId?: string, node?: DocNode, mod?: TreeModify, res?: string, rstFiles?: RstFile[], page?: PuckNode } = {}) {
 		super({ uri, type: DoctreeReq.__type__ });
 		this.a = a; // after super: AnDatasetReq's TA() is for its own A
 		Object.assign(this, opts);
@@ -237,8 +241,8 @@ export class DoctreeResp extends AnDatasetResp {
 	build?: string | null;
 	/** output of the build tool: warnings, or why it failed */
 	buildlog?: string | null;
-	/** r/page: the story's page, json of semantic-doc/story StoryData; null: a new story */
-	page?: string | null;
+	/** r/page: the story's page, as saved (toPuck() for Puck) */
+	page?: PuckNode | null;
 
 	constructor(json: any) {
 		super({ ...json, forest: json.forest, type: DoctreeResp.__type__ });
@@ -348,13 +352,21 @@ export class StreeDoctier extends StreeTier {
 		this.send(DoctreeReq.A.unpublish, { docId }, ok, err);
 	}
 
-	/** STUB (media story) r/page: the story's page → resp.page */
+	/** r/stories: the stories' headers → resp.docs */
+	stories(ok: OnOk, err?: OnErr) {
+		this.send(DoctreeReq.A.stories, {}, ok, err);
+	}
+
+	/** r/page: the story's page → resp.page */
 	page(docId: string, ok: OnOk, err?: OnErr) {
 		this.send(DoctreeReq.A.page, { docId }, ok, err);
 	}
 
-	/** STUB (media story) u/page: save the story's page (json of StoryData) */
-	savePage(docId: string, page: string, ok: OnOk, err?: OnErr) {
+	/**
+	 * u/page: save the story's page, fromPuck()'s → resp.doc
+	 * @param docId undefined: a new story, its id in resp.doc
+	 */
+	savePage(docId: string | undefined, page: PuckNode, ok: OnOk, err?: OnErr) {
 		this.send(DoctreeReq.A.savePage, { docId, page }, ok, err);
 	}
 

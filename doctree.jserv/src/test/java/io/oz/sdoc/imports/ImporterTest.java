@@ -30,10 +30,11 @@ import io.odysz.semantic.ext.TreeModify;
 import io.odysz.semantic.jserv.JRobot;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.semantics.IUser;
-import io.oz.sdoc.DocInf;
-import io.oz.sdoc.DocNode;
-import io.oz.sdoc.S_DocNodeMeta;
-import io.oz.sdoc.DoctreeDBHelper;
+import io.oz.sdoc.docx.Block;
+import io.oz.sdoc.docx.DocxtreeDBHelper;
+import io.oz.sdoc.docx.S_DocNodeMeta;
+import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.docx.DocxNode;
 import io.oz.sdoc.docx.DocxWalker;
 import io.oz.sdoc.tier.DoctreeReq;
 import io.oz.sdoc.tier.DoctreeResp;
@@ -43,26 +44,26 @@ import io.oz.sdoc.tier.DoctreeTier;
  * c/import through the tier, on a fresh src/test/res/doctree.db, with the tricky blocks as the parser.
  */
 class ImporterTest {
-	/** connected by {@link DoctreeDBHelper#connect(String, String, String)}, volume: src/test/res */
+	/** connected by {@link DocxtreeDBHelper#connect(String, String, String)}, volume: src/test/res */
 	static String conn;
 	static final String webinf = "src/test/res/WEB-INF";
 	static final String docx = "src/test/res/tricky.docx";
 
 	static DoctreeTier tier;
 	/** set up once, with fresh tables; don't set up again, the docs imported by the tests would be dropped */
-	static DoctreeDBHelper db;
+	static DocxtreeDBHelper db;
 	static final JRobot robot = new JRobot();
 
 	@BeforeAll
 	static void init() throws Exception {
 		// a fresh db: force-drop doesn't reach oz_autoseq (semantic-DA's), whose sequence would go on
-		new File("src/test/res", DoctreeDBHelper.dbfile).delete();
+		new File("src/test/res", DocxtreeDBHelper.dbfile).delete();
 		Configs.init(webinf);
 		Connects.init(webinf);
-		conn = DoctreeDBHelper.connect(webinf, "..", "T");
+		conn = DocxtreeDBHelper.connect(webinf, "..", "T");
 		DatasetCfg.init(webinf);
 
-		db = DoctreeDBHelper.setup(conn, true);
+		db = DocxtreeDBHelper.setup(conn, true);
 
 		// any file: the parser is the fake one
 		tier = new DoctreeTier(Port.echo)
@@ -76,10 +77,10 @@ class ImporterTest {
 		AnsonMsg<? extends AnsonResp> msg = tier.handle(importReq("doc-a"));
 
 		assertEquals(MsgCode.ok, msg.code(), msg.body(0).msg());
-		DocInf doc = ((DoctreeResp) msg.body(0)).doc;
+		DocxInf doc = ((DoctreeResp) msg.body(0)).doc;
 		String docId = doc.docId;
 		assertEquals("T.0001", docId); // synode + autopk, Radix32 (file-sys = windows), id-len 4
-		assertEquals(DocInf.State.parsing, doc.state);
+		assertEquals(DocxInf.State.parsing, doc.state);
 		assertEquals("doc-a", doc.srcId);
 
 		tier.importer().await();
@@ -88,7 +89,7 @@ class ImporterTest {
 		q.a(DoctreeReq.A.docs);
 		DoctreeResp docs = (DoctreeResp) tier.handle(q).body(0);
 		doc = docs.docs.get(0);
-		assertEquals(DocInf.State.ready, doc.state);
+		assertEquals(DocxInf.State.ready, doc.state);
 		assertEquals("Annual Report", doc.title);
 
 		// the nids: auto keys, in the order of generation, which is the tree order here
@@ -102,7 +103,7 @@ class ImporterTest {
 		String root = k[0];
 
 		// a second doc: a new id, new nids; a subtree selected by fullpath prefix stays in its doc
-		DocInf doc2 = ((DoctreeResp) tier.handle(importReq("doc-a")).body(0)).doc;
+		DocxInf doc2 = ((DoctreeResp) tier.handle(importReq("doc-a")).body(0)).doc;
 		tier.importer().await();
 		assertEquals("T.0002", doc2.docId);
 		String[] k2 = nids(doc2.docId);
@@ -149,7 +150,7 @@ class ImporterTest {
 	 */
 	@Test
 	void editTree() throws Exception {
-		DocInf doc = ((DoctreeResp) tier.handle(importReq("doc-a")).body(0)).doc;
+		DocxInf doc = ((DoctreeResp) tier.handle(importReq("doc-a")).body(0)).doc;
 		tier.importer().await();
 		String d = doc.docId;
 		String[] k = nids(d);
@@ -194,7 +195,7 @@ class ImporterTest {
 		AnResultset fp0 = Connects.select(conn, String.format(
 				"select fullpath from s_docnodes where nid = '%s'", n6));
 		fp0.next();
-		DoctreeReq u = new DoctreeReq("/sdoc").docId(d).node(new DocNode(d, n6, DocNode.Kind.p)
+		DoctreeReq u = new DoctreeReq("/sdoc").docId(d).node(new DocxNode(d, n6, DocxNode.Kind.p)
 				.tipjson("{\"contype\":\"doc\"}").rstext("{\"body\":\"x\"}", 1));
 		u.a(DoctreeReq.A.update);
 		AnsonMsg<? extends AnsonResp> m = tier.handle(u);
@@ -214,7 +215,7 @@ class ImporterTest {
 		// c/commit
 		DoctreeReq c = new DoctreeReq("/sdoc").docId(d);
 		c.a(DoctreeReq.A.commit);
-		DocInf committed = ((DoctreeResp) tier.handle(c).body(0)).doc;
+		DocxInf committed = ((DoctreeResp) tier.handle(c).body(0)).doc;
 		assertEquals(false, committed.dirty);
 		assertTrue(committed.committedAt != null);
 	}
@@ -260,11 +261,11 @@ class ImporterTest {
 
 		expectTrace("parseFails", "Exception: not a docx");
 
-		DocInf doc = ((DoctreeResp) t.handle(importReq("x")).body(0)).doc;
+		DocxInf doc = ((DoctreeResp) t.handle(importReq("x")).body(0)).doc;
 		t.importer().await();
 
 		doc = db.doc(doc.docId);
-		assertEquals(DocInf.State.failed, doc.state);
+		assertEquals(DocxInf.State.failed, doc.state);
 		assertEquals("not a docx", doc.msg);
 	}
 
@@ -283,10 +284,10 @@ class ImporterTest {
 
 		expectTrace("failsHalfway", "NullPointerException");
 
-		DocInf doc = ((DoctreeResp) t.handle(importReq("x")).body(0)).doc;
+		DocxInf doc = ((DoctreeResp) t.handle(importReq("x")).body(0)).doc;
 		t.importer().await();
 
-		assertEquals(DocInf.State.failed, db.doc(doc.docId).state);
+		assertEquals(DocxInf.State.failed, db.doc(doc.docId).state);
 		assertEquals(0, db.nodes(doc.docId).total());
 	}
 
@@ -305,10 +306,10 @@ class ImporterTest {
 			@Override public String uid() { return "ody"; }
 		};
 
-		DocInf doc = ((DoctreeResp) t.handle(importReq("media"), ody).body(0)).doc;
+		DocxInf doc = ((DoctreeResp) t.handle(importReq("media"), ody).body(0)).doc;
 		t.importer().await();
 		String d = doc.docId;
-		assertEquals(DocInf.State.ready, db.doc(d).state, db.doc(d).msg);
+		assertEquals(DocxInf.State.ready, db.doc(d).state, db.doc(d).msg);
 		assertEquals("ody", db.doc(d).creator);
 
 		// the picture and the Excel object, the 11th and 12th nodes in tree order, under 第二章, the 9th
@@ -319,10 +320,10 @@ class ImporterTest {
 				m.parentId, m.kind, m.ptext, m.resId, m.tbl, m.pk, k[11], k[12], m.fullpath));
 		rs.next();
 		assertEquals(k[9], rs.getString(m.parentId)); // 第二章
-		assertEquals(DocNode.Kind.image, rs.getString(m.kind));
+		assertEquals(DocxNode.Kind.image, rs.getString(m.kind));
 		assertEquals("image1.png", rs.getString(m.resId));
 		rs.next();
-		assertEquals(DocNode.Kind.p, rs.getString(m.kind));
+		assertEquals(DocxNode.Kind.p, rs.getString(m.kind));
 		assertEquals("[excel object is ignored in semantic-doc 0.1.1]", rs.getString(m.ptext));
 
 		File png = db.res.file("ody", d, "image1.png");
@@ -340,7 +341,7 @@ class ImporterTest {
 		expectTrace("importMedia", "IOException: No part word/media/none.png");
 		doc = ((DoctreeResp) f.handle(importReq("media"), ody).body(0)).doc;
 		f.importer().await();
-		assertEquals(DocInf.State.failed, db.doc(doc.docId).state);
+		assertEquals(DocxInf.State.failed, db.doc(doc.docId).state);
 		assertEquals(0, db.nodes(doc.docId).total());
 		assertEquals(false, db.res.dir("ody", doc.docId).exists());
 	}
@@ -355,7 +356,7 @@ class ImporterTest {
 		dbf.delete();
 		Connects.addSqlite("doctree.stale", dbf.getAbsolutePath(), "semantics-doctree-stale.xml");
 
-		SemanticException e = assertThrows(SemanticException.class, () -> DoctreeDBHelper.setup("doctree.stale", true));
+		SemanticException e = assertThrows(SemanticException.class, () -> DocxtreeDBHelper.setup("doctree.stale", true));
 		assertTrue(e.getMessage().contains("expecting <smtc>fullpath2</smtc>"), e.getMessage());
 		assertTrue(e.getMessage().contains("WEB-INF/semantics-doctree.xml"), e.getMessage());
 	}
@@ -391,7 +392,7 @@ class ImporterTest {
 	static DoctreeReq importReq(String srcId) {
 		DoctreeReq req = new DoctreeReq("/sdoc");
 		req.srcId = srcId;
-		req.doc = new DocInf(null, null, null);
+		req.doc = new DocxInf(null, null, null);
 		req.a(DoctreeReq.A.importDocx);
 		return req;
 	}

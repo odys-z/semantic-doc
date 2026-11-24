@@ -33,8 +33,8 @@ import io.odysz.semantic.jserv.x.SsException;
 import io.odysz.semantic.jsession.ISessionVerifier;
 import io.odysz.semantic.tier.docs.Docs206;
 import io.odysz.semantics.IUser;
-import io.oz.sdoc.DocInf;
-import io.oz.sdoc.DoctreeDBHelper;
+import io.oz.sdoc.docx.DocxtreeDBHelper;
+import io.oz.sdoc.docx.DocxInf;
 import io.oz.sdoc.docx.DocxWalker;
 
 /**
@@ -53,13 +53,13 @@ class Doctree206ServTest {
 
 	@BeforeAll
 	static void init() throws Exception {
-		new File("src/test/res/r206", DoctreeDBHelper.dbfile).delete();
+		new File("src/test/res/r206", DocxtreeDBHelper.dbfile).delete();
 		AnsonMsg.understandPorts(Port.echo); // the app's ports, for parsing anson64
 		Configs.init(webinf);
 		Connects.init(webinf);
-		String conn = DoctreeDBHelper.connect(webinf, "../r206", "R");
+		String conn = DocxtreeDBHelper.connect(webinf, "../r206", "R");
 		DatasetCfg.init(webinf);
-		DoctreeDBHelper.setup(conn, true);
+		DocxtreeDBHelper.setup(conn, true);
 
 		sessions.put("ss-ody", user("ody"));
 		sessions.put("ss-zsu", user("zsu"));
@@ -69,7 +69,7 @@ class Doctree206ServTest {
 				.importer((srcId) -> "src/test/res/media.docx", DocxWalker::blocks);
 		DoctreeReq imp = new DoctreeReq("/sdoc");
 		imp.srcId = "media";
-		imp.doc = new DocInf(null, null, null);
+		imp.doc = new DocxInf(null, null, null);
 		imp.a(DoctreeReq.A.importDocx);
 		docId = ((DoctreeResp) tier.handle(imp, sessions.get("ss-ody")).body(0)).doc.docId;
 		tier.importer().await();

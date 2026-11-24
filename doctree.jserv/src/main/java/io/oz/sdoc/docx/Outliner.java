@@ -1,4 +1,4 @@
-package io.oz.sdoc.imports;
+package io.oz.sdoc.docx;
 
 import static io.odysz.common.LangExt.isblank;
 
@@ -16,9 +16,7 @@ import io.odysz.semantics.SemanticObject;
 import io.odysz.transact.sql.parts.Resulving;
 import io.odysz.transact.sql.parts.condition.ExprPart;
 import io.odysz.transact.x.TransException;
-import io.oz.sdoc.DocNode;
 import io.oz.sdoc.DocRes;
-import io.oz.sdoc.S_DocNodeMeta;
 
 /**
  * Builds a doc tree from {@link Block}s and inserts it into the nodes table, subtree by subtree.
@@ -43,7 +41,7 @@ import io.oz.sdoc.S_DocNodeMeta;
  * <li>The first Title-styled block (outline -1) is the doc's title, not a node.</li>
  * <li>Empty paragraphs (spacing) are dropped; empty headings are kept.</li>
  * <li>A numbering label is put in front of the text, e.g. "1. First".</li>
- * <li>Nodes carry structure, text, src, style and the paragraphs' run facts ({@link Run}):
+ * <li>Nodes carry structure, text, src, style and the paragraphs' run facts ({@link Facts}):
  *     no json / rst, the client builds them.</li>
  * <li>The fullpath is the fullpath semantics' (semantic.DA ShFullpath2), not composed here; only the
  *     doc root's is given, its own nid ({@code new Resulving(nodes, nid)}). The handler needs a row's
@@ -66,13 +64,13 @@ public class Outliner {
 
 	/** An open section: on the stack until a heading of its level or upper comes. */
 	static class Section {
-		final DocNode node;
+		final DocxNode node;
 		/** outline level, the doc root: -2 */
 		final int level;
 		/** children so far, the next one's sibling sort is + 1 */
 		int children;
 
-		Section(DocNode node, int level) {
+		Section(DocxNode node, int level) {
 			this.node = node;
 			this.level = level;
 		}
@@ -84,7 +82,7 @@ public class Outliner {
 	final DATranscxt st;
 
 	/** each node's parent, until the node is inserted and its parentId known */
-	final IdentityHashMap<DocNode, DocNode> parents = new IdentityHashMap<DocNode, DocNode>();
+	final IdentityHashMap<DocxNode, DocxNode> parents = new IdentityHashMap<DocxNode, DocxNode>();
 
 	/** where the pictures are saved; null: not saved, an image's resId is its part in the docx */
 	DocRes res;
@@ -120,7 +118,7 @@ public class Outliner {
 		this.st = new DATranscxt(conn);
 	}
 
-	/** Without a db, for tests overriding {@link #insertRoot(DocNode)} and {@link #insert(ArrayList)}. */
+	/** Without a db, for tests overriding {@link #insertRoot(DocxNode)} and {@link #insert(ArrayList)}. */
 	Outliner() {
 		this.conn = null;
 		this.nodem = new S_DocNodeMeta();
@@ -152,7 +150,7 @@ public class Outliner {
 		o.title = !isblank(title) ? title
 				: docxTitle != null && !isblank(docxTitle.text) ? docxTitle.text : deftitle;
 
-		DocNode root = new DocNode(docId, null, DocNode.Kind.doc);
+		DocxNode root = new DocxNode(docId, null, DocxNode.Kind.doc);
 		root.sort = 1;
 		root.ptext = o.title;
 		// its fullpath, its own nid, is the prefix of the doc's subtree, unique in the nodes table
@@ -163,7 +161,7 @@ public class Outliner {
 		stack.push(new Section(root, -2));
 
 		// rows not inserted yet, in the document's order: depth first, parents first
-		ArrayList<DocNode> rows = new ArrayList<DocNode>();
+		ArrayList<DocxNode> rows = new ArrayList<DocxNode>();
 
 		for (Block b : blocks) {
 			if (b == docxTitle)
@@ -171,9 +169,9 @@ public class Outliner {
 			if (!b.isHeading() && isblank(b.text))
 				continue;
 
-			String kind = b.isHeading() ? DocNode.Kind.section
-						: Block.table.equals(b.kind) ? DocNode.Kind.tabl
-						: Block.image.equals(b.kind) ? DocNode.Kind.image : DocNode.Kind.p;
+			String kind = b.isHeading() ? DocxNode.Kind.section
+						: Block.table.equals(b.kind) ? DocxNode.Kind.tabl
+						: Block.image.equals(b.kind) ? DocxNode.Kind.image : DocxNode.Kind.p;
 
 			// an upper (or the same) level: the sections down to it are finished, insert them
 			if (b.isHeading())
@@ -182,15 +180,15 @@ public class Outliner {
 			Section parent = stack.peek();
 
 			// nid: the auto key; parentId: when inserted; fullpath: the semantics', by parentId & sort
-			DocNode node = new DocNode(docId, null, kind).parent(null, ++parent.children);
+			DocxNode node = new DocxNode(docId, null, kind).parent(null, ++parent.children);
 			parents.put(node, parent.node);
 			node.ptext = isblank(b.numLabel) ? b.text : b.numLabel + " " + b.text;
 			node.src = b.src;
 			if (!b.isHeading() && !b.runs.isEmpty()) {
-				ArrayList<Run> runs = new ArrayList<Run>(b.runs);
+				ArrayList<Facts> runs = new ArrayList<Facts>(b.runs);
 				if (!isblank(b.numLabel))
-					runs.add(0, new Run(b.numLabel + " "));
-				node.facts = Run.factsOf(runs);
+					runs.add(0, new Facts(b.numLabel + " "));
+				node.facts = Facts.factsOf(runs);
 			}
 			node.docxstyle = b.styleName;
 			if (Block.image.equals(b.kind))
@@ -215,7 +213,7 @@ public class Outliner {
 	 * @param level outline level of the coming heading; the doc root (-2) is popped only by the end
 	 * @param rows not inserted yet, in depth first order; cleared when inserted
 	 */
-	void pop2db(Deque<Section> stack, int level, ArrayList<DocNode> rows) throws TransException, SQLException {
+	void pop2db(Deque<Section> stack, int level, ArrayList<DocxNode> rows) throws TransException, SQLException {
 		boolean popped = false;
 		while (!stack.isEmpty() && stack.peek().level >= level) {
 			stack.pop();
@@ -235,7 +233,7 @@ public class Outliner {
 	 *
 	 * @param root
 	 */
-	void insertRoot(DocNode root) throws TransException, SQLException {
+	void insertRoot(DocxNode root) throws TransException, SQLException {
 		SemanticObject res = (SemanticObject) st.insert(nodem.tbl, usr)
 			.nv(nodem.docId, root.docId)
 			.nv(nodem.sort, root.sort)
@@ -256,8 +254,8 @@ public class Outliner {
 	 * @param ix index of the insert's rows before n
 	 * @return nid or {@link Resulving}
 	 */
-	ExprPart parentRef(DocNode n, IdentityHashMap<DocNode, Integer> ix) throws TransException {
-		DocNode p = parents.get(n);
+	ExprPart parentRef(DocxNode n, IdentityHashMap<DocxNode, Integer> ix) throws TransException {
+		DocxNode p = parents.get(n);
 		if (p.nid != null)
 			return ExprPart.constr(p.nid); // a string, quoted: constVal() isn't
 		Integer i = ix.get(p);
@@ -272,13 +270,13 @@ public class Outliner {
 	 * @param rows
 	 * @param nids generated by the insert
 	 */
-	void inserted(ArrayList<DocNode> rows, List<String> nids) throws TransException {
+	void inserted(ArrayList<DocxNode> rows, List<String> nids) throws TransException {
 		if (nids == null || nids.size() != rows.size())
 			throw new TransException("Outliner: %s nodes inserted, but %s keys generated.",
 					rows.size(), nids == null ? 0 : nids.size());
 		for (int i = 0; i < rows.size(); i++)
 			rows.get(i).nid = nids.get(i);
-		for (DocNode n : rows)
+		for (DocxNode n : rows)
 			n.parentId = parents.remove(n).nid;
 	}
 
@@ -289,14 +287,14 @@ public class Outliner {
 	 *
 	 * @param nodes in depth first order; nothing is done if empty
 	 */
-	void insert(ArrayList<DocNode> nodes) throws TransException, SQLException {
+	void insert(ArrayList<DocxNode> nodes) throws TransException, SQLException {
 		if (nodes.isEmpty())
 			return;
 
 		ArrayList<ArrayList<Object[]>> vals = new ArrayList<ArrayList<Object[]>>(nodes.size());
-		IdentityHashMap<DocNode, Integer> ix = new IdentityHashMap<DocNode, Integer>(nodes.size());
+		IdentityHashMap<DocxNode, Integer> ix = new IdentityHashMap<DocxNode, Integer>(nodes.size());
 		for (int i = 0; i < nodes.size(); i++) {
-			DocNode n = nodes.get(i);
+			DocxNode n = nodes.get(i);
 			ArrayList<Object[]> row = new ArrayList<Object[]>();
 			row.add(new Object[] { nodem.docId, n.docId });
 			row.add(new Object[] { nodem.parentId, parentRef(n, ix) });

@@ -16,3 +16,5 @@ RemoteSystemsTempFiles
 /src/test/res/upgrade-fail/
 /src/test/res/upgrade-inits/
 /src/test/res/upgrade-nopicks/
+/src/test/res/story/*
+!/src/test/res/story/.keep

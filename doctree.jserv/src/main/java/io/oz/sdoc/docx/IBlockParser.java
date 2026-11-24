@@ -1,4 +1,4 @@
-package io.oz.sdoc.imports;
+package io.oz.sdoc.docx;
 
 import java.util.List;
 

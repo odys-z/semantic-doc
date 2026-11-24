@@ -1,6 +1,7 @@
-package io.oz.sdoc;
+package io.oz.sdoc.docx;
 
 import io.odysz.anson.Anson;
+import io.oz.sdoc.DocRes;
 
 /**
  * Content record: one tree node of a doc, an element of "nodes" in
@@ -13,18 +14,18 @@ import io.odysz.anson.Anson;
  *
  * @author ody
  */
-public class DocNode extends Anson {
+public class DocxNode extends Anson {
 
-	/** Values of {@link DocNode#kind}. */
+	/** Values of {@link DocxNode#kind}. */
 	public static class Kind {
 		/** the doc root, nid = docId */
 		public static final String doc = "doc";
 		public static final String section = "section";
 		public static final String p = "p";
 		public static final String math = "math";
-		/** media node, content is in {@link DocNode#resId} */
+		/** media node, content is in {@link DocxNode#resId} */
 		public static final String image = "image";
-		/** live, read-only reference to another doc's subtree, root is {@link DocNode#refId} */
+		/** live, read-only reference to another doc's subtree, root is {@link DocxNode#refId} */
 		public static final String docref = "docref";
 		/** docx table: its text with merge markers (DocxWalker#table()), edited as a table in the editor */
 		public static final String tabl = "tabl";
@@ -68,31 +69,31 @@ public class DocNode extends Anson {
 	public String ptext;
 
 	/**
-	 * The importer's facts of a paragraph's runs, {"v":1,"runs":[...]}, see {@link io.oz.sdoc.imports.Run};
+	 * The importer's facts of a paragraph's runs, {"v":1,"runs":[...]}, see {@link io.oz.sdoc.docx.Facts};
 	 * the client builds {@link #tipjson} from them.
 	 */
 	public String facts;
 
-	public DocNode() { }
+	public DocxNode() { }
 
-	public DocNode(String docId, String nid, String kind) {
+	public DocxNode(String docId, String nid, String kind) {
 		this.docId = docId;
 		this.nid = nid;
 		this.kind = kind;
 	}
 
-	public DocNode parent(String parentId, int sort) {
+	public DocxNode parent(String parentId, int sort) {
 		this.parentId = parentId;
 		this.sort = sort;
 		return this;
 	}
 
-	public DocNode tipjson(String tiptap) {
+	public DocxNode tipjson(String tiptap) {
 		this.tipjson = tiptap;
 		return this;
 	}
 
-	public DocNode rstext(String rst, int ver) {
+	public DocxNode rstext(String rst, int ver) {
 		this.rstext = rst;
 		this.rstver = ver;
 		return this;

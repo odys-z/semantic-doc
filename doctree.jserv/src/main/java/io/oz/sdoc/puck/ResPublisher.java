@@ -1,4 +1,4 @@
-package io.oz.sdoc.publish;
+package io.oz.sdoc.puck;
 
 import static io.odysz.common.LangExt.isblank;
 import static io.odysz.common.LangExt.len;
@@ -7,18 +7,18 @@ import java.io.IOException;
 
 import io.odysz.anson.AnsonException;
 import io.odysz.common.Utils;
-import io.odysz.jclient.HttpServClient;
-import io.odysz.semantic.jprotocol.AnsonMsg;
 import io.odysz.semantic.jprotocol.IPort;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.x.SemanticException;
-import io.oz.sdoc.DocInf;
-import io.oz.sdoc.DoctreeDBHelper;
-import io.oz.sdoc.publish.ResPublishReq.A;
+import io.oz.sdoc.docx.DocxtreeDBHelper;
+import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.publish.PuckPubResp;
+import io.oz.sdoc.tier.PucktreeReq;
+import io.oz.sdoc.publish.PuckPubReq.A;
 
 /**
  * Publishes / removes docs at the local html-service, by requests to its port respaths
- * (io.oz.srv.ResPathsTier), and keeps the docs' context paths ({@link DocInf#pubpath}).
+ * (io.oz.srv.ResPathsTier), and keeps the docs' context paths ({@link DocxInf#pubpath}).
  *
  * <p>The synode's records are what html-service finally follows (it queries {@link ResPublishTier}
  * when started and from time to time), so the requests here only make a change effective at once.</p>
@@ -41,23 +41,34 @@ public class ResPublisher {
 	}
 
 	/**
-	 * Publish the doc's html package ({@link DocInf#htmlUri}) at html-service, or replace it
+	 * Publish the doc's html package ({@link DocxInf#htmlUri}) at html-service, or replace it
 	 * if already published. A first published doc's pubpath is assigned by html-service.
 	 * 
 	 * @return the doc's header, with pubpath
 	 * @throws SemanticException no such doc, the doc isn't built, or html-service refused
 	 * @throws IOException html-service isn't reachable: nothing changed
 	 */
-	public DocInf publish(DoctreeDBHelper db, String docId, IUser usr) throws Exception {
-		DocInf doc = db.doc(docId);
+	public DocxInf publish(DocxtreeDBHelper db, String docId, IUser usr) throws Exception {
+		return publish(db, docId, usr, null);
+	}
+
+	/**
+	 * Publish a doc, or a story with its media's map ({@link PubMedia}), which html-service keeps
+	 * as the story's json map for serving m/&lt;synuid&gt;.
+	 *
+	 * @param media the stories' media, see io.oz.sdoc.tier.DoctreeTier#media(MediaSource); for a story
+	 * @return the doc's header, with pubpath
+	 * @since 0.1.5
+	 */
+	public DocxInf publish(DocxtreeDBHelper db, String docId, IUser usr, PucktreeReq req) throws Exception {
+		DocxInf doc = db.doc(docId);
 		if (doc == null)
 			throw new SemanticException("Can't find doc %s.", docId);
 		if (isblank(doc.htmlUri))
 			throw new SemanticException("Doc %s has no html package. Build it first.", docId);
 
-		// TODO WP3 (media story): for a story (DocInf.Kind.story), the request's media, its PubMedia
-		// (StoryPages.mediaPaths()); html-service keeps it as the story's json map
-		ResPublishResp resp = post(A.deploy, doc);
+
+		PuckPubResp resp = post(A.deploy, doc);
 		if (len(resp.respubs) != 1 || isblank(resp.respubs.get(0).pubpath))
 			throw new SemanticException("Html-service doesn't reply the published path of doc %s.", docId);
 
@@ -70,14 +81,14 @@ public class ResPublisher {
 	 * 
 	 * @return the doc's header, without pubpath
 	 */
-	public DocInf unpublish(DoctreeDBHelper db, String docId, IUser usr) throws Exception {
-		DocInf doc = db.doc(docId);
+	public DocxInf unpublish(DocxtreeDBHelper db, String docId, IUser usr) throws Exception {
+		DocxInf doc = db.doc(docId);
 		if (doc == null)
 			throw new SemanticException("Can't find doc %s.", docId);
 		if (isblank(doc.pubpath))
 			return doc;
 
-		DocInf d = db.pubpath(docId, null, usr);
+		DocxInf d = db.pubpath(docId, null, usr);
 		try {
 			post(A.remove, doc);
 		} catch (IOException e) {
@@ -88,11 +99,9 @@ public class ResPublisher {
 	}
 
 	/** Post to html-service. */
-	protected ResPublishResp post(String a, DocInf doc) throws IOException, SemanticException, AnsonException {
-		AnsonMsg<ResPublishReq> req = new AnsonMsg<ResPublishReq>(respaths)
-				.body(new ResPublishReq().respubs(doc).a(a));
-		return (ResPublishResp) new HttpServClient()
-				.post(respaths.url(htmlroot), req)
-				.body(0);
+	protected PuckPubResp post(String a, DocxInf doc)
+			throws IOException, SemanticException, AnsonException {
+				return null;
+
 	}
 }

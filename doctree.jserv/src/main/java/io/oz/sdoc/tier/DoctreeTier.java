@@ -26,15 +26,13 @@ import io.odysz.semantic.jserv.x.SsException;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.x.SemanticException;
 import io.odysz.transact.x.TransException;
-import io.oz.sdoc.DocInf;
-import io.oz.sdoc.DoctreeDBHelper;
-import io.oz.sdoc.build.HtmlBuilder;
-import io.oz.sdoc.imports.DocxSource;
-import io.oz.sdoc.imports.IBlockParser;
-import io.oz.sdoc.imports.Importer;
-import io.oz.sdoc.imports.MediaSource;
-import io.oz.sdoc.publish.ResPublisher;
-import io.oz.sdoc.story.StoryPages;
+import io.oz.sdoc.docx.DocxtreeDBHelper;
+import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.docx.IBlockParser;
+import io.oz.sdoc.docx.Importer;
+import io.oz.sdoc.puck.PuckNode;
+import io.oz.sdoc.puck.ResPublisher;
+import io.oz.sdoc.rst.HtmlBuilder;
 
 /**
  * The doc-tree tier: the service semantic-doc's editor (AnDoctreeditor) talks to.
@@ -42,7 +40,7 @@ import io.oz.sdoc.story.StoryPages;
  * <p>The port is the app's, e.g. jserv-album's AlbumPort.doctree, so this lib
  * doesn't depend on the app's port enum. Its url must be {@link #url}.</p>
  *
- * <p>The working copy is in its own db ({@link DoctreeDBHelper}), connection {@link #conn(String, String)},
+ * <p>The working copy is in its own db ({@link DocxtreeDBHelper}), connection {@link #conn(String, String)},
  * set up at the first request.
  * Served: every action of {@link DoctreeReq.A}; {@link DoctreeReq.A#importDocx} with
  * {@link #importer(DocxSource, IBlockParser)}. Tree changes are SemanticTree.onModifyTree()'s,
@@ -51,6 +49,11 @@ import io.oz.sdoc.story.StoryPages;
  * <p>The session is verified ({@link #onPost(AnsonMsg, HttpServletResponse)}); its user is the
  * creator of the docs he imports, the owner of their resource folders ({@link DocRes}).</p>
  *
+ * TODO Rename to RstreeTier
+ * TODO
+ * TODO
+ * TODO
+ * 
  * @author ody
  */
 @WebServlet(description = "semantic-doc doc-tree tier", urlPatterns = { "/doctree.serv" })
@@ -64,11 +67,11 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	String conn;
 	/** for doc ids */
 	String synode;
-	DocxSource source;
+	DocxInf source;
 	IBlockParser parser;
 
 	/** created by {@link #db()} at the first request needing it */
-	DoctreeDBHelper db;
+	DocxtreeDBHelper db;
 	Importer importer;
 
 	/** the user of {@link #handle(DoctreeReq)}, without a session (tests), and of the db's logs */
@@ -83,7 +86,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 * needing them ({@link #db()}), so a synode never editing doc trees keeps an empty db file,
 	 * and a failure here never stops the synode.
 	 * 
-	 * @param conn connection of the doc-tree db, see {@link DoctreeDBHelper#connect(String, String, String)}
+	 * @param conn connection of the doc-tree db, see {@link DocxtreeDBHelper#connect(String, String, String)}
 	 * @param synode id of this synode, the prefix of doc ids
 	 * @return this
 	 */
@@ -100,7 +103,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 * @param parser e.g. {@link io.oz.sdoc.imports.DocxWalker#blocks(String)}
 	 * @return this
 	 */
-	public DoctreeTier importer(DocxSource source, IBlockParser parser) {
+	public DoctreeTier importer(DocxInf source, IBlockParser parser) {
 		this.source = source;
 		this.parser = parser;
 		return this;
@@ -112,9 +115,9 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	 * @return null if not configured
 	 * @throws Exception
 	 */
-	public synchronized DoctreeDBHelper db() throws Exception {
+	public synchronized DocxtreeDBHelper db() throws Exception {
 		if (db == null && conn != null) {
-			db = DoctreeDBHelper.setup(conn, false);
+			db = DocxtreeDBHelper.setup(conn, false);
 			if (parser != null)
 				importer = new Importer(conn, db, source, parser);
 		}
@@ -122,38 +125,6 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	}
 
 	public Importer importer() { return importer; }
-
-	MediaSource media;
-
-	/**
-	 * STUB (media story, WP3): enable stories' media: their files by io_oz_synuid, for the maps
-	 * html-service keeps of published stories (m/&lt;synuid&gt;), given at publish and refresh.
-	 *
-	 * @param media where the media files are, e.g. {@link MediaSource#extfiles(String, String)}
-	 * @return this
-	 */
-	public DoctreeTier media(MediaSource media) {
-		this.media = media;
-		return this;
-	}
-
-	public MediaSource media() { return media; }
-
-	/** STUB (media story, WP3): the stories' pages, created with {@link #db()} */
-	StoryPages stories;
-
-	ResPublisher publisher;
-
-	/**
-	 * Enable {@link DoctreeReq.A#publish} and {@link DoctreeReq.A#unpublish}.
-	 * 
-	 * @param publisher to the local html-service
-	 * @return this
-	 */
-	public DoctreeTier publisher(ResPublisher publisher) {
-		this.publisher = publisher;
-		return this;
-	}
 
 	HtmlBuilder builder;
 
@@ -218,18 +189,20 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 				rsp = update(req);
 			else if (DoctreeReq.A.modify.equals(a))
 				rsp = modify(req);
-			else if (DoctreeReq.A.commit.equals(a))
-				rsp = commit(req, usr);
+//			else if (DoctreeReq.A.commit.equals(a))
+//				rsp = commit(req, usr);
 			else if (DoctreeReq.A.build.equals(a))
 				rsp = build(req);
-			else if (DoctreeReq.A.publish.equals(a))
-				rsp = publish(req, usr);
-			else if (DoctreeReq.A.unpublish.equals(a))
-				rsp = unpublish(req, usr);
+//			else if (DoctreeReq.A.publish.equals(a))
+//				rsp = publish(req, usr);
+//			else if (DoctreeReq.A.unpublish.equals(a))
+//				rsp = unpublish(req, usr);
+			else if (DoctreeReq.A.stories.equals(a))
+				rsp = stories(req);
 			else if (DoctreeReq.A.page.equals(a))
 				rsp = page(req);
-			else if (DoctreeReq.A.savePage.equals(a))
-				rsp = savePage(req, usr);
+//			else if (DoctreeReq.A.savePage.equals(a))
+//				rsp = savePage(req, usr);
 			else
 				throw new SemanticException("Doc-tree tier: request.a, %s, can not be handled.", a);
 
@@ -247,7 +220,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 
 	/** r/docs: the docs' headers → docs (empty if the working copy isn't configured) */
 	DoctreeResp docs(DoctreeReq req) throws Exception {
-		return new DoctreeResp().docs(db() == null ? new ArrayList<DocInf>() : db.docs());
+		return new DoctreeResp().docs(db() == null ? new ArrayList<DocxInf>() : db.docs());
 	}
 
 	/** c/import: the doc header (state parsing) at once; the nodes are parsed in the background → doc */
@@ -260,7 +233,7 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 
 	/** r/tree: the doc root {@link DoctreeReq#docId} with its subtree → doc, forest */
 	DoctreeResp tree(DoctreeReq req) throws Exception {
-		DocInf doc = doc(req);
+		DocxInf doc = doc(req);
 
 		// while importing (state parsing), the forest is empty; the client asks again
 		DoctreeResp rsp = new DoctreeResp().doc(doc);
@@ -302,79 +275,26 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 		return rsp;
 	}
 
-	/**
-	 * c/publish: the doc's html package is published at html-service → doc, with pubpath.
-	 * With a {@link #builder(HtmlBuilder)}, only the package built since the last commit.
-	 */
-	DoctreeResp publish(DoctreeReq req, IUser usr) throws Exception {
-		if (db() == null || publisher == null)
-			throw new SemanticException("Doc-tree tier: publishing isn't configured.");
 
-		// TODO WP3 (media story): a story (DocInf.Kind.story) has no html package: its htmlUri is the
-		// committed page; ResPublisher sends it with the story's media map (PubMedia,
-		// StoryPages.mediaPaths()), html-service writing the shell, page.json and the map's json.
-
-		if (builder != null) {
-			DocInf doc = doc(req);
-			String state = builder.state(req.docId);
-			if (eq(HtmlBuilder.State.building, state))
-				throw new SemanticException("The doc's html is still building. Try again later.");
-			if (isblank(doc.builtAt) || !isblank(doc.committedAt) && doc.builtAt.compareTo(doc.committedAt) < 0)
-				throw new SemanticException(eq(HtmlBuilder.State.failed, state)
-					? "The doc's html build failed. " + builder.log(req.docId)
-					: "The doc's html isn't built since it's committed. Commit it again.");
-		}
-		return new DoctreeResp().doc(publisher.publish(db, req.docId, usr));
+	/** r/stories: the stories' headers → docs (empty if the working copy isn't configured) */
+	DoctreeResp stories(DoctreeReq req) throws Exception {
+		return new DoctreeResp().docs(db() == null ? new ArrayList<DocxInf>() : db.stories.stories());
 	}
 
-	/**
-	 * STUB (media story, WP3) r/page: the story's page → doc, page (null: a new story).
-	 */
+	/** r/page: the story's page → doc, page */
 	DoctreeResp page(DoctreeReq req) throws Exception {
-		DocInf doc = doc(req);
-		// TODO WP3: stories = new StoryPages(db), with db()
-		return new DoctreeResp().doc(doc).page(stories == null ? null : stories.page(req.docId));
+		if (db() == null)
+			throw new SemanticException("Doc-tree tier: the working copy isn't configured.");
+		PuckNode page = db.stories.page(req.docId);
+		if (page == null)
+			throw new SemanticException("Doc-tree tier: no such story: %s", req.docId);
+		return new DoctreeResp().doc(db.stories.story(req.docId)).page(page);
 	}
 
-	/**
-	 * STUB (media story, WP3) u/page: save the story's page, and its media (s_docmedia) → doc.
-	 */
-	DoctreeResp savePage(DoctreeReq req, IUser usr) throws Exception {
-		doc(req);
-		if (stories == null)
-			throw new SemanticException("TODO: stories aren't supported yet.");
-		return new DoctreeResp().doc(stories.save(req.docId, req.page, usr));
-	}
-
-	/** d/publish: the doc is removed from html-service → doc, without pubpath */
-	DoctreeResp unpublish(DoctreeReq req, IUser usr) throws Exception {
-		if (db() == null || publisher == null)
-			throw new SemanticException("Doc-tree tier: publishing isn't configured.");
-		return new DoctreeResp().doc(publisher.unpublish(db, req.docId, usr));
-	}
-
-	/**
-	 * c/commit: the doc isn't dirty, committedAt = now → doc; with {@link DoctreeReq#rstFiles},
-	 * the doc's html package is built in the background → build (building), see {@link #build(DoctreeReq)}.
-	 */
-	DoctreeResp commit(DoctreeReq req, IUser usr) throws Exception {
-		doc(req);
-		// TODO WP3 (media story): a story is committed by StoryPages.commit(): items' pid →
-		// io_oz_synuid, the committed page, s_docmedia; no html build
-		DocInf doc = db.commit(req.docId, robot);
-		DoctreeResp rsp = new DoctreeResp().doc(doc);
-		if (builder != null && !isNull(req.rstFiles)) {
-			builder.start(db, doc, req.rstFiles, usr);
-			rsp.build(builder.state(req.docId), null);
-		}
-		else if (builder != null)
-			builder.forget(req.docId);
-		return rsp;
-	}
 
 	/** r/build: the state of the doc's html build → doc (with builtAt, htmlUri), build, buildlog */
 	DoctreeResp build(DoctreeReq req) throws Exception {
-		DocInf doc = doc(req);
+		DocxInf doc = doc(req);
 		DoctreeResp rsp = new DoctreeResp().doc(doc);
 		if (builder != null)
 			rsp.build(builder.state(req.docId), builder.log(req.docId));
@@ -382,10 +302,10 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 	}
 
 	/** the doc of the request; the working copy must be configured */
-	DocInf doc(DoctreeReq req) throws Exception {
+	DocxInf doc(DoctreeReq req) throws Exception {
 		if (db() == null)
 			throw new SemanticException("Doc-tree tier: the working copy isn't configured.");
-		DocInf doc = db.doc(req.docId);
+		DocxInf doc = db.doc(req.docId);
 		if (doc == null)
 			throw new SemanticException("Doc-tree tier: no such doc: %s", req.docId);
 		return doc;

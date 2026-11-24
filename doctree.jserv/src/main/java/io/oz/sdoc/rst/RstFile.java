@@ -1,4 +1,4 @@
-package io.oz.sdoc.build;
+package io.oz.sdoc.rst;
 
 import io.odysz.anson.Anson;
 

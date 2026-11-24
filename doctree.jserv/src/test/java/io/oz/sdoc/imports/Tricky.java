@@ -3,6 +3,9 @@ package io.oz.sdoc.imports;
 import java.util.Arrays;
 import java.util.List;
 
+import io.oz.sdoc.docx.Block;
+import io.oz.sdoc.docx.Facts;
+
 /**
  * Blocks of hello/docx4j's samples/tricky.docx, as FactsDemo prints them (see its README),
  * plus an empty paragraph (body/7a), a quote in "Second bullet, Ody's", and run facts in body/2.
@@ -30,12 +33,12 @@ class Tricky {
 	/** body/2, with run facts: "under" bold and green */
 	static Block body2() {
 		Block b = new Block(Block.p, "body/2").style("Normal", "Normal").text("Body text under chapter one.");
-		Run under = new Run("under");
+		Facts under = new Facts("under");
 		under.b = true;
 		under.color = "1E8449";
-		b.runs.add(new Run("Body text "));
+		b.runs.add(new Facts("Body text "));
 		b.runs.add(under);
-		b.runs.add(new Run(" chapter one."));
+		b.runs.add(new Facts(" chapter one."));
 		return b;
 	}
 

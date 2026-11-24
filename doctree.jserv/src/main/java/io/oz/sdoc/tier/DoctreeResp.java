@@ -4,7 +4,8 @@ import java.util.ArrayList;
 
 import io.odysz.anson.AnsonField;
 import io.odysz.semantic.ext.AnDatasetResp;
-import io.oz.sdoc.DocInf;
+import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.puck.PuckNode;
 
 /**
  * Response of the doc-tree tier, matching semantic-doc's TS DoctreeResp (doctree-tier.ts).
@@ -18,11 +19,11 @@ import io.oz.sdoc.DocInf;
 public class DoctreeResp extends AnDatasetResp {
 
 	/** the doc's header */
-	public DocInf doc;
+	public DocxInf doc;
 
 	/** for {@link DoctreeReq.A#docs} */
 	@AnsonField(valType="io.oz.sdoc.DocInf")
-	public ArrayList<DocInf> docs;
+	public ArrayList<DocxInf> docs;
 
 	/**
 	 * for {@link DoctreeReq.A#commit}, {@link DoctreeReq.A#build}: the state of the doc's html build,
@@ -33,21 +34,18 @@ public class DoctreeResp extends AnDatasetResp {
 	/** output of the build tool (warnings, or why it failed) */
 	public String buildlog;
 
-	/**
-	 * for {@link DoctreeReq.A#page}: the story's page, json of semantic-doc/story StoryData
-	 * (Puck's Data); null: a new story.
-	 */
-	public String page;
+	/** for {@link DoctreeReq.A#page}: the story's page, see io.oz.sdoc.story.StoryPages#page() */
+	public PuckNode page;
 
 	public DoctreeResp() { }
 
 	/** for {@link DoctreeReq.A#page} */
-	public DoctreeResp page(String json) {
-		this.page = json;
+	public DoctreeResp page(PuckNode page) {
+		this.page = page;
 		return this;
 	}
 
-	public DoctreeResp doc(DocInf d) {
+	public DoctreeResp doc(DocxInf d) {
 		this.doc = d;
 		return this;
 	}
@@ -58,7 +56,7 @@ public class DoctreeResp extends AnDatasetResp {
 		return this;
 	}
 
-	public DoctreeResp docs(ArrayList<DocInf> ds) {
+	public DoctreeResp docs(ArrayList<DocxInf> ds) {
 		this.docs = ds;
 		return this;
 	}

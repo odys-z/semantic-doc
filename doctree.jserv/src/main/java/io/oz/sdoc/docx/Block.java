@@ -1,4 +1,4 @@
-package io.oz.sdoc.imports;
+package io.oz.sdoc.docx;
 
 /**
  * Facts of a block-level element of a docx (a paragraph, a table, or a picture of a paragraph),
@@ -38,7 +38,7 @@ public class Block {
 	public boolean hasSpans;
 
 	/** paragraph only: the runs, text with direct formatting; empty if not collected */
-	public final java.util.List<Run> runs = new java.util.ArrayList<Run>();
+	public final java.util.List<Facts> runs = new java.util.ArrayList<Facts>();
 
 	public Block(String kind, String src) {
 		this.kind = kind;

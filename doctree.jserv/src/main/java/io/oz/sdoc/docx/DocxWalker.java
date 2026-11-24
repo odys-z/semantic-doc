@@ -42,13 +42,10 @@ import org.docx4j.wml.Text;
 import org.docx4j.wml.Tr;
 import org.docx4j.wml.UnderlineEnumeration;
 
-import io.oz.sdoc.imports.Block;
-import io.oz.sdoc.imports.Run;
-
 /**
  * The "facts first" walker of hello/docx4j (FactsDemo), producing doctree.jserv's {@link Block}s:
  * per block, the source path, style, effective outline level and numbering label;
- * per paragraph, its runs: text with direct formatting ({@link Run}).
+ * per paragraph, its runs: text with direct formatting ({@link Facts}).
  *
  * <p>Pictures (w:drawing, inline or anchored, embedded in the docx) of a paragraph are
  * {@link Block#image} blocks following the paragraph's block. An embedded Excel object is
@@ -202,11 +199,11 @@ public class DocxWalker {
 	 * @param href the target of the hyperlink the content is in, or null
 	 * @param runs output
 	 */
-	void runs(List<Object> content, String href, List<Run> runs) {
+	void runs(List<Object> content, String href, List<Facts> runs) {
 		for (Object c : content) {
 			Object o = XmlUtils.unwrap(c);
 			if (o instanceof R r) {
-				Run f = facts(r);
+				Facts f = facts(r);
 				if (f != null) {
 					f.href = href;
 					runs.add(f);
@@ -220,13 +217,13 @@ public class DocxWalker {
 	}
 
 	/** a run's text and direct formatting (rPr only: style formatting isn't the author's emphasis) */
-	static Run facts(R r) {
+	static Facts facts(R r) {
 		StringBuilder sb = new StringBuilder();
 		collect(r, sb); // not trimmed: the spaces between runs are text
 		String t = sb.toString();
 		if (t.isEmpty()) return null;
 
-		Run f = new Run(t);
+		Facts f = new Facts(t);
 		RPr pr = r.getRPr();
 		if (pr == null) return f;
 

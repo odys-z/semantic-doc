@@ -1,4 +1,4 @@
-package io.oz.sdoc.imports;
+package io.oz.sdoc.docx;
 
 /**
  * Facts of a run: text and its direct formatting, as the docx has it, neutral of the
@@ -10,7 +10,7 @@ package io.oz.sdoc.imports;
  *
  * @author ody
  */
-public class Run {
+public class Facts {
 	/** version of the facts json */
 	public static final int version = 1;
 
@@ -30,7 +30,7 @@ public class Run {
 	/** hyperlink target */
 	public String href;
 
-	public Run(String t) {
+	public Facts(String t) {
 		this.t = t;
 	}
 
@@ -38,7 +38,7 @@ public class Run {
 	 * @param runs
 	 * @return facts json of a block: {"v":1,"runs":[...]}
 	 */
-	public static String factsOf(java.util.List<Run> runs) {
+	public static String factsOf(java.util.List<Facts> runs) {
 		StringBuilder sb = new StringBuilder("{\"v\":").append(version).append(",\"runs\":[");
 		for (int x = 0; x < runs.size(); x++) {
 			if (x > 0) sb.append(',');

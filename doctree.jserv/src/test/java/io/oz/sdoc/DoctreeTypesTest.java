@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import io.odysz.anson.Anson;
 import io.odysz.semantic.ext.TreeModify;
+import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.docx.DocxNode;
 import io.oz.sdoc.tier.DoctreeReq;
 import io.oz.sdoc.tier.DoctreeResp;
 
@@ -20,7 +22,7 @@ class DoctreeTypesTest {
 
 	@Test
 	void respRoundTrip() throws Exception {
-		DocInf doc = new DocInf("doc-a", "Annual Report 2026", "ody");
+		DocxInf doc = new DocxInf("doc-a", "Annual Report 2026", "ody");
 		doc.dirty = true;
 		DoctreeResp resp = new DoctreeResp().doc(doc);
 		resp.root("a1").rejected(TreeModify.Rejected.noop).newId("a1.2");
@@ -37,9 +39,9 @@ class DoctreeTypesTest {
 
 	@Test
 	void docsRoundTrip() throws Exception {
-		ArrayList<DocInf> docs = new ArrayList<DocInf>();
-		docs.add(new DocInf("doc-a", "Annual Report 2026", "ody"));
-		docs.add(new DocInf("doc-b", "Glossary", "ody"));
+		ArrayList<DocxInf> docs = new ArrayList<DocxInf>();
+		docs.add(new DocxInf("doc-a", "Annual Report 2026", "ody"));
+		docs.add(new DocxInf("doc-b", "Glossary", "ody"));
 
 		DoctreeResp back = (DoctreeResp) Anson.fromJson(new DoctreeResp().docs(docs).toBlock());
 
@@ -76,7 +78,7 @@ class DoctreeTypesTest {
 
 	@Test
 	void updateRoundTrip() throws Exception {
-		DoctreeReq req = new DoctreeReq("/sdoc").node(new DocNode("doc-a", "a1.1", DocNode.Kind.p)
+		DoctreeReq req = new DoctreeReq("/sdoc").node(new DocxNode("doc-a", "a1.1", DocxNode.Kind.p)
 				.tipjson("{\"contype\":\"doc\"}").rstext("{\"body\":\"x\"}", 1));
 		req.a(DoctreeReq.A.update);
 

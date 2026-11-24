@@ -4,7 +4,7 @@
 
   <groupId>io.github.odys-z</groupId>
   <artifactId>doctree.jserv</artifactId>
-  <version>0.1.4</version>
+  <version>0.1.5</version>
   <name>semantic-doc doc-tree tier</name>
   <description>The doc-tree tier core of semantic-doc, depended on by synodes (docsync) and the demo jserv</description>
   <url>https://github.com/odys-z/semantic-doc</url>
@@ -14,6 +14,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	<maven.compiler.source>17</maven.compiler.source>
 	<maven.compiler.target>17</maven.compiler.target>
+	<jetty.version>12.0.18</jetty.version>
   </properties>
 
   <licenses>
@@ -33,6 +34,12 @@
   </developers>
 
   <dependencies>
+    <dependency>
+      <groupId>org.eclipse.jetty.ee10</groupId>
+      <artifactId>jetty-ee10-servlet</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+
   	<dependency>
 		<groupId>org.junit.jupiter</groupId>
 		<artifactId>junit-jupiter-engine</artifactId>
@@ -54,7 +61,7 @@
 		<!-- No servlet container or jdbc driver here: those are the app's (demo jserv, synode) choices. -->
 	    <groupId>io.github.odys-z</groupId>
 	    <artifactId>semantic.jserv</artifactId>
-	    <version>[1.5.21,)</version>
+	    <version>[1.6.1,)</version>
    	</dependency>
 
    	<dependency>
@@ -63,14 +70,14 @@
 	         1.5.31: ShFullpath2, smtc fullpath2 in semantics-doctree.xml -->
 	    <groupId>io.github.odys-z</groupId>
 	    <artifactId>semantic.DA</artifactId>
-	    <version>[1.5.32,)</version>
+	    <version>[1.5.33,)</version>
    	</dependency>
 
 	<!-- requests to the local html-service (ResPublisher) -->
 	<dependency>
 	    <groupId>io.github.odys-z</groupId>
 	    <artifactId>anclient.java</artifactId>
-	    <version>[0.5.24,)</version>
+	    <version>[0.5.25,)</version>
 	</dependency>
 
     <dependency>

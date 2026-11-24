@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import io.odysz.anson.AnsonField;
 import io.odysz.semantic.jprotocol.AnsonBody;
 import io.odysz.semantic.jprotocol.AnsonMsg;
-import io.oz.sdoc.DocInf;
+import io.oz.sdoc.docx.DocxInf;
 
 /**
  * Request between html-service and the local synode, for docs published at html-service:<ol>
@@ -13,11 +13,11 @@ import io.oz.sdoc.DocInf;
  *     {@link A#deploy}, {@link A#remove}, {@link A#refresh};</li>
  * <li>html-service -&gt; synode's port {@link ResPublishTier}: {@link A#refresh}.</li>
  * </ol>
- * Both answer {@link ResPublishResp}. No session, localhost only.
+ * Both answer {@link PuckPubResp}. No session, localhost only.
  * 
  * @since 0.1.2
  */
-public class ResPublishReq extends AnsonBody {
+public class PuckPubReq extends AnsonBody {
 
 	public static class A {
 		/**
@@ -26,35 +26,30 @@ public class ResPublishReq extends AnsonBody {
 		 */
 		public static final String refresh = "r/list";
 		
-		/** Publish (or replace) {@link ResPublishReq#respubs}; a doc without pubpath gets one */
+		/** Publish (or replace) {@link PuckPubReq#respubs}; a doc without pubpath gets one */
 		public static final String deploy = "c";
-		/** Remove {@link ResPublishReq#respubs}, by {@link DocInf#pubpath} */
+		/** Remove {@link PuckPubReq#respubs}, by {@link DocxInf#pubpath} */
 		public static final String remove = "d";
 	}
 
-	/** Docs to deploy / remove, with {@link DocInf#pubpath}, {@link DocInf#htmlUri} and {@link DocInf#builtAt}. */
+	/** Docs to deploy / remove, with {@link DocxInf#pubpath}, {@link DocxInf#htmlUri} and {@link DocxInf#builtAt}. */
 	@AnsonField(valType="io.oz.sdoc.DocInf")
-	public ArrayList<DocInf> respubs;
+	public ArrayList<PuckPage> respubs;
 
-	/**
-	 * STUB (media story): for {@link A#deploy}, the media maps of the stories in {@link #respubs}
-	 * (a story's htmlUri is its committed page, written as page.json, no package to unzip).
-	 */
-	@AnsonField(valType="io.oz.sdoc.publish.PubMedia")
-	public ArrayList<PubMedia> media;
 
-	public ResPublishReq respubs(DocInf... docs) {
-		respubs = new ArrayList<DocInf>();
-		for (DocInf d : docs)
+	public PuckPubReq respubs(PuckPage... docs) {
+		respubs = new ArrayList<PuckPage>();
+		for (PuckPage d : docs)
 			respubs.add(d);
 		return this;
 	}
 
-	public ResPublishReq() {
+
+	public PuckPubReq() {
 		super(null, null);
 	}
 
-	public ResPublishReq(AnsonMsg<? extends AnsonBody> parent, String uri) {
+	public PuckPubReq(AnsonMsg<? extends AnsonBody> parent, String uri) {
 		super(parent, uri);
 	}
 }

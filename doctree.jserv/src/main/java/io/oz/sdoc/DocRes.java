@@ -12,14 +12,18 @@ import java.util.zip.ZipFile;
 
 import org.apache.commons.io.FileUtils;
 
+import io.odysz.anson.Anson;
+import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.docx.DocxNode;
+
 /**
  * Resources (pictures) of the docs in the working copy: files in
  * &lt;volume&gt;/&lt;uid&gt;/{@link #folder}/&lt;docId&gt;/, the volume: where the doc-tree db is.
  *
- * <p>The uid is the doc's creator ({@link DocInf#creator}), not a session id: the user goes on
+ * <p>The uid is the doc's creator ({@link DocxInf#creator}), not a session id: the user goes on
  * with his work in another session, and the folder is found by the doc.</p>
  *
- * <p>A node's {@link DocNode#resId} is the file's name in its doc's folder, e.g. "image1.png":
+ * <p>A node's {@link DocxNode#resId} is the file's name in its doc's folder, e.g. "image1.png":
  * a reference relative to the doc, as a relative src of a html page.</p>
  *
  * <p>Temporary but persisted: not a session's temp folder, the files are there for the user's
@@ -27,7 +31,7 @@ import org.apache.commons.io.FileUtils;
  *
  * @author ody
  */
-public class DocRes {
+public class DocRes extends Anson {
 	/** the resources' folder of a user, in his folder of the synode's volume */
 	public static final String folder = "doctree.temp";
 
@@ -85,6 +89,18 @@ public class DocRes {
 	 */
 	public File htmlzip(String uid, String docId) throws IOException {
 		return new File(new File(new File(volume, name(uid)), htmlfolder), name(docId) + ".zip");
+	}
+
+	/**
+	 * A story's committed page, &lt;volume&gt;/&lt;uid&gt;/{@link #htmlfolder}/&lt;storyId&gt;.page.json,
+	 * beside the doc trees' html packages; may not exist.
+	 *
+	 * @param uid the story's creator
+	 * @param storyId
+	 * @since 0.1.5
+	 */
+	public File storypage(String uid, String storyId) throws IOException {
+		return new File(new File(new File(volume, name(uid)), htmlfolder), name(storyId) + ".page.json");
 	}
 
 	/** a file / folder name, no path */

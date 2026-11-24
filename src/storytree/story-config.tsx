@@ -73,9 +73,12 @@ export const storyConfig: Config = {
 	components: { Hero, Text, Gallery } as Config['components'],
 };
 
+/** Anson's type of a story's page root, the envelope the synode parses (io.oz.sdoc.story.PuckNode) */
+export const PUCKNODE = 'io.oz.sdoc.story.PuckNode';
+
 /** A story's page as Puck's Data: the root's fields as root props, its children as content. */
 export function toPuck(page: PuckNode): Data {
-	const { pucktype: _p, children, ...root } = page ?? {};
+	const { pucktype: _p, type: _t, children, ...root } = page ?? {};
 	return {
 		root: { props: root },
 		content: (children ?? []).map(({ pucktype, ...props }: PuckNode) => ({ type: pucktype, props })),
@@ -85,6 +88,7 @@ export function toPuck(page: PuckNode): Data {
 /** Puck's Data as a story's page, see {@link toPuck} */
 export function fromPuck(data: Data): PuckNode {
 	return {
+		type: PUCKNODE, // the envelope only: blocks are typed by the synode's fields
 		pucktype: 'page',
 		...(data.root?.props ?? {}),
 		children: data.content.map(({ type, props }) => ({ pucktype: type, ...props })),
@@ -101,19 +105,24 @@ export function fromPuck(data: Data): PuckNode {
  */
 export function dropTo(pucktype: string, props: any, dropped: AnTreeNode[]): any | undefined {
 	const isFolder = (n: AnTreeNode) => n.node?.nodetype === 'gallery';
+	/**
+	 * A media as kept in the page: the album node's type, id (the pid) and node, without the tree's
+	 * own fields (level, indents, parent), which the synode's AnTreeNode can't take as the client has them.
+	 */
+	const media = (n: AnTreeNode) => ({ type: n.type, id: n.id, node: n.node }) as AnTreeNode;
 
 	if (pucktype === 'Gallery') {
 		const items: AnTreeNode[] = [...(props.items ?? [])];
 		const have = new Set(items.map((n) => n.id));
 		for (const d of dropped)
 			for (const s of isFolder(d) ? (d.node.children ?? []) : [d])
-				if (!have.has(s.id)) { have.add(s.id); items.push(s); }
+				if (!have.has(s.id)) { have.add(s.id); items.push(media(s)); }
 		return items.length === (props.items ?? []).length ? undefined : { ...props, items };
 	}
 
 	if (pucktype === 'Hero') {
-		const media = dropped.find((d) => !isFolder(d));
-		return media ? { ...props, media } : undefined;
+		const m = dropped.find((d) => !isFolder(d));
+		return m ? { ...props, media: media(m) } : undefined;
 	}
 
 	return undefined;

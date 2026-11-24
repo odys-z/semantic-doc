@@ -11,8 +11,10 @@ import org.junit.jupiter.api.Test;
 import io.odysz.transact.sql.parts.Resulving;
 import io.odysz.transact.sql.parts.condition.ExprPart;
 import io.odysz.transact.x.TransException;
-import io.oz.sdoc.DocNode;
-import io.oz.sdoc.imports.Outliner.Outline;
+import io.oz.sdoc.docx.Block;
+import io.oz.sdoc.docx.DocxNode;
+import io.oz.sdoc.docx.Outliner;
+import io.oz.sdoc.docx.Outliner.Outline;
 
 /**
  * The outliner without a db: the inserts are collected, a line per statement.
@@ -25,13 +27,13 @@ class OutlinerTest {
 	static class Collecting extends Outliner {
 		/** nids of each insert statement */
 		final ArrayList<String> inserts = new ArrayList<String>();
-		final ArrayList<DocNode> nodes = new ArrayList<DocNode>();
+		final ArrayList<DocxNode> nodes = new ArrayList<DocxNode>();
 		/** each insert's parentIds, as given: a nid (sql, quoted), or [i] for the insert's i-th row's key (a Resulving) */
 		final ArrayList<String> parentRefs = new ArrayList<String>();
 		int k = 0;
 
 		@Override
-		void insertRoot(DocNode root) {
+		void insertRoot(DocxNode root) {
 			root.nid = "k" + k++;
 			root.fullpath = root.nid;
 			inserts.add(root.nid);
@@ -39,13 +41,13 @@ class OutlinerTest {
 		}
 
 		@Override
-		void insert(ArrayList<DocNode> rows) throws TransException {
+		void insert(ArrayList<DocxNode> rows) throws TransException {
 			if (rows.isEmpty())
 				return;
 			ArrayList<String> refs = new ArrayList<String>();
-			IdentityHashMap<DocNode, Integer> ix = new IdentityHashMap<DocNode, Integer>();
+			IdentityHashMap<DocxNode, Integer> ix = new IdentityHashMap<DocxNode, Integer>();
 			for (int i = 0; i < rows.size(); i++) {
-				DocNode n = rows.get(i);
+				DocxNode n = rows.get(i);
 				ExprPart p = parentRef(n, ix);
 				refs.add(p instanceof Resulving ? "[" + ix.get(parents.get(n)) + "]" : p.sql(null));
 				ix.put(n, i);
@@ -99,7 +101,7 @@ class OutlinerTest {
 		// in tree order as they are; only the doc root's fullpath is given, its nid
 		String[] tree = Tricky.tree("k0", "k1", "k2", "k3", "k4", "k5", "k6", "k7", "k8", "k9", "k10");
 		for (int i = 0; i < tree.length; i++) {
-			DocNode n = c.nodes.get(i);
+			DocxNode n = c.nodes.get(i);
 			String[] expect = tree[i].split(" ", 6); // nid parentId sort fullpath kind text
 			assertEquals(expect[0], n.nid);
 			assertEquals(expect[1], String.valueOf(n.parentId));
@@ -127,8 +129,8 @@ class OutlinerTest {
 		pic.add(new Block(Block.image, "body/2/pic/0").res("word/media/image1.png").text("image1.png"));
 		c = new Collecting();
 		c.outline("X.00000D", pic, null, "d.docx");
-		DocNode img = c.nodes.get(3);
-		assertEquals(DocNode.Kind.image, img.kind);
+		DocxNode img = c.nodes.get(3);
+		assertEquals(DocxNode.Kind.image, img.kind);
 		assertEquals("k1", img.parentId);
 		assertEquals("word/media/image1.png", img.resId);
 		assertEquals("image1.png", img.ptext);

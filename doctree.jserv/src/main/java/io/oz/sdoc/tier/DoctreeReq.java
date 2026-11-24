@@ -5,9 +5,10 @@ import java.util.ArrayList;
 import io.odysz.anson.AnsonField;
 import io.odysz.semantic.jprotocol.AnsonBody;
 import io.odysz.semantic.jprotocol.AnsonMsg;
-import io.oz.sdoc.DocInf;
-import io.oz.sdoc.DocNode;
-import io.oz.sdoc.build.RstFile;
+import io.oz.sdoc.docx.DocxInf;
+import io.oz.sdoc.docx.DocxNode;
+import io.oz.sdoc.puck.PuckNode;
+import io.oz.sdoc.rst.RstFile;
 import io.odysz.semantic.ext.AnDatasetReq;
 import io.odysz.semantic.ext.TreeModify;
 
@@ -16,6 +17,12 @@ import io.odysz.semantic.ext.TreeModify;
  *
  * <p>Tree changes are AnDatasetReq's {@link #mod}, a {@link TreeModify} as the user means it,
  * e.g. indent a node: the server works out where nodes go.</p>
+ * 
+ * 
+ * TODO Rename to RstreeReq
+ * TODO
+ * TODO
+ * TODO
  *
  * @author ody
  */
@@ -56,18 +63,17 @@ public class DoctreeReq extends AnDatasetReq {
 		 */
 		public static final String res = "r/res";
 
-		/** STUB (media story): load a story's page → {@link DoctreeResp#doc}, {@link DoctreeResp#page} */
+		/** the stories' headers (DocInf, kind story) → {@link DoctreeResp#docs}; since 0.1.5 */
+		public static final String stories = "r/stories";
+		/** load a story's page → {@link DoctreeResp#doc}, {@link DoctreeResp#page}; since 0.1.5 */
 		public static final String page = "r/page";
-		/**
-		 * STUB (media story): save a story's page, {@link DoctreeReq#page}; the story's media
-		 * (s_docmedia) are updated with it → {@link DoctreeResp#doc}
-		 */
+		/** save a story's page, {@link DoctreeReq#page}; a new story if docId is null → {@link DoctreeResp#doc}; since 0.1.5 */
 		public static final String savePage = "u/page";
 	}
 
 	public String docId;
 	/** for {@link A#createDoc}, {@link A#importDocx}: title etc. */
-	public DocInf doc;
+	public DocxInf doc;
 
 	/** for {@link A#importDocx}: the docx's record id in the doc table (h_photos) */
 	public String srcId;
@@ -76,7 +82,7 @@ public class DoctreeReq extends AnDatasetReq {
 	public String res;
 
 	/** for {@link A#update}: the node's columns, json + rst */
-	public DocNode node;
+	public DocxNode node;
 
 	/**
 	 * for {@link A#commit}: the doc as RST files, assembled by the client; the synode builds the
@@ -85,8 +91,8 @@ public class DoctreeReq extends AnDatasetReq {
 	@AnsonField(valType="io.oz.sdoc.build.RstFile")
 	public ArrayList<RstFile> rstFiles;
 
-	/** for {@link A#savePage}: the story's page, json of semantic-doc/story StoryData, kept as is */
-	public String page;
+	/** for {@link A#savePage}: the story's page; docId null: a new story */
+	public PuckNode page;
 
 	public DoctreeReq() {
 		super(null, null);
@@ -106,7 +112,7 @@ public class DoctreeReq extends AnDatasetReq {
 	}
 
 	/** for {@link A#update} */
-	public DoctreeReq node(DocNode n) {
+	public DoctreeReq node(DocxNode n) {
 		this.node = n;
 		this.docId = n == null ? docId : n.docId;
 		return this;
@@ -128,9 +134,9 @@ public class DoctreeReq extends AnDatasetReq {
 	}
 
 	/** for {@link A#savePage} */
-	public DoctreeReq page(String docId, String json) {
+	public DoctreeReq page(String docId, PuckNode page) {
 		this.docId = docId;
-		this.page = json;
+		this.page = page;
 		return this;
 	}
 

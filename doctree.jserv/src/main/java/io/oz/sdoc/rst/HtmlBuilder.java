@@ -1,4 +1,4 @@
-package io.oz.sdoc.build;
+package io.oz.sdoc.rst;
 
 import static io.odysz.common.LangExt.isblank;
 
@@ -27,9 +27,9 @@ import java.util.zip.ZipOutputStream;
 import io.odysz.common.Utils;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.x.SemanticException;
-import io.oz.sdoc.DocInf;
 import io.oz.sdoc.DocRes;
-import io.oz.sdoc.DoctreeDBHelper;
+import io.oz.sdoc.docx.DocxtreeDBHelper;
+import io.oz.sdoc.docx.DocxInf;
 
 /**
  * Builds a doc's html package on the synode, RST -&gt; html, by Sphinx: the only step compiled
@@ -39,8 +39,8 @@ import io.oz.sdoc.DoctreeDBHelper;
  * <li>&lt;volume&gt;/&lt;creator&gt;/{@link DocRes#buildfolder}/&lt;docId&gt;/source: the template's files
  *     (conf.py, static/), the RST files, and media/ with the resources the files link;</li>
  * <li>sphinx-build -b html source html;</li>
- * <li>html is zipped as {@link DocRes#htmlzip(String, String)}, the doc's {@link DocInf#htmlUri},
- *     with builtAt = now ({@link DoctreeDBHelper#built(String, String, IUser)}).</li>
+ * <li>html is zipped as {@link DocRes#htmlzip(String, String)}, the doc's {@link DocxInf#htmlUri},
+ *     with builtAt = now ({@link DocxtreeDBHelper#built(String, String, IUser)}).</li>
  * </ol>
  * The state of a doc's last build, {@link #state(String)}, is kept in memory: a build that
  * finished is told by the doc's builtAt, not earlier than its committedAt.
@@ -114,7 +114,7 @@ public class HtmlBuilder {
 	 * @param files the doc as RST files
 	 * @param usr who committed
 	 */
-	public synchronized void start(DoctreeDBHelper db, DocInf doc, ArrayList<RstFile> files, IUser usr) {
+	public synchronized void start(DocxtreeDBHelper db, DocxInf doc, ArrayList<RstFile> files, IUser usr) {
 		states.put(doc.docId, new String[] { State.building, null });
 		last = worker.submit(() -> {
 			try {
@@ -145,7 +145,7 @@ public class HtmlBuilder {
 	 * @throws SemanticException the files can't be built, or sphinx-build failed: its output
 	 * @throws IOException sphinx-build can't be run, or files can't be written
 	 */
-	String build(DoctreeDBHelper db, DocInf doc, ArrayList<RstFile> files, IUser usr) throws Exception {
+	String build(DocxtreeDBHelper db, DocxInf doc, ArrayList<RstFile> files, IUser usr) throws Exception {
 		if (db.res == null)
 			throw new SemanticException("The doc-tree db has no volume for building docs.");
 		if (!new File(template, "conf.py").isFile())
