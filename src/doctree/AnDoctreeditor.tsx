@@ -278,7 +278,7 @@ class AnDoctreeditorComp extends AnTreeditorComp<any> {
 	commit() {
 		this.flush();
 		const forest = this.state.forest;
-		this.props.doctier.commit(this.props.docId, forest[0] ? assemble(forest[0]) : [],
+		this.props.doctier.commitDoc(this.props.docId, forest[0] ? assemble(forest[0]) : [],
 			(resp) => {
 				this.setState({ committed: !resp.doc?.dirty, committedAt: resp.doc?.committedAt, build: resp.build,
 					doc: resp.doc ?? this.state.doc });

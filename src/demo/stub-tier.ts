@@ -4,9 +4,12 @@
  *
  * Text saves and commits work on an in-memory copy. Structure changes need the
  * server's reshaping, so they are answered with an error naming the request.
+ *
+ * A StreeDoctier answering its requests itself: it has no client, and the requests it doesn't
+ * override (e.g. publish) are never enabled by the demo's docs (no html package).
  */
-import type { TreeModify } from '@anclient/semantier';
-import { DoctreeResp, DocNode, locate, type Doctier, type OnErr, type OnOk, type RstFile } from '../doctree';
+import type { SessionClient, TreeModify } from '@anclient/semantier';
+import { DoctreeResp, DocNode, StreeDoctier, locate, type OnErr, type OnOk, type RstFile } from '../doctree';
 
 /** urls of the json files; webpack emits them as assets */
 export const stubDocs: Record<string, string> = {
@@ -20,9 +23,9 @@ const clone = <T,>(o: T): T => JSON.parse(JSON.stringify(o));
 export const describe = (q: TreeModify) =>
 	[q.op, q.at, q.nid, q.nvs?.find((nv) => nv[0] === 'kind')?.[1]].filter(Boolean).join(' ');
 
-export class StubDoctreeTier implements Doctier {
+export class StubDoctreeTier extends StreeDoctier {
 	/** the "server's" copy of each doc */
-	docs = new Map<string, Promise<DoctreeResp>>();
+	copies = new Map<string, Promise<DoctreeResp>>();
 	/** answer delay, ms */
 	delay = 120;
 	/** demo: answer text saves with an error */
@@ -31,14 +34,18 @@ export class StubDoctreeTier implements Doctier {
 	log: TreeModify[] = [];
 	onLog?: (log: TreeModify[]) => void;
 
+	constructor() {
+		super(undefined as unknown as SessionClient, '/demo/doctree', 'doctree.serv');
+	}
+
 	private doc(docId: string) {
-		if (!this.docs.has(docId)) {
+		if (!this.copies.has(docId)) {
 			const url = stubDocs[docId];
-			this.docs.set(docId, url
+			this.copies.set(docId, url
 				? fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(`${r.status} ${url}`)))
 				: Promise.reject(`no such doc: ${docId}`));
 		}
-		return this.docs.get(docId)!;
+		return this.copies.get(docId)!;
 	}
 
 	/** answer like a server: later, a copy */
@@ -48,11 +55,11 @@ export class StubDoctreeTier implements Doctier {
 			.catch((e) => err?.(String(e)));
 	}
 
-	tree(docId: string, ok: OnOk, err?: OnErr) {
+	override tree(docId: string, ok: OnOk, err?: OnErr) {
 		this.answer(docId, ok, err, (d) => new DoctreeResp({ doc: d.doc, forest: d.forest }));
 	}
 
-	update(docId: string, node: DocNode, ok: OnOk, err?: OnErr) {
+	override update(docId: string, node: DocNode, ok: OnOk, err?: OnErr) {
 		if (this.failSaves) {
 			setTimeout(() => err?.('server unreachable (simulated)'), this.delay);
 			return;
@@ -65,13 +72,13 @@ export class StubDoctreeTier implements Doctier {
 		});
 	}
 
-	modify(_docId: string, req: TreeModify, _ok: OnOk, err?: OnErr) {
+	override modify(_docId: string, req: TreeModify, _ok: OnOk, err?: OnErr) {
 		this.log = [...this.log, req];
 		this.onLog?.(this.log);
 		setTimeout(() => err?.(`${describe(req)}: structure changes need the server (doctree.serv)`), this.delay);
 	}
 
-	commit(docId: string, _rstFiles: RstFile[], ok: OnOk, err?: OnErr) {
+	override commitDoc(docId: string, _rstFiles: RstFile[] | undefined, ok: OnOk, err?: OnErr) {
 		this.answer(docId, ok, err, (d) => {
 			d.doc!.dirty = false;
 			d.doc!.committedAt = new Date().toLocaleString();

@@ -7,6 +7,8 @@ import { AnsonMsg, TreeModify } from '@anclient/semantier';
 import {
 	DocNode, DoctreeReq, DoctreeResp, RstFile, StreeDoctier, insertMod, moveMod, removeMod, replaced, type DocTreeNode, type MoveOp,
 } from '../../doctree/doc-stree';
+import { PuckNode, templates } from '../../storytree/templates';
+import { fromPuck, toPuck } from '../../storytree/story-config';
 import type { Result } from '../runner';
 
 /** a tree node, server shaped: node fields as strings */
@@ -48,6 +50,31 @@ const cases: { name: string; actual: () => string; expected: string }[] = [
 		})),
 		expected: '[{"type":"io.oz.sdoc.tier.DoctreeReq","a":"c/publish","docId":"d"},'
 				+ '{"type":"io.oz.sdoc.tier.DoctreeReq","a":"d/publish","docId":"d"}]',
+	},
+	{
+		name: 'doc-stree: u/page request, the page as puckpage (not page, QueryReq\'s paging index), as doctree.jserv reads it',
+		actual: () => {
+			const page = new PuckNode({ pucktype: PuckNode.Type.page, id: 'root', title: 'Spring Trip', children: [
+				new PuckNode({ pucktype: PuckNode.Type.text, id: 'Text-1', content: 'Three days in the tea hills' })] });
+			const r = JSON.parse(JSON.stringify(new DoctreeReq('/sdoc', DoctreeReq.A.savePage, { puckpage: page })));
+			return json({ type: r.type, a: r.a, page: r.page, puckpage: r.puckpage });
+		},
+		expected: '{"type":"io.oz.sdoc.tier.DoctreeReq","a":"u/page","page":0,"puckpage":{"type":"io.oz.sdoc.puck.PuckNode",'
+				+ '"pucktype":"page","id":"root","title":"Spring Trip","children":[{"type":"io.oz.sdoc.puck.PuckNode",'
+				+ '"pucktype":"Text","id":"Text-1","content":"Three days in the tea hills"}]}}',
+	},
+	{
+		name: 'doc-stree: a template through Puck and back, PuckNodes with the template id, no "type" in Puck\'s props',
+		actual: () => {
+			const data = toPuck(templates[0].data);
+			const back = fromPuck(data);
+			return json({ root: data.root.props, block0: data.content[0], back: back.children!.map((c) => c.type + ' ' + c.pucktype),
+				type: back.type, template: back.template });
+		},
+		expected: '{"root":{"id":"root","template":"pm-0","title":"My PM Story by 12 Videos","subtitle":""},'
+				+ '"block0":{"type":"Hero","props":{"id":"Hero-1","title":"My PM Story by 12 Videos","subtitle":""}},'
+				+ '"back":["io.oz.sdoc.puck.PuckNode Hero","io.oz.sdoc.puck.PuckNode Text","io.oz.sdoc.puck.PuckNode Gallery",'
+				+ '"io.oz.sdoc.puck.PuckNode Text"],"type":"io.oz.sdoc.puck.PuckNode","template":"pm-0"}',
 	},
 	{
 		name: 'doc-stree: u/tree request, as doctree.jserv reads it',

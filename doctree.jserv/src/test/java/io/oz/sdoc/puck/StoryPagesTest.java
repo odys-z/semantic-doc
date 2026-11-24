@@ -65,7 +65,7 @@ class StoryPagesTest {
 			+ "\"node\": {\"nodetype\": \"p\", \"mime\": \"" + mime + "\", \"css\": \"{\\\"wh\\\":[4,3]}\", \"doctabl\": \"h_photos\"}}";
 	}
 
-	/** a page as the editor sends it (fromPuck(): "type" on the root only) */
+	/** a page as the editor sends it, here with "type" on the root only (blocks typed by the fields) */
 	static PuckNode page(String title, String... galleryPids) throws Exception {
 		StringBuilder items = new StringBuilder();
 		for (String p : galleryPids)
@@ -86,7 +86,7 @@ class StoryPagesTest {
 	@Test
 	void story() throws Exception {
 		// a new story
-		DoctreeReq save = new DoctreeReq("/sdoc").page(null, page("Spring Trip", "00A3F1", "00A3F2"));
+		DoctreeReq save = new DoctreeReq("/sdoc").puckPage(null, page("Spring Trip", "00A3F1", "00A3F2"));
 		save.a(DoctreeReq.A.savePage);
 		SDocRef s = ok(save).doc;
 		assertNotNull(s.docId);
@@ -115,7 +115,7 @@ class StoryPagesTest {
 		assertEquals("image/jpeg", p.children.get(2).items.get(1).get("mime"));
 
 		// a media appended, saved again: the blocks replaced
-		save = new DoctreeReq("/sdoc").page(s.docId, page("Spring Trip", "00A3F1", "00A3F2", "00A3F7"));
+		save = new DoctreeReq("/sdoc").puckPage(s.docId, page("Spring Trip", "00A3F1", "00A3F2", "00A3F7"));
 		save.a(DoctreeReq.A.savePage);
 		ok(save);
 		assertEquals(3, ok(load).page.children.get(2).items.size());
@@ -135,7 +135,7 @@ class StoryPagesTest {
 	/** committed: the media's pids mapped to their synuids by the album's records */
 	@Test
 	void commit() throws Exception {
-		DoctreeReq save = new DoctreeReq("/sdoc").page(null, page("Spring Trip", "00A3F1", "00A3F2", "00A3F7"));
+		DoctreeReq save = new DoctreeReq("/sdoc").puckPage(null, page("Spring Trip", "00A3F1", "00A3F2", "00A3F7"));
 		save.a(DoctreeReq.A.savePage);
 		SDocRef s = ok(save).doc;
 		DoctreeReq load = new DoctreeReq("/sdoc").docId(s.docId);
@@ -177,7 +177,7 @@ class StoryPagesTest {
 
 	@Test
 	void missingMedia() throws Exception {
-		DoctreeReq save = new DoctreeReq("/sdoc").page(null, page("Lost", "00A3F9"));
+		DoctreeReq save = new DoctreeReq("/sdoc").puckPage(null, page("Lost", "00A3F9"));
 		save.a(DoctreeReq.A.savePage);
 		SDocRef s = ok(save).doc;
 

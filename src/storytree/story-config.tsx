@@ -1,8 +1,8 @@
 /**
  * The Puck config of stories, the same for the editor (Puck) and the published page (Render).
  *
- * A story's page is a tree of PuckNode, {pucktype, id, ...props, children} (templates.ts):
- * "pucktype", not "type", which Anson reads as a class name. Puck takes its own Data,
+ * A story's page is a tree of PuckNode, io.oz.sdoc.puck.PuckNode (templates.ts), {pucktype, id,
+ * ...props, children}: "pucktype", not "type", which is Anson's. Puck takes its own Data,
  * {root: {props}, content: [{type, props}]}: toPuck() / fromPuck() at the boundary.
  *
  * Media are the album tree's AnTreeNodes, as dropped: a Hero's media, a Gallery's items. A
@@ -15,7 +15,7 @@ import React from 'react';
 import type { ComponentConfig, Config, Data } from '@puckeditor/core';
 import type { AnTreeNode } from '@anclient/semantier';
 
-import type { PuckNode } from './templates';
+import { PuckNode } from './templates';
 import { MediaDrop } from './MediaDrop';
 
 /** Puck's metadata of the editor: media as session links; drops applied by the editor */
@@ -73,26 +73,26 @@ export const storyConfig: Config = {
 	components: { Hero, Text, Gallery } as Config['components'],
 };
 
-/** Anson's type of a story's page root, the envelope the synode parses (io.oz.sdoc.puck.PuckNode) */
-export const PUCKNODE = 'io.oz.sdoc.puck.PuckNode';
-
-/** A story's page as Puck's Data: the root's fields as root props, its children as content. */
+/**
+ * A story's page as Puck's Data: the root's fields as root props, its children as content.
+ * Anson's "type" (the class name) is not a prop: fromPuck() gives it back.
+ */
 export function toPuck(page: PuckNode): Data {
-	const { pucktype: _p, type: _t, children, ...root } = page ?? {};
+	const { pucktype: _p, type: _t, children, ...root } = page;
 	return {
 		root: { props: root },
-		content: (children ?? []).map(({ pucktype, ...props }: PuckNode) => ({ type: pucktype, props })),
+		content: (children ?? []).map(({ pucktype, type: _bt, ...props }) => ({ type: pucktype, props })),
 	};
 }
 
-/** Puck's Data as a story's page, see {@link toPuck} */
+/** Puck's Data as a story's page, io.oz.sdoc.puck.PuckNode, see {@link toPuck} */
 export function fromPuck(data: Data): PuckNode {
-	return {
-		type: PUCKNODE, // the envelope only: blocks are typed by the synode's fields
-		pucktype: 'page',
+	return new PuckNode({
 		...(data.root?.props ?? {}),
-		children: data.content.map(({ type, props }) => ({ pucktype: type, ...props })),
-	};
+		pucktype: PuckNode.Type.page,
+		id: 'root',
+		children: data.content.map(({ type, props }) => new PuckNode({ ...props, pucktype: type as string })),
+	});
 }
 
 /**
@@ -111,7 +111,7 @@ export function dropTo(pucktype: string, props: any, dropped: AnTreeNode[]): any
 	 */
 	const media = (n: AnTreeNode) => ({ type: n.type, id: n.id, node: n.node }) as AnTreeNode;
 
-	if (pucktype === 'Gallery') {
+	if (pucktype === PuckNode.Type.gallery) {
 		const items: AnTreeNode[] = [...(props.items ?? [])];
 		const have = new Set(items.map((n) => n.id));
 		for (const d of dropped)
@@ -120,7 +120,7 @@ export function dropTo(pucktype: string, props: any, dropped: AnTreeNode[]): any
 		return items.length === (props.items ?? []).length ? undefined : { ...props, items };
 	}
 
-	if (pucktype === 'Hero') {
+	if (pucktype === PuckNode.Type.hero) {
 		const m = dropped.find((d) => !isFolder(d));
 		return m ? { ...props, media: media(m) } : undefined;
 	}

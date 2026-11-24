@@ -67,7 +67,7 @@ public class DoctreeReq extends AnDatasetReq {
 		public static final String stories = "r/stories";
 		/** load a story's page → {@link DoctreeResp#doc}, {@link DoctreeResp#page}; since 0.1.5 */
 		public static final String page = "r/page";
-		/** save a story's page, {@link DoctreeReq#page}; a new story if docId is null → {@link DoctreeResp#doc}; since 0.1.5 */
+		/** save a story's page, {@link DoctreeReq#puckpage}; a new story if docId is null → {@link DoctreeResp#doc}; since 0.1.5 */
 		public static final String savePage = "u/page";
 
 		/**
@@ -98,8 +98,11 @@ public class DoctreeReq extends AnDatasetReq {
 	@AnsonField(valType="io.oz.sdoc.rst.RstFile")
 	public ArrayList<RstFile> rstFiles;
 
-	/** for {@link A#savePage}: the story's page; docId null: a new story */
-	public PuckNode page;
+	/**
+	 * for {@link A#savePage}: the story's page; docId null: a new story.
+	 * Not named page, which would hide AnQueryReq.page, the paging index (an int) every client sends.
+	 */
+	public PuckNode puckpage;
 
 	public DoctreeReq() {
 		super(null, null);
@@ -141,9 +144,9 @@ public class DoctreeReq extends AnDatasetReq {
 	}
 
 	/** for {@link A#savePage} */
-	public DoctreeReq page(String docId, PuckNode page) {
+	public DoctreeReq puckPage(String docId, PuckNode page) {
 		this.docId = docId;
-		this.page = page;
+		this.puckpage = page;
 		return this;
 	}
 

@@ -90,7 +90,7 @@ class DoctreePublishTest {
 		// a story, saved by the editor, committed (its page file)
 		DoctreeReq save = new DoctreeReq("/sdoc");
 		save.a(DoctreeReq.A.savePage);
-		save.page = (PuckNode) Anson.fromJson("{\"type\": \"io.oz.sdoc.puck.PuckNode\", \"pucktype\": \"page\", \"id\": \"root\", "
+		save.puckpage = (PuckNode) Anson.fromJson("{\"type\": \"io.oz.sdoc.puck.PuckNode\", \"pucktype\": \"page\", \"id\": \"root\", "
 				+ "\"title\": \"Tea hills\", \"template\": \"pm-0\", \"children\": ["
 				+ "{\"pucktype\": \"Text\", \"id\": \"Text-1\", \"content\": \"Three days in the tea hills\"}]}");
 		storyId = ok(tier.handle(save, ody)).doc.docId;

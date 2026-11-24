@@ -406,11 +406,11 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 		return new DoctreeResp().doc(puck.doc(req.docId)).page(page);
 	}
 
-	/** u/page: save the story's page, {@link DoctreeReq#page}; docId null: a new story → doc */
+	/** u/page: save the story's page, {@link DoctreeReq#puckpage}; docId null: a new story → doc */
 	DoctreeResp savePage(DoctreeReq req, IUser usr) throws Exception {
 		if (puck() == null)
 			throw new SemanticException("Doc-tree tier: the working copy isn't configured.");
-		return new DoctreeResp().doc(puck.stories.save(synode, req.docId, req.page, usr));
+		return new DoctreeResp().doc(puck.stories.save(synode, req.docId, req.puckpage, usr));
 	}
 
 

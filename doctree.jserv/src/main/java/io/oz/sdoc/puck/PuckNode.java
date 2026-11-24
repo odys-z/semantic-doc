@@ -9,7 +9,8 @@ import io.odysz.semantic.DA.DatasetCfg.AnTreeNode;
 /**
  * A story's page, and each block of it: semantic-doc's TS PuckNode (storytree/templates.ts),
  * {pucktype, id, ...props, children}, "pucktype", not "type", which Anson reads as the class.
- * Only the page root carries "type" (the envelope); blocks and media are typed by the fields.
+ * The TS PuckNode is an Anson too, so the client's blocks carry "type"; blocks without it are
+ * typed by the fields (children's valType).
  *
  * <p>Media are the album tree's nodes as dropped, AnTreeNode: id the h_photos pid while editing;
  * node.synuid, the record's io_oz_synuid, set when the story is committed.</p>

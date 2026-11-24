@@ -2,8 +2,8 @@
  * The doc-tree tier, client side: types the same as doctree.jserv's (io.oz.sdoc), and
  * {@link StreeDoctier}, its requests through a SessionClient.
  *
- *   request   DoctreeReq  {a, docId, doc, srcId, node, mod}   a: one of DoctreeReq.A
- *   response  DoctreeResp {doc, docs, root, forest, rejected, newId}
+ *   request   DoctreeReq  {a, docId, doc, srcId, node, mod, res, rstFiles, puckpage}   a: one of DoctreeReq.A
+ *   response  DoctreeResp {doc, docs, root, forest, rejected, newId, build, buildlog, page}
  *
  * The server owns the tree: every tree change is a TreeModify as the user means it
  * (up, down, indent, outdent, insert, remove), and the server works out where nodes go
@@ -22,13 +22,18 @@ import {
 } from '@anclient/semantier';
 import type { PuckNode } from '../storytree/templates';
 
-/** io.oz.sdoc.SDocRef: doc header, of a doc tree or a story */
+/**
+ * io.oz.sdoc.SDocRef, a semantic.DA DocRef: doc header, of a doc tree or a story.
+ * Only the fields the browser gets: DocRef's others, and SDocRef.resources, are exchanged
+ * between the synode and its html-service only.
+ */
 export class DocInf extends Anson {
 	static __type__ = 'io.oz.sdoc.SDocRef';
 
 	/** io.oz.sdoc.SDocRef.State */
 	static State = { parsing: 'parsing', ready: 'ready', failed: 'failed' } as const;
 
+	/** DocRef.docId */
 	docId?: string;
 	title?: string;
 	creator?: string;
@@ -36,8 +41,6 @@ export class DocInf extends Anson {
 	state?: string | null;
 	/** why the import failed */
 	msg?: string | null;
-	/** the source docx's record id (h_photos); null if created in the editor */
-	srcId?: string | null;
 	/** compiled html uri; null if never built */
 	htmlUri?: string | null;
 	builtAt?: string | null;
@@ -53,7 +56,7 @@ export class DocInf extends Anson {
 	dirty?: boolean;
 	/** time of the last commit, null if never committed */
 	committedAt?: string | null;
-	/** What the doc's content is, see {@link DocInf.Kind}: story for a story (s_stories); null: a doc tree (s_docs). */
+	/** What the doc's content is, see {@link DocInf.Kind}: story for a story (s_stories); null: a doc tree (s_docs) */
 	mime?: string | null;
 	/** a story's subtitle */
 	subtitle?: string | null;
@@ -198,8 +201,13 @@ export class DoctreeReq extends AnDatasetReq {
 		stories: 'r/stories',
 		/** load a story's page → doc, page */
 		page: 'r/page',
-		/** save a story's page, page; docId absent: a new story → doc */
+		/** save a story's page, puckpage; docId absent: a new story → doc */
 		savePage: 'u/page',
+		/**
+		 * the pages published at html-service, of both trees → docs (with their resources):
+		 * the local html-service's query (loopback, no session), not the browser's
+		 */
+		published: 'r/published',
 	} as const;
 
 	docId?: string;
@@ -213,10 +221,13 @@ export class DoctreeReq extends AnDatasetReq {
 	res?: string;
 	/** for commit: the doc as RST files; absent: committed without a html build */
 	rstFiles?: RstFile[];
-	/** for savePage: the story's page, fromPuck()'s, "type" on the root (io.oz.sdoc.puck.PuckNode) */
-	page?: PuckNode;
+	/**
+	 * for savePage: the story's page, fromPuck()'s. Not named page, which is QueryReq's
+	 * paging index, as Java's DoctreeReq.puckpage isn't to hide AnQueryReq.page.
+	 */
+	puckpage?: PuckNode;
 
-	constructor(uri: string, a: Doctree_A, opts: { docId?: string, doc?: DocInf, srcId?: string, node?: DocNode, mod?: TreeModify, res?: string, rstFiles?: RstFile[], page?: PuckNode } = {}) {
+	constructor(uri: string, a: Doctree_A, opts: { docId?: string, doc?: DocInf, srcId?: string, node?: DocNode, mod?: TreeModify, res?: string, rstFiles?: RstFile[], puckpage?: PuckNode } = {}) {
 		super({ uri, type: DoctreeReq.__type__ });
 		this.a = a; // after super: AnDatasetReq's TA() is for its own A
 		Object.assign(this, opts);
@@ -257,28 +268,6 @@ Protocol.registerBody(DoctreeResp.__type__, (json) => new DoctreeResp(json));
 
 export type OnOk = (resp: DoctreeResp) => void;
 export type OnErr = (msg: string) => void;
-
-// /** Requests of the doc-tree tier, see {@link StreeDoctier} */
-// export interface Doctier {
-// 	/** r/tree: the doc root with its subtree */
-// 	tree(docId: string, ok: OnOk, err?: OnErr): void;
-// 	/** u/node: save tipjson + rstext of one node; answers the doc header, no forest */
-// 	update(docId: string, node: DocNode, ok: OnOk, err?: OnErr): void;
-// 	/** u/tree: answers the reloaded subtree, or rejected */
-// 	modify(docId: string, mod: TreeModify, ok: OnOk, err?: OnErr): void;
-// 	/**
-// 	 * c/commit: mark the doc's work as finished; the synode builds the doc's html package
-// 	 * from rstFiles in the background (resp.build: building), see {@link Doctier.build}
-// 	 */
-// 	commit(docId: string, rstFiles: RstFile[], ok: OnOk, err?: OnErr): void;
-// 	/** r/build: the state of the doc's html build. Absent: no builds (e.g. a stub tier). */
-// 	build?(docId: string, ok: OnOk, err?: OnErr): void;
-// 	/**
-// 	 * url of a doc's resource, e.g. an imported picture, for an img's src or a fetch;
-// 	 * the same url for the same resource. Absent, or undefined: no resources (e.g. a stub tier).
-// 	 */
-// 	resSrc?(docId: string, name: string): string | undefined;
-// }
 
 /** base64 of a string's UTF-8 bytes (btoa() takes Latin-1 only) */
 function base64(s: string): string {
@@ -331,7 +320,11 @@ export class StreeDoctier extends StreeTier {
 		this.send(DoctreeReq.A.modify, { docId, mod }, ok, err);
 	}
 
-	commit(docId: string, rstFiles: RstFile[], ok: OnOk, err?: OnErr) {
+	/**
+	 * c/commit: a doc tree with its RST files, the synode building its html package from them;
+	 * a story without (its page is committed by the synode) → resp.doc, build
+	 */
+	commitDoc(docId: string, rstFiles: RstFile[] | undefined, ok: OnOk, err?: OnErr) {
 		this.send(DoctreeReq.A.commit, { docId, rstFiles }, ok, err);
 	}
 
@@ -367,7 +360,7 @@ export class StreeDoctier extends StreeTier {
 	 * @param docId undefined: a new story, its id in resp.doc
 	 */
 	savePage(docId: string | undefined, page: PuckNode, ok: OnOk, err?: OnErr) {
-		this.send(DoctreeReq.A.savePage, { docId, page }, ok, err);
+		this.send(DoctreeReq.A.savePage, { docId, puckpage: page }, ok, err);
 	}
 
 	/**
@@ -517,16 +510,8 @@ export function replaced(forest: DocTreeNode[], resp: DoctreeResp): DocTreeNode[
 	return [...forest];
 }
 
-/**
- * Received forests: semantic-DA's IndentFlag says 'space' where semantier's
- * IndentName says 'spacex'. TODO semantier: accept 'space', then drop this.
- */
+/** Received forests, as they are: semantier's IndentName is semantic-DA's IndentFlag ('space') */
 export function received(forest: DocTreeNode[] | undefined): DocTreeNode[] {
-	const fix = (t: DocTreeNode) => {
-		t.indents = t.indents?.map((i) => ((i as string) === 'space' ? 'spacex' : i));
-		t.node.children?.forEach(fix);
-	};
-	(forest ?? []).forEach(fix);
 	return forest ?? [];
 }
 
@@ -542,7 +527,7 @@ function placeAs(sub: DocTreeNode, old: DocTreeNode) {
 	const down = (p: DocTreeNode) => {
 		const kids = (p.node.children ?? []) as DocTreeNode[];
 		const base = p.indents?.length
-			? [...p.indents.slice(0, -1), (p.islastSibling ?? (p as any).lastSibling) ? 'spacex' : 'vlink'] as DocTreeNode['indents']
+			? [...p.indents.slice(0, -1), (p.islastSibling ?? (p as any).lastSibling) ? 'space' : 'vlink'] as DocTreeNode['indents']
 			: [];
 		kids.forEach((k, x) => {
 			k.level = (p.level ?? 0) + 1;

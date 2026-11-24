@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import io.odysz.anson.Anson;
 import io.odysz.semantic.ext.TreeModify;
 import io.oz.sdoc.docx.DocxNode;
+import io.oz.sdoc.puck.PuckNode;
 import io.oz.sdoc.tier.DoctreeReq;
 import io.oz.sdoc.tier.DoctreeResp;
 
@@ -104,5 +105,25 @@ class DoctreeTypesTest {
 		assertEquals("index.rst", req.rstFiles.get(0).path);
 		assertEquals("Doc\n===\n", req.rstFiles.get(0).rst);
 		assertEquals("image1.png", req.rstFiles.get(0).media[0]);
+	}
+
+	/**
+	 * u/page as the client sends it (semantic-doc/src/test/cases/doc-stree.ts): the page as puckpage,
+	 * beside QueryReq's paging index, page, 0, which is AnQueryReq.page's.
+	 */
+	@Test
+	void savePageFromClient() throws Exception {
+		String json = "{\"type\":\"io.oz.sdoc.tier.DoctreeReq\",\"a\":\"u/page\",\"page\":0,\"puckpage\":{\"type\":\"io.oz.sdoc.puck.PuckNode\","
+				+ "\"pucktype\":\"page\",\"id\":\"root\",\"title\":\"Spring Trip\",\"children\":[{\"type\":\"io.oz.sdoc.puck.PuckNode\","
+				+ "\"pucktype\":\"Text\",\"id\":\"Text-1\",\"content\":\"Three days in the tea hills\"}]}}";
+
+		DoctreeReq req = (DoctreeReq) Anson.fromJson(json);
+
+		assertEquals(DoctreeReq.A.savePage, req.a());
+		assertEquals(0, req.page());
+		assertEquals(PuckNode.Type.page, req.puckpage.pucktype);
+		assertEquals("Spring Trip", req.puckpage.title);
+		assertEquals(PuckNode.Type.text, req.puckpage.children.get(0).pucktype);
+		assertEquals("Three days in the tea hills", req.puckpage.children.get(0).content);
 	}
 }
