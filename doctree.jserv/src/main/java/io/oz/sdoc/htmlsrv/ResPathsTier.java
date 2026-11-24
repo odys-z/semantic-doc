@@ -292,7 +292,7 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 	 */
 	DoctreeResp queryPublishs() throws Exception {
 		if (isblank(synode))
-			throw new SemanticException("The synode's jserv root, html-service.json/dynaResource.syn_jserv, is not configured.");
+			throw new SemanticException("The synode's jserv root, WebConfig (html-service.json)/dynaResource.syn_jserv, is not configured.");
 
 		AnsonMsg<DoctreeReq> req = new AnsonMsg<DoctreeReq>(synport)
 				.body(new DoctreeReq().a(DoctreeReq.A.docs));
@@ -353,7 +353,7 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 
 		synchronized (this) {
 			ArrayList<SDocRef> docs = new ArrayList<SDocRef>();
-			try (DirectoryStream<Path> dirs = Files.newDirectoryStrPuckeam(resroot, Files::isDirectory)) {
+			try (DirectoryStream<Path> dirs = Files.newDirectoryStream(resroot, Files::isDirectory)) {
 				for (Path d : dirs) {
 					if (StoryShell.viewer.equals(d.getFileName().toString()))
 						continue;

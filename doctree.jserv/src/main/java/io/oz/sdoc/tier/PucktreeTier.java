@@ -16,12 +16,10 @@ import io.odysz.semantic.jprotocol.IPort;
 import io.odysz.semantic.jprotocol.AnsonMsg.MsgCode;
 import io.odysz.semantic.jserv.ServPort;
 import io.odysz.semantics.x.SemanticException;
-import io.oz.sdoc.htmlsrv.HtmlPubResp;
-import io.oz.sdoc.htmlsrv.HtmlPubReq.A;
 import io.oz.sdoc.puck.PuckNode;
 import io.oz.sdoc.puck.PucktreeDBHelper;
 
-@WebServlet(description = "semantic-doc doc-tree tier", urlPatterns = { "/pucktree.serv" })
+@WebServlet(description = "semantic-doc puck-tree tier", urlPatterns = { "/pucktree.serv" })
 public class PucktreeTier extends ServPort<PucktreeReq> {
 
 	public PucktreeTier(IPort port) throws SemanticException {
@@ -54,12 +52,12 @@ public class PucktreeTier extends ServPort<PucktreeReq> {
 	 */
 	public AnsonMsg<? extends AnsonResp> handle(PucktreeReq req) {
 		try {
-			if (!A.refresh.equals(req.a()))
-				throw new SemanticException("Res-publish tier: request.a, %s, can not be handled.", req.a());
+//			if (!A.refresh.equals(req.a()))
+//				throw new SemanticException("Res-publish tier: request.a, %s, can not be handled.", req.a());
 
 			PucktreeDBHelper db = null;
 			if (db == null)
-				return ok(new HtmlPubResp().respubs(new ArrayList<PuckNode>()));
+				return ok(new DoctreeResp().respubs(new ArrayList<PuckNode>()));
 
 //			ArrayList<PuckNode> pubs = db.storypage();
 //			for (DocxInf d : pubs)
