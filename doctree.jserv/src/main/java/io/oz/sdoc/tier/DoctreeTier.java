@@ -52,11 +52,6 @@ import io.oz.sdoc.rst.HtmlBuilder;
  * <p>The session is verified ({@link #onPost(AnsonMsg, HttpServletResponse)}); its user is the
  * creator of the docs he imports, the owner of their resource folders ({@link DocResHelper}).</p>
  *
- * TODO Rename to RstreeTier
- * TODO
- * TODO
- * TODO
- * 
  * @author ody
  */
 @WebServlet(description = "semantic-doc doc-tree tier", urlPatterns = { "/doctree.serv" })
@@ -388,6 +383,10 @@ public class DoctreeTier extends ServPort<DoctreeReq> {
 			pubs.addAll(puck().published());
 			pubs.addAll(db.published());
 		}
+		// the synode publishing them, e.g. reported by html-service's ResPathsTier
+		for (SDocRef d : pubs)
+			if (isblank(d.synoder))
+				d.synoder = synode;
 		return new DoctreeResp().docs(pubs);
 	}
 

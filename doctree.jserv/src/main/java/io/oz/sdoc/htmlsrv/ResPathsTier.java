@@ -44,14 +44,15 @@ import io.odysz.jclient.HttpServClient;
 import io.odysz.semantic.jprotocol.AnsonMsg;
 import io.odysz.semantic.jprotocol.AnsonMsg.MsgCode;
 import io.odysz.semantic.jprotocol.IPort;
+import io.odysz.semantic.jprotocol.JServUrl;
 import io.odysz.semantic.jserv.DynaResource;
 import io.odysz.semantic.jserv.IResUpdater;
 import io.odysz.semantic.jserv.ServPort6;
 import io.odysz.semantic.jserv.WebConfig;
 import io.odysz.semantic.meta.DocRef;
+import io.odysz.semantic.meta.SynChangeMeta;
 import io.odysz.semantics.x.SemanticException;
 import io.oz.sdoc.SDocRef;
-import io.oz.sdoc.puck.PuckNode;
 import io.oz.sdoc.tier.DoctreeReq;
 import io.oz.sdoc.tier.DoctreeResp;
 import io.oz.sdoc.tier.DoctreeTier;
@@ -91,28 +92,30 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 	/** url of the port, without the leading '/', the same as the synode's port for html-service, e.g. SynDocollPort.respaths */
 	public static final String url = "respaths.serv";
 
-	/** A published doc. */
-	static class DynaPublish extends SDocRef {
-		DynaPublish(SDocRef doc) {
-			docId   = doc.docId;
-			title   = doc.title;
-			creator = doc.creator;
-			pubpath = doc.pubpath;
-			htmlUri = doc.htmlUri;
-			builtAt = doc.builtAt;
-			mime    = doc.mime;
-		}
-
-		/** @return the doc's header, a type the synode knows */
-		SDocRef inf() {
-			SDocRef d = new SDocRef(docId, title, creator);
-			d.pubpath = pubpath;
-			d.htmlUri = htmlUri;
-			d.builtAt = builtAt;
-			d.mime    = mime;
-			return d;
-		}
-	}
+//	/** A published doc. */
+//	static class DynaPublish extends SDocRef {
+//		DynaPublish(SDocRef doc) {
+//			synoder = doc.synoder;
+//			docId   = doc.docId;
+//			title   = doc.title;
+//			creator = doc.creator;
+//			pubpath = doc.pubpath;
+//			htmlUri = doc.htmlUri;
+//			builtAt = doc.builtAt;
+//			mime    = doc.mime;
+//		}
+//
+//		/** @return the doc's header, a type the synode knows */
+//		SDocRef inf() {
+//			SDocRef d = new SDocRef(docId, title, creator);
+//			d.synoder = synoder;
+//			d.pubpath = pubpath;
+//			d.htmlUri = htmlUri;
+//			d.builtAt = builtAt;
+//			d.mime    = mime;
+//			return d;
+//		}
+//	}
 
 	/** the folder of all the published docs, {@link DynaResource#resource}, served at /{@link #pubroot} */
 	Path resroot;
@@ -123,6 +126,8 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 	String pubroot;
 	/** the local synode's jserv root, {@link DynaResource#syn_jserv} */
 	String synode;
+	/** the published docs' link root, http://&lt;local ip&gt;:&lt;html-service's port&gt;, for the reports */
+	String weblink;
 	/** polling interval, {@link DynaResource#pollInterval_snd}; 0: no polling */
 	long seconds;
 	/** polling again after a failure */
@@ -138,7 +143,7 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 	HashMap<String, SDocRef> indexDocs;
 
 	/** [pubpath, published doc] */
-	HashMap<String, DynaPublish> published = new HashMap<String, DynaPublish>();
+	HashMap<String, SDocRef> published = new HashMap<String, SDocRef>();
 
 	ScheduledExecutorService scheduler;
 
@@ -189,6 +194,7 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 
 		synode    = res.syn_jserv;
 		seconds   = res.pollInterval_snd;
+		weblink   = f("http://%s:%s", JServUrl.getLocalIp(2), wcfg.port);
 		resroot   = Paths.get(EnvPath.decodeUri(Paths.get(".").toAbsolutePath().toString(), res.resource)).normalize();
 		pubroot   = res.danyroot.replaceAll("^/+|/\\*$|/+$", "");
 		if (!pubroot.matches("[0-9A-Za-z_\\-\\.]+"))
@@ -321,6 +327,78 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 		return resp;
 	}
 
+	/**
+	 * The resource report, e.g. logged by html-service (io.oz.srv.HtmlServer) once the server is started:
+	 * the url root and its folder, the polling, the docs' folders served (kept from before a restart, or
+	 * deployed since), and the paths deployed by the synode's records ({@link #paths()}), which are none
+	 * until the synode answers the first polling, in its own thread.
+	 */
+	@Override
+	public String toString() {
+		if (resroot == null)
+			return f("[ResPathsTier] port /%s, not started (dynaResource not loaded by onUpdate()).", url);
+
+		ArrayList<String> folders = new ArrayList<String>();
+		try (DirectoryStream<Path> dirs = Files.newDirectoryStream(resroot, Files::isDirectory)) {
+			for (Path d : dirs)
+				if (!StoryShell.viewer.equals(d.getFileName().toString()))
+					folders.add(pubroot + "/" + d.getFileName());
+		} catch (IOException e) {
+			folders.add(f("[can't list %s: %s]", resroot, e.getMessage()));
+		}
+		folders.sort(null);
+
+		return f("[ResPathsTier] port /%s, dynamic paths: /%s/* -> %s, %s\n"
+				+ "\t%s doc folder(s) served: %s\n"
+				+ "\tstory media maps: %s\n"
+				+ "%s",
+				url, pubroot, resroot,
+				seconds > 0 && !isblank(synode) ? f("polling %s per %s seconds", synode, seconds) : "no polling",
+				folders.size(), String.join(", ", folders),
+				storyMedia == null ? null : storyMedia.maps,
+				resources());
+	}
+
+	/**
+	 * The resource list, of the docs deployed by the synode's records ({@link #published}), a line each,
+	 * synode : puck / rst : id : pub-link, where id is the doc's id for a page, and h_photos'
+	 * io_oz_synuid for a story's media (the synode is the one the media is from), e.g.<pre>
+	 * closed-1-hub : rst  : 000001 : http://192.168.2.59:8996/pub/ofhgd5/
+	 * closed-1-hub : puck : 000002 : http://192.168.2.59:8996/pub/k2xe7q/
+	 * closed-1-hub : puck : closed-1-hub,0000A3 : http://192.168.2.59:8996/pub/k2xe7q/m/closed-1-hub,0000A3</pre>
+	 * None until the synode answers the first polling, after the server is started.
+	 * @return the lines, the first one counting the docs
+	 */
+	synchronized String resources() {
+		StringBuilder b = new StringBuilder(f("[ResPathsTier] %s doc(s) deployed by the synode's records%s",
+				published.size(), published.isEmpty() ? " (none yet, or the synode hasn't answered)." : ":"));
+
+		for (String path : paths()) {
+			SDocRef d = published.get(path);
+			boolean story = eq(SDocRef.Kind.story, d.mime);
+			String link = f("%s/%s/", weblink, path);
+			b.append(f("\n\t%s : %s : %s : %s", d.synoder, story ? "puck" : "rst ", d.docId, link));
+
+			if (!story) continue;
+			SDocRef m;
+			try { m = storyMedia.read(path); }
+			catch (IOException e) {
+				b.append(f("\n\t\t[can't read the media map: %s]", e.getMessage()));
+				continue;
+			}
+			if (m == null || m.resources == null) continue;
+			for (DocRef r : m.resources) {
+				if (r == null || isblank(r.uids)) continue;
+				int sep = r.uids.indexOf(SynChangeMeta.UIDsep);
+				b.append(f("\n\t\t%s : puck : %s : %sm/%s%s",
+						sep > 0 ? r.uids.substring(0, sep) : d.synoder,
+						r.uids, link, r.uids,
+						isblank(r.uri64) ? " (not synchronized yet, 404)" : ""));
+			}
+		}
+		return b.toString();
+	}
+
 	/** @return published paths, sorted */
 	public synchronized String[] paths() {
 		return published.keySet().stream().sorted().toArray(String[]::new);
@@ -330,7 +408,7 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 	synchronized ArrayList<SDocRef> published() {
 		ArrayList<SDocRef> docs = new ArrayList<SDocRef>();
 		for (String path : paths())
-			docs.add(published.get(path).inf());
+			docs.add(published.get(path));
 		return docs;
 	}
 
@@ -455,6 +533,7 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 			}
 		}
 		storyMedia.report();
+		Utils.logi("%s", resources());
 	}
 
 	/** @return the request's docs, with pubpaths */
@@ -488,7 +567,7 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 		if (isblank(doc.pubpath))
 			doc.pubpath = getCtxUrlPath(doc);
 
-		DynaPublish old = published.get(doc.pubpath);
+		SDocRef old = published.get(doc.pubpath);
 		if (!force && old != null && eq(old.builtAt, doc.builtAt) && eq(old.htmlUri, doc.htmlUri))
 			return;
 
@@ -513,7 +592,8 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 			throw e;
 		}
 
-		published.put(doc.pubpath, new DynaPublish(doc));
+		// published.put(doc.pubpath, new DynaPublish(doc));
+		published.put(doc.pubpath, doc);
 		Utils.logi("[ResPathsTier] published /%s <- %s", doc.pubpath, doc.htmlUri);
 	}
 
@@ -557,7 +637,8 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 	 * If a doc already published, e.g. the synode missed the reply, keeps its path.
 	 */
 	String getCtxUrlPath(SDocRef doc) {
-		for (DynaPublish p : published.values())
+//		for (DynaPublish p : published.values())
+		for (SDocRef p : published.values())
 			if (!isblank(doc.docId) && eq(p.docId, doc.docId))
 				return p.pubpath;
 
