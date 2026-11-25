@@ -1,0 +1,460 @@
+diff --git a/doctree.jserv/src/main/java/io/oz/sdoc/puck/PuckNode.java b/doctree.jserv/src/main/java/io/oz/sdoc/puck/PuckNode.java
+index 3f5a83d..bc5d1fc 100644
+--- a/doctree.jserv/src/main/java/io/oz/sdoc/puck/PuckNode.java
++++ b/doctree.jserv/src/main/java/io/oz/sdoc/puck/PuckNode.java
+@@ -42,6 +42,12 @@ public class PuckNode extends Anson {
+ 	/** Gallery */
+ 	public String layout;
+ 
++	/**
++	 * page: the album media referenced by the blocks, json of a map, h_photos pid → Puck block ids,
++	 * s_stories.refs ({@link S_StoriesMeta#refs}); maintained by the editor, passed through here.
++	 */
++	public String refs;
++
+ 	/** Hero: the album node dropped (a media) */
+ 	public AnTreeNode media;
+ 
+diff --git a/doctree.jserv/src/main/java/io/oz/sdoc/puck/S_StoriesMeta.java b/doctree.jserv/src/main/java/io/oz/sdoc/puck/S_StoriesMeta.java
+index 3a9df44..07cadd8 100644
+--- a/doctree.jserv/src/main/java/io/oz/sdoc/puck/S_StoriesMeta.java
++++ b/doctree.jserv/src/main/java/io/oz/sdoc/puck/S_StoriesMeta.java
+@@ -25,6 +25,12 @@ public class S_StoriesMeta extends SemanticTableMeta {
+ 	public final String viewer;
+ 	/** io_oz_synuid of the cover media (the first hero's), set when committed */
+ 	public final String cover;
++	/**
++	 * The album media referenced by the page's blocks, Anson json of a map, h_photos pid → Puck block
++	 * ids, e.g. {"0001": ["Hero-1", "Gallery-1"]}; written with the blocks, passed through, read by the
++	 * editor only ({@link PuckNode#refs}); null: none.
++	 */
++	public final String refs;
+ 	/** the committed page, &lt;volume&gt;/&lt;uid&gt;/doctree.html/&lt;storyId&gt;.page.json */
+ 	public final String htmlUri;
+ 	/** time of htmlUri */
+@@ -47,6 +53,7 @@ public class S_StoriesMeta extends SemanticTableMeta {
+ 		template = "template";
+ 		viewer   = "viewer";
+ 		cover    = "cover";
++		refs     = "refs";
+ 		htmlUri  = "htmlUri";
+ 		builtAt  = "builtAt";
+ 		builtBy  = "builtBy";
+@@ -63,6 +70,7 @@ public class S_StoriesMeta extends SemanticTableMeta {
+ 			+ "  " + template + " varchar(64),          -- the Puck template, e.g. pm-0\n"
+ 			+ "  " + viewer   + " varchar(16),          -- the viewer bundle, e.g. story-0.1\n"
+ 			+ "  " + cover    + " varchar(64),          -- io_oz_synuid of the cover media\n"
++			+ "  " + refs     + " text,                 -- h_photos pid -> Puck block ids, Anson json\n" // IGNORE-PICKING-0.8.3 s_stories.refs -- new column, null by the DDL; rebuilt from the story's blocks at its next save (fromPuck())
+ 			+ "  " + htmlUri  + " varchar(512),         -- the committed page\n"
+ 			+ "  " + builtAt  + " varchar(24),\n"
+ 			+ "  " + builtBy  + " varchar(32),\n"
+diff --git a/doctree.jserv/src/main/java/io/oz/sdoc/puck/StoryPages.java b/doctree.jserv/src/main/java/io/oz/sdoc/puck/StoryPages.java
+index 934e623..6eb48c0 100644
+--- a/doctree.jserv/src/main/java/io/oz/sdoc/puck/StoryPages.java
++++ b/doctree.jserv/src/main/java/io/oz/sdoc/puck/StoryPages.java
+@@ -15,6 +15,7 @@ import java.util.LinkedHashSet;
+ import io.odysz.anson.Anson;
+ import io.odysz.module.rs.AnResultset;
+ import io.odysz.semantic.DATranscxt;
++import io.odysz.semantic.util.DAHelper;
+ import io.odysz.semantic.DA.DatasetCfg.AnTreeNode;
+ import io.odysz.semantics.IUser;
+ import io.odysz.semantics.SemanticObject;
+@@ -145,6 +146,7 @@ public class StoryPages {
+ 		page.title = d.title;
+ 		page.subtitle = d.subtitle;
+ 		page.template = d.template;
++		page.refs = DAHelper.getValstr(st, conn, storym, storym.refs, storym.pk, storyId);
+ 		page.children = new ArrayList<PuckNode>();
+ 
+ 		AnResultset rs = (AnResultset) st.select(nodem.tbl)
+@@ -184,6 +186,7 @@ public class StoryPages {
+ 				.nv(storym.title, page.title)
+ 				.nv(storym.subtitle, page.subtitle)
+ 				.nv(storym.template, page.template)
++				.nv(storym.refs, page.refs)
+ 				.nv(storym.viewer, viewer)
+ 				.nv(storym.creator, usr.uid())
+ 				.nv(storym.dirty, 1)
+@@ -200,6 +203,7 @@ public class StoryPages {
+ 			.nv(storym.title, page.title)
+ 			.nv(storym.subtitle, page.subtitle)
+ 			.nv(storym.template, page.template)
++			.nv(storym.refs, page.refs)
+ 			.nv(storym.dirty, 1)
+ 			.whereEq(storym.pk, storyId)
+ 			.post(st.delete(nodem.tbl, usr)
+diff --git a/src/storytree/AlbumPanel.tsx b/src/storytree/AlbumPanel.tsx
+index d862498..a076924 100644
+--- a/src/storytree/AlbumPanel.tsx
++++ b/src/storytree/AlbumPanel.tsx
+@@ -1,24 +1,83 @@
+ /**
+- * STUB (media story, WP2): the album tree beside the page, the tab "Album" of the editor's left
+- * panel (Puck's drawer, "Blocks", may be a second tab later).
++ * The album tree beside the page, in the editor's left panel (Puck's drawer; "Blocks" may be a
++ * second tab later).
+  *
+- * The tree is anreact's (AnTreegrid), loaded by the app's tier as a StreeTier with the app's
++ * The tree is anreact's AnTreeditor, loaded by the app's tier as a StreeTier with the app's
+  * semantics key, e.g. album-web's GalleryTier with 'tree-album-family-folder': semantic-doc
+- * knows nothing of the album. Its 'p' and 'gallery' nodes are dragged as they are, AnTreeNodes
+- * (anreact's TreegridProps.draggable).
++ * knows nothing of the album. Its folders ('gallery') and media (leaves, also a gallery's photos)
++ * are dragged as they are, AnTreeNodes (TreegridProps.draggable), onto the blocks (MediaDrop).
++ *
++ * Each node has a checkbox (TreegridProps.checkbox), checked if the page uses it, by the page's
++ * refs (story-config.tsx pageRefs()), a folder if all its media are used. Unchecking clears the
++ * node's media from all the blocks using them (unref()), autosaved as any change of the page.
++ *
++ * Rendered inside Puck: the page is Puck's state (createUsePuck()).
+  */
+ import React from 'react';
+-import type { StreeTier } from '@anclient/semantier';
++import { createUsePuck } from '@puckeditor/core';
++import type { AnDatasetResp, AnsonMsg, AnsonResp, AnTreeNode, StreeTier } from '@anclient/semantier';
++import { AnContext, type AnContextType, AnTreeditor, Lightbox, L } from '@anclient/anreact';
++
++import { pageRefs, unref } from './story-config';
++
++const usePuck = createUsePuck();
+ 
+ export interface AlbumPanelProps {
+ 	/** the app's tier for the album tree; undefined: no tree */
+ 	albumtier?: StreeTier;
+ 	/** semantics key of the tree, e.g. 'tree-album-family-folder' */
+ 	albumsk: string;
++	/** the album's doc uri, e.g. album-web's synuri, '/album/syn': loading the tree, its pictures */
++	docuri: string;
+ }
+ 
+-export function AlbumPanel(_props: AlbumPanelProps) {
+-	// TODO WP2: albumtier.stree({ sk: albumsk, ... }) → forest;
+-	// <AnTreegrid forest draggable={(n) => n.node.nodetype === 'p' || n.node.nodetype === 'gallery'} ... />
+-	return <div className='sdoc-story-album'>TODO: album tree</div>;
++/** folders of media, and media, can be dragged into the page */
++const draggable = (n: AnTreeNode) => n.node.nodetype === 'gallery' || !n.node.children?.length;
++
++export function AlbumPanel({ albumtier, albumsk, docuri }: AlbumPanelProps) {
++	const ctx = React.useContext(AnContext) as AnContextType;
++	const [forest, setForest] = React.useState<AnTreeNode[]>();
++
++	const content = usePuck((s) => s.appState.data.content);
++	const dispatch = usePuck((s) => s.dispatch);
++
++	React.useEffect(() => {
++		if (!albumtier) return;
++		albumtier.stree({ uri: albumtier.uri, synuri: docuri, sk: albumsk,
++			onOk: (rep: AnsonMsg<AnsonResp>) => {
++				albumtier.forest = (rep.Body() as AnDatasetResp).forest as AnTreeNode[];
++				setForest(albumtier.forest);
++			} },
++			ctx.error);
++	}, [albumtier, albumsk, docuri]);
++
++	/** the media the page uses, pid → block ids: the checked nodes */
++	const selected = React.useMemo(() => ({ ids: new Map<string, any>(Object.entries(pageRefs(content))) }),
++		[content]);
++
++	/** nodes unchecked: their media cleared from the page */
++	const onSelectChange = React.useCallback((ids: Map<string, any>) => {
++		const gone = [...selected.ids.keys()].filter((pid) => !ids.has(pid));
++		if (gone.length)
++			dispatch({ type: 'setData', data: (d) => unref(d, gone) });
++	}, [selected, dispatch]);
++
++	const lightbox = React.useCallback((photos: AnTreeNode[], opts: { ix: number, open: boolean, onClose: () => void }) =>
++		<Lightbox {...opts} showResourceCount photos={photos} tier={albumtier} />, [albumtier]);
++
++	if (!albumtier) return <div className='sdoc-story-album'>{L('No album.')}</div>;
++
++	return (
++		<div className='sdoc-story-album'>
++			{forest &&
++			  <AnTreeditor pk='pid' sk={albumsk} tier={albumtier} forest={forest} reload={false}
++				uri={albumtier.uri} docuri={docuri}
++				columns={[
++					{ type: 'text',     field: 'text', label: L('Album'), grid: {xs: 8} },
++					{ type: 'icon-sum', field: '',     label: '',         grid: {xs: 4} },
++				]}
++				checkbox selected={selected} onSelectChange={onSelectChange}
++				draggable={draggable}
++				lightbox={lightbox} />}
++		</div>);
+ }
+diff --git a/src/storytree/AnStoryEditor.tsx b/src/storytree/AnStoryEditor.tsx
+index d0ee955..5dd9b81 100644
+--- a/src/storytree/AnStoryEditor.tsx
++++ b/src/storytree/AnStoryEditor.tsx
+@@ -3,23 +3,28 @@
+  *
+  * A story is a doc of the doc-tree tier with mime 'story' (DocInf.Kind.story), its content a
+  * page, a tree of PuckNode (templates.ts), instead of RST nodes:
+- *  - a new story starts from a template;
++ *  - loaded with r/page, a new story's page (none saved yet) from a template;
+  *  - the album tree beside the page (AlbumPanel), its media and folders dropped into the blocks
+- *    as they are, AnTreeNodes (MediaDrop, story-config.tsx dropTo());
++ *    as they are, AnTreeNodes (MediaDrop, story-config.tsx dropTo()); the tree's checkboxes show
++ *    the media the page uses (the page's refs, s_stories.refs), unchecking clears them;
+  *  - text edited in place; Puck's blocks drawer and fields panel are hidden (overrides), and
+  *    kept for later;
+  *  - saved with u/page (autosave), committed and published as doc trees are (c/commit, c/publish).
+  *
++ * Puck takes its data once, when mounted: changes made outside it, a drop, are dispatched to it
++ * (setData), as its own are, and saved by onChange.
++ *
+  * Media are shown with anreact's GalleryView / Lightbox, their src session links (Puck's
+  * metadata, editorMetadata()); the published page uses the same config, with html-service's
+  * m/<synuid> (viewerMetadata()).
+  */
+ import React from 'react';
+-import { Puck, type Data } from '@puckeditor/core';
++import { Puck, useGetPuck, type Data } from '@puckeditor/core';
+ import '@puckeditor/core/puck.css';
+ import type { AnTreeNode, StreeTier } from '@anclient/semantier';
+ 
+ import type { StreeDoctier } from '../doctree/doc-stree';
++import { SAVE_DELAY } from '../doctree/AnDoctreeditor';
+ import { templates } from './templates';
+ import { AlbumPanel } from './AlbumPanel';
+ import { dropTo, editorMetadata, fromPuck, storyConfig, toPuck } from './story-config';
+@@ -31,37 +36,79 @@ export interface AnStoryEditorProps {
+ 	albumtier?: StreeTier;
+ 	/** semantics key of the album tree, e.g. 'tree-album-family-folder' */
+ 	albumsk: string;
++	/** the album's doc uri, e.g. album-web's synuri, '/album/syn', see AlbumPanel */
++	docuri: string;
+ 	height?: string;
+ }
+ 
+ export function AnStoryEditor(props: AnStoryEditorProps) {
+-	// TODO WP2: doctier.page(docId) → resp.page, or a template for a new story
+-	const [data, setData] = React.useState<Data>(() => toPuck(templates[0].data));
++	const { docId, doctier, albumtier, albumsk, docuri } = props;
++
++	/** the page as loaded; undefined: loading */
++	const [data, setData] = React.useState<Data>();
++	/** error of loading / saving */
++	const [msg, setMsg] = React.useState<string>();
++
++	/** Puck's state, got inside Puck (the drawer) */
++	const getPuck = React.useRef<ReturnType<typeof useGetPuck>>(undefined);
++	/** the page changed and not saved yet */
++	const pending = React.useRef<{ d: Data, timer: number }>(undefined);
++
++	React.useEffect(() => {
++		setData(undefined);
++		doctier.page(docId, (resp) => setData(toPuck(resp.page ?? templates[0].data)), setMsg);
++	}, [doctier, docId]);
++
++	/** u/page, the changes not saved yet */
++	const flush = React.useCallback(() => {
++		const p = pending.current;
++		if (!p) return;
++		window.clearTimeout(p.timer);
++		pending.current = undefined;
++		doctier.savePage(docId, fromPuck(p.d), () => setMsg(undefined), setMsg);
++	}, [doctier, docId]);
+ 
+-	/** a drop on block id: its new props by dropTo(), or ignored */
++	// saved when the editor is left
++	React.useEffect(() => flush, [flush]);
++
++	/** Puck's changes, its own and dispatched: autosaved */
++	const onChange = React.useCallback((d: Data) => {
++		if (pending.current) window.clearTimeout(pending.current.timer);
++		pending.current = { d, timer: window.setTimeout(flush, SAVE_DELAY) };
++	}, [flush]);
++
++	/** a drop on block id: its new props by dropTo(), dispatched to Puck; or ignored */
+ 	const onDrop = React.useCallback((id: string, dropped: AnTreeNode[]) => {
+-		setData((d) => {
+-			const ix = d.content.findIndex((c) => c.props.id === id);
+-			if (ix < 0) return d;
+-			const props = dropTo(d.content[ix].type as string, d.content[ix].props, dropped);
+-			if (!props) return d;
+-			const content = [...d.content];
+-			content[ix] = { ...content[ix], props };
+-			// TODO WP2: Puck's dispatch (setData) instead of remounting, and autosave fromPuck(next)
+-			return { ...d, content };
+-		});
++		const puck = getPuck.current?.();
++		if (!puck) return;
++		const content = puck.appState.data.content;
++		const ix = content.findIndex((c) => c.props.id === id);
++		if (ix < 0) return;
++		const p = dropTo(content[ix].type as string, content[ix].props, dropped);
++		if (!p) return;
++		const next = [...content];
++		next[ix] = { ...next[ix], props: p };
++		puck.dispatch({ type: 'setData', data: { content: next } });
+ 	}, []);
+ 
+ 	/** TODO WP2: GalleryView.imgSrcReq(n.id, 'h_photos', { ...albumtier, docuri }) */
+-	const metadata = React.useMemo(() => editorMetadata((_n) => '', onDrop), [props.albumtier, onDrop]);
++	const metadata = React.useMemo(() => editorMetadata((_n) => '', onDrop), [onDrop]);
++
++	/** the album tree, inside Puck: where Puck's state is got for onDrop */
++	const overrides = React.useMemo(() => ({
++		drawer: function Drawer() {
++			getPuck.current = useGetPuck();
++			return <AlbumPanel albumtier={albumtier} albumsk={albumsk} docuri={docuri} />;
++		},
++	}), [albumtier, albumsk, docuri]);
++
++	if (!data)
++		return <div style={{ height: props.height }}>{msg ?? 'Loading the story ...'}</div>;
+ 
+ 	return (
+ 		<div style={{ height: props.height }}>
++			{msg && <div className='sdoc-story-msg'>{msg}</div>}
+ 			<Puck config={storyConfig} data={data} metadata={metadata}
+-				// TODO WP2: u/page (autosave) with fromPuck(d)
+-				onChange={(d) => void fromPuck(d)}
+-				overrides={{
+-					drawer: () => <AlbumPanel albumtier={props.albumtier} albumsk={props.albumsk} />,
+-				}} />
++				onChange={onChange} overrides={overrides} />
+ 		</div>);
+ }
+diff --git a/src/storytree/MediaDrop.tsx b/src/storytree/MediaDrop.tsx
+index 0bde2fc..4da8b9c 100644
+--- a/src/storytree/MediaDrop.tsx
++++ b/src/storytree/MediaDrop.tsx
+@@ -3,8 +3,9 @@
+  * a folder ('gallery') with its children. What a drop does is story-config.tsx dropTo()'s:
+  * a Gallery adds the folder's images (or the media), a Hero takes a media, others ignore it.
+  *
+- * TODO WP2: the droppable area, highlighted while an album node is over it; how it hooks into
+- * the drag engine shared with Puck (dnd-kit) is decided by the prototype, hello/puck-media (WP0).
++ * The drag is anreact's (TreegridProps.draggable): a HTML5 drag, its data 'application/json',
++ * the node's {type, id, node}; Puck's own drags (dnd-kit, pointer events) are not HTML5 drags,
++ * so the two don't meet.
+  */
+ import React from 'react';
+ import type { AnTreeNode } from '@anclient/semantier';
+@@ -15,6 +16,33 @@ export interface MediaDropProps {
+ 	children?: React.ReactNode;
+ }
+ 
+-export function MediaDrop({ children }: MediaDropProps) {
+-	return <div className='sdoc-story-drop'>{children}</div>;
++/** a drag of the album tree, by its data type */
++const isTreeDrag = (e: React.DragEvent) => e.dataTransfer.types.includes('application/json');
++
++export function MediaDrop({ onDrop, children }: MediaDropProps) {
++	/** an album node is over the block */
++	const [over, setOver] = React.useState(false);
++
++	return (
++		<div className={`sdoc-story-drop${over ? ' sdoc-story-drop-over' : ''}`}
++			style={over ? { outline: '2px dashed #1976d2', outlineOffset: -2 } : undefined}
++			onDragOver={(e) => {
++				if (!isTreeDrag(e)) return;
++				e.preventDefault(); // accepts the drop
++				e.dataTransfer.dropEffect = 'copy';
++				setOver(true);
++			}}
++			onDragLeave={() => setOver(false)}
++			onDrop={(e) => {
++				setOver(false);
++				if (!isTreeDrag(e)) return;
++				e.preventDefault();
++				try {
++					const n = JSON.parse(e.dataTransfer.getData('application/json')) as AnTreeNode;
++					if (n?.id && n.node) onDrop([n]);
++				}
++				catch (_) { /* not an album node */ }
++			}} >
++			{children}
++		</div>);
+ }
+diff --git a/src/storytree/index.ts b/src/storytree/index.ts
+index f89a6e2..7608ba5 100644
+--- a/src/storytree/index.ts
++++ b/src/storytree/index.ts
+@@ -8,4 +8,4 @@ export { AnStoryEditor } from './AnStoryEditor';
+ export type { AnStoryEditorProps } from './AnStoryEditor';
+ export { templates } from './templates';
+ export type { StoryTemplate, PuckNode } from './templates';
+-export { storyConfig, toPuck, fromPuck, dropTo, editorMetadata, viewerMetadata } from './story-config';
++export { storyConfig, toPuck, fromPuck, dropTo, pageRefs, unref, editorMetadata, viewerMetadata } from './story-config';
+diff --git a/src/storytree/story-config.tsx b/src/storytree/story-config.tsx
+index 31ced90..2b55712 100644
+--- a/src/storytree/story-config.tsx
++++ b/src/storytree/story-config.tsx
+@@ -85,16 +85,56 @@ export function toPuck(page: PuckNode): Data {
+ 	};
+ }
+ 
+-/** Puck's Data as a story's page, io.oz.sdoc.puck.PuckNode, see {@link toPuck} */
++/**
++ * Puck's Data as a story's page, io.oz.sdoc.puck.PuckNode, see {@link toPuck};
++ * its refs, s_stories.refs, are the blocks' media, {@link pageRefs}.
++ */
+ export function fromPuck(data: Data): PuckNode {
++	const refs = pageRefs(data.content);
+ 	return new PuckNode({
+ 		...(data.root?.props ?? {}),
+ 		pucktype: PuckNode.Type.page,
+ 		id: 'root',
++		refs: Object.keys(refs).length ? JSON.stringify(refs) : undefined,
+ 		children: data.content.map(({ type, props }) => new PuckNode({ ...props, pucktype: type as string })),
+ 	});
+ }
+ 
++/**
++ * The album media the blocks use, h_photos pid → the ids of the blocks using it: a Hero's media,
++ * a Gallery's items. Taken from the blocks each time, it can't go out of step with them.
++ */
++export function pageRefs(content: Data['content'] | undefined): Record<string, string[]> {
++	const refs: Record<string, string[]> = {};
++	const ref = (pid: string | undefined, id: string) => {
++		if (!pid) return;
++		const ids = (refs[pid] ??= []);
++		if (!ids.includes(id)) ids.push(id);
++	};
++	for (const { props } of content ?? []) {
++		ref((props.media as AnTreeNode | undefined)?.id, props.id);
++		for (const n of (props.items as AnTreeNode[] | undefined) ?? [])
++			ref(n.id, props.id);
++	}
++	return refs;
++}
++
++/** The page without the media of pids: a Hero's media cleared, a Gallery's items removed. */
++export function unref(data: Data, pids: string[]): Data {
++	const gone = new Set(pids);
++	return {
++		...data,
++		content: data.content.map((c) => {
++			const { media, items } = c.props as { media?: AnTreeNode, items?: AnTreeNode[] };
++			if (media && gone.has(media.id))
++				return { ...c, props: { ...c.props, media: undefined } };
++			if (items?.some((n) => gone.has(n.id)))
++				return { ...c, props: { ...c.props, items: items.filter((n) => !gone.has(n.id)) } };
++			return c;
++		}),
++	};
++}
++
+ /**
+  * Album nodes dropped on a block → the block's new props; undefined: ignored.
+  *
+diff --git a/src/storytree/templates.ts b/src/storytree/templates.ts
+index 60c0274..ee8b41d 100644
+--- a/src/storytree/templates.ts
++++ b/src/storytree/templates.ts
+@@ -39,6 +39,12 @@ export class PuckNode extends Anson {
+ 	/** Gallery: the album nodes dropped, a folder's children */
+ 	items?: AnTreeNode[];
+ 
++	/**
++	 * page: the album media the blocks use, json of a map, h_photos pid → block ids, e.g.
++	 * {"0001": ["Hero-1", "Gallery-1"]}; s_stories.refs, set by fromPuck() (story-config.tsx).
++	 */
++	refs?: string;
++
+ 	/** page: the blocks */
+ 	children?: PuckNode[];
+ 

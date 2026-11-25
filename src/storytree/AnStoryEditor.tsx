@@ -37,12 +37,12 @@ export interface AnStoryEditorProps {
 	/** semantics key of the album tree, e.g. 'tree-album-family-folder' */
 	albumsk: string;
 	/** the album's doc uri, e.g. album-web's synuri, '/album/syn', see AlbumPanel */
-	docuri: string;
+	synuri: string;
 	height?: string;
 }
 
 export function AnStoryEditor(props: AnStoryEditorProps) {
-	const { docId, doctier, albumtier, albumsk, docuri } = props;
+	const { docId, doctier, albumtier, albumsk, synuri: docuri } = props;
 
 	/** the page as loaded; undefined: loading */
 	const [data, setData] = React.useState<Data>();

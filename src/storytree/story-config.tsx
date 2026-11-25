@@ -101,8 +101,8 @@ export function fromPuck(data: Data): PuckNode {
 }
 
 /**
- * The album media the blocks use, h_photos pid → the ids of the blocks using it: a Hero's media,
- * a Gallery's items. Taken from the blocks each time, it can't go out of step with them.
+ * Build the refs mape: {h_photos.pid → [referencing puck node id]}
+ * @since 0.8.4
  */
 export function pageRefs(content: Data['content'] | undefined): Record<string, string[]> {
 	const refs: Record<string, string[]> = {};
