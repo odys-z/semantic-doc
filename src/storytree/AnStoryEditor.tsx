@@ -99,7 +99,8 @@ export function AnStoryEditor(props: AnStoryEditorProps) {
 		if (!p) return;
 		const next = [...content];
 		next[ix] = { ...next[ix], props: p };
-		puck.dispatch({ type: 'setData', data: { content: next } });
+		// recorded: Puck doesn't keep setData in its history (undo) unless asked
+		puck.dispatch({ type: 'setData', data: { content: next }, recordHistory: true });
 	}, []);
 
 	/**

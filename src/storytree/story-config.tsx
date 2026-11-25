@@ -53,13 +53,16 @@ const Hero: ComponentConfig<{ title?: string, subtitle?: string, media?: AnTreeN
 	  const cover = media && withSrc([media as AnTreeNode], puck.metadata.mediaSrc)[0];
 	  return (
 		<MediaDrop onDrop={(dropped) => puck.metadata.onDrop?.(id, dropped)}>
-			<div className='sdoc-story-hero'>
+			{/* with a cover, a banner: the title and subtitle over its lower part (story.css) */}
+			<div className={cover ? 'sdoc-story-hero sdoc-story-hero-banner' : 'sdoc-story-hero'}>
 				{cover && (regex.mime2type(String(cover.node?.mime ?? '')) === 'video'
 					? <video className='sdoc-story-cover' src={String(cover.node.src)} controls />
 					: <img className='sdoc-story-cover' src={String(cover.node.src)}
 						alt={String(cover.node?.docname ?? cover.id)} />)}
-				<h1 className='sdoc-story-editable'>{title}</h1>
-				{(puck.isEditing || subtitle) && <p className='sdoc-story-editable'>{subtitle}</p>}
+				<div className='sdoc-story-hero-text'>
+					<h1 className='sdoc-story-editable'>{title}</h1>
+					{(puck.isEditing || subtitle) && <p className='sdoc-story-editable'>{subtitle}</p>}
+				</div>
 			</div>
 		</MediaDrop>);
 	},

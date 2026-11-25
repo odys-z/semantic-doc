@@ -59,7 +59,7 @@ export function AlbumPanel({ albumtier, albumsk, docuri }: AlbumPanelProps) {
 	const onSelectChange = React.useCallback((ids: Map<string, any>) => {
 		const gone = [...selected.ids.keys()].filter((pid) => !ids.has(pid));
 		if (gone.length)
-			dispatch({ type: 'setData', data: (d) => unref(d, gone) });
+			dispatch({ type: 'setData', data: (d) => unref(d, gone), recordHistory: true });
 	}, [selected, dispatch]);
 
 	const lightbox = React.useCallback((photos: AnTreeNode[], opts: { ix: number, open: boolean, onClose: () => void }) =>
