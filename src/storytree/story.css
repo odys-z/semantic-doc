@@ -1,0 +1,14 @@
+/*
+ * The story's blocks (story-config.tsx).
+ * Text edited in place, Puck's inline editors (a span in the element): while empty, they keep a
+ * place to click into, e.g. a new Text block, a Hero's subtitle.
+ */
+.sdoc-story-editable > span {
+	display: inline-block;
+	min-width: 6em;
+	min-height: 1.2em;
+}
+
+.sdoc-story-text {
+	white-space: pre-wrap;
+}

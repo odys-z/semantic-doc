@@ -17,6 +17,7 @@ import type { AnTreeNode } from '@anclient/semantier';
 
 import { PuckNode } from './templates';
 import { MediaDrop } from './MediaDrop';
+import './story.css';
 
 /** Puck's metadata of the editor: media as session links; drops applied by the editor */
 export function editorMetadata(mediaSrc: (n: AnTreeNode) => string,
@@ -36,22 +37,32 @@ export function viewerMetadata() {
 const withSrc = (items: AnTreeNode[] | undefined, src: (n: AnTreeNode) => string) =>
 	(items ?? []).map((n) => ({ ...n, node: { ...n.node, src: src(n) } }) as AnTreeNode);
 
+/**
+ * Text edited in place: Puck's contentEditable fields, also in the fields panel. In the editor, the
+ * props are Puck's inline editors (ReactNodes, saved as strings); in a published page, the strings.
+ * Elements with sdoc-story-editable keep a place to click into while empty (story.css).
+ */
 const Hero: ComponentConfig<{ title?: string, subtitle?: string, media?: AnTreeNode }> = {
-	fields: {},
+	fields: {
+		title:    { type: 'text', label: 'title', contentEditable: true },
+		subtitle: { type: 'text', label: 'subtitle', contentEditable: true },
+	},
 	render: ({ id, title, subtitle, media, puck }) => (
 		<MediaDrop onDrop={(dropped) => puck.metadata.onDrop?.(id, dropped)}>
 			<div className='sdoc-story-hero'>
-				{/* TODO WP2: the cover, withSrc([media], puck.metadata.mediaSrc)[0]; title, subtitle edited in place */}
+				{/* TODO WP2: the cover, withSrc([media], puck.metadata.mediaSrc)[0] */}
 				{media && <span>{String(media.node?.docname ?? media.id)}</span>}
-				<h1>{title}</h1>{subtitle && <p>{subtitle}</p>}
+				<h1 className='sdoc-story-editable'>{title}</h1>
+				{(puck.isEditing || subtitle) && <p className='sdoc-story-editable'>{subtitle}</p>}
 			</div>
 		</MediaDrop>),
 };
 
 const Text: ComponentConfig<{ content?: string }> = {
-	fields: {},
-	// TODO WP2: content edited in place
-	render: ({ content }) => <div className='sdoc-story-text'>{content}</div>,
+	fields: {
+		content: { type: 'textarea', label: 'text', contentEditable: true },
+	},
+	render: ({ content }) => <div className='sdoc-story-text sdoc-story-editable'>{content}</div>,
 };
 
 const Gallery: ComponentConfig<{ items?: AnTreeNode[], layout?: string }> = {
