@@ -8,4 +8,4 @@ export { AnStoryEditor } from './AnStoryEditor';
 export type { AnStoryEditorProps } from './AnStoryEditor';
 export { templates } from './templates';
 export type { StoryTemplate, PuckNode } from './templates';
-export { storyConfig, toPuck, fromPuck, dropTo, editorMetadata, viewerMetadata } from './story-config';
+export { storyConfig, toPuck, fromPuck, dropTo, pageRefs, unref, editorMetadata, viewerMetadata } from './story-config';

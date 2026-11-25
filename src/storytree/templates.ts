@@ -39,6 +39,12 @@ export class PuckNode extends Anson {
 	/** Gallery: the album nodes dropped, a folder's children */
 	items?: AnTreeNode[];
 
+	/**
+	 * page: the album media the blocks use, json of a map, h_photos pid → block ids, e.g.
+	 * {"0001": ["Hero-1", "Gallery-1"]}; s_stories.refs, set by fromPuck() (story-config.tsx).
+	 */
+	refs?: string;
+
 	/** page: the blocks */
 	children?: PuckNode[];
 

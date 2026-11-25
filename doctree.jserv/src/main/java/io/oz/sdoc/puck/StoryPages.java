@@ -15,6 +15,7 @@ import java.util.LinkedHashSet;
 import io.odysz.anson.Anson;
 import io.odysz.module.rs.AnResultset;
 import io.odysz.semantic.DATranscxt;
+import io.odysz.semantic.util.DAHelper;
 import io.odysz.semantic.DA.DatasetCfg.AnTreeNode;
 import io.odysz.semantics.IUser;
 import io.odysz.semantics.SemanticObject;
@@ -145,6 +146,7 @@ public class StoryPages {
 		page.title = d.title;
 		page.subtitle = d.subtitle;
 		page.template = d.template;
+		page.refs = DAHelper.getValstr(st, conn, storym, storym.refs, storym.pk, storyId);
 		page.children = new ArrayList<PuckNode>();
 
 		AnResultset rs = (AnResultset) st.select(nodem.tbl)
@@ -184,6 +186,7 @@ public class StoryPages {
 				.nv(storym.title, page.title)
 				.nv(storym.subtitle, page.subtitle)
 				.nv(storym.template, page.template)
+				.nv(storym.refs, page.refs)
 				.nv(storym.viewer, viewer)
 				.nv(storym.creator, usr.uid())
 				.nv(storym.dirty, 1)
@@ -200,6 +203,7 @@ public class StoryPages {
 			.nv(storym.title, page.title)
 			.nv(storym.subtitle, page.subtitle)
 			.nv(storym.template, page.template)
+			.nv(storym.refs, page.refs)
 			.nv(storym.dirty, 1)
 			.whereEq(storym.pk, storyId)
 			.post(st.delete(nodem.tbl, usr)

@@ -25,6 +25,12 @@ public class S_StoriesMeta extends SemanticTableMeta {
 	public final String viewer;
 	/** io_oz_synuid of the cover media (the first hero's), set when committed */
 	public final String cover;
+	/**
+	 * The album media referenced by the page's blocks, Anson json of a map, h_photos pid → Puck block
+	 * ids, e.g. {"0001": ["Hero-1", "Gallery-1"]}; written with the blocks, passed through, read by the
+	 * editor only ({@link PuckNode#refs}); null: none.
+	 */
+	public final String refs;
 	/** the committed page, &lt;volume&gt;/&lt;uid&gt;/doctree.html/&lt;storyId&gt;.page.json */
 	public final String htmlUri;
 	/** time of htmlUri */
@@ -47,6 +53,7 @@ public class S_StoriesMeta extends SemanticTableMeta {
 		template = "template";
 		viewer   = "viewer";
 		cover    = "cover";
+		refs     = "refs";
 		htmlUri  = "htmlUri";
 		builtAt  = "builtAt";
 		builtBy  = "builtBy";
@@ -63,6 +70,7 @@ public class S_StoriesMeta extends SemanticTableMeta {
 			+ "  " + template + " varchar(64),          -- the Puck template, e.g. pm-0\n"
 			+ "  " + viewer   + " varchar(16),          -- the viewer bundle, e.g. story-0.1\n"
 			+ "  " + cover    + " varchar(64),          -- io_oz_synuid of the cover media\n"
+			+ "  " + refs     + " text,                 -- h_photos pid -> Puck block ids, Anson json\n" // IGNORE-PICKING-0.8.3 s_stories.refs -- new column, null by the DDL; rebuilt from the story's blocks at its next save (fromPuck())
 			+ "  " + htmlUri  + " varchar(512),         -- the committed page\n"
 			+ "  " + builtAt  + " varchar(24),\n"
 			+ "  " + builtBy  + " varchar(32),\n"

@@ -42,6 +42,12 @@ public class PuckNode extends Anson {
 	/** Gallery */
 	public String layout;
 
+	/**
+	 * page: the album media referenced by the blocks, json of a map, h_photos pid → Puck block ids,
+	 * s_stories.refs ({@link S_StoriesMeta#refs}); maintained by the editor, passed through here.
+	 */
+	public String refs;
+
 	/** Hero: the album node dropped (a media) */
 	public AnTreeNode media;
 

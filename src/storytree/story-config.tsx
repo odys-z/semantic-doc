@@ -85,14 +85,54 @@ export function toPuck(page: PuckNode): Data {
 	};
 }
 
-/** Puck's Data as a story's page, io.oz.sdoc.puck.PuckNode, see {@link toPuck} */
+/**
+ * Puck's Data as a story's page, io.oz.sdoc.puck.PuckNode, see {@link toPuck};
+ * its refs, s_stories.refs, are the blocks' media, {@link pageRefs}.
+ */
 export function fromPuck(data: Data): PuckNode {
+	const refs = pageRefs(data.content);
 	return new PuckNode({
 		...(data.root?.props ?? {}),
 		pucktype: PuckNode.Type.page,
 		id: 'root',
+		refs: Object.keys(refs).length ? JSON.stringify(refs) : undefined,
 		children: data.content.map(({ type, props }) => new PuckNode({ ...props, pucktype: type as string })),
 	});
+}
+
+/**
+ * The album media the blocks use, h_photos pid → the ids of the blocks using it: a Hero's media,
+ * a Gallery's items. Taken from the blocks each time, it can't go out of step with them.
+ */
+export function pageRefs(content: Data['content'] | undefined): Record<string, string[]> {
+	const refs: Record<string, string[]> = {};
+	const ref = (pid: string | undefined, id: string) => {
+		if (!pid) return;
+		const ids = (refs[pid] ??= []);
+		if (!ids.includes(id)) ids.push(id);
+	};
+	for (const { props } of content ?? []) {
+		ref((props.media as AnTreeNode | undefined)?.id, props.id);
+		for (const n of (props.items as AnTreeNode[] | undefined) ?? [])
+			ref(n.id, props.id);
+	}
+	return refs;
+}
+
+/** The page without the media of pids: a Hero's media cleared, a Gallery's items removed. */
+export function unref(data: Data, pids: string[]): Data {
+	const gone = new Set(pids);
+	return {
+		...data,
+		content: data.content.map((c) => {
+			const { media, items } = c.props as { media?: AnTreeNode, items?: AnTreeNode[] };
+			if (media && gone.has(media.id))
+				return { ...c, props: { ...c.props, media: undefined } };
+			if (items?.some((n) => gone.has(n.id)))
+				return { ...c, props: { ...c.props, items: items.filter((n) => !gone.has(n.id)) } };
+			return c;
+		}),
+	};
 }
 
 /**
