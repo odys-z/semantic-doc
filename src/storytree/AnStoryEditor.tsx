@@ -4,11 +4,13 @@
  * A story is a doc of the doc-tree tier with mime 'story' (DocInf.Kind.story), its content a
  * page, a tree of PuckNode (templates.ts), instead of RST nodes:
  *  - loaded with r/page, a new story's page (none saved yet) from a template;
- *  - the album tree beside the page (AlbumPanel), its media and folders dropped into the blocks
+ *  - the album tree beside the page (AlbumPanel), in Puck's left side bar or above the page, as
+ *    toggled in the header (headerActions); its media and folders dropped into the blocks
  *    as they are, AnTreeNodes (MediaDrop, story-config.tsx dropTo()); the tree's checkboxes show
  *    the media the page uses (the page's refs, s_stories.refs), unchecking clears them;
  *  - text edited in place; Puck's blocks drawer and fields panel are hidden (overrides), and
  *    kept for later;
+ *  - the album tree and the page scroll each on its own, Puck being as high as the editor (height);
  *  - saved with u/page (autosave), committed and published as doc trees are (c/commit, c/publish).
  *
  * Puck takes its data once, when mounted: changes made outside it, a drop, are dispatched to it
@@ -20,6 +22,11 @@
  */
 import React from 'react';
 import { Puck, useGetPuck, type Data } from '@puckeditor/core';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import VerticalSplit from '@mui/icons-material/VerticalSplit';
+import HorizontalSplit from '@mui/icons-material/HorizontalSplit';
+import { L } from '@anclient/anreact';
 import '@puckeditor/core/puck.css';
 import type { AnTreeNode, StreeTier } from '@anclient/semantier';
 
@@ -48,8 +55,10 @@ export function AnStoryEditor(props: AnStoryEditorProps) {
 	const [data, setData] = React.useState<Data>();
 	/** error of loading / saving */
 	const [msg, setMsg] = React.useState<string>();
+	/** where the album tree is: in Puck's left side bar, or above the page */
+	const [albumAt, setAlbumAt] = React.useState<'left' | 'top'>('left');
 
-	/** Puck's state, got inside Puck (the drawer) */
+	/** Puck's state, got inside Puck (the header's actions) */
 	const getPuck = React.useRef<ReturnType<typeof useGetPuck>>(undefined);
 	/** the page changed and not saved yet */
 	const pending = React.useRef<{ d: Data, timer: number }>(undefined);
@@ -94,21 +103,57 @@ export function AnStoryEditor(props: AnStoryEditorProps) {
 	/** TODO WP2: GalleryView.imgSrcReq(n.id, 'h_photos', { ...albumtier, docuri }) */
 	const metadata = React.useMemo(() => editorMetadata((_n) => '', onDrop), [onDrop]);
 
-	/** the album tree, inside Puck: where Puck's state is got for onDrop */
+	/** the album tree, scrolled on its own: in the left side bar, or above the page (at most a third of it) */
+	const album = React.useMemo(() => (
+		<div className='sdoc-story-album-scroll' style={albumAt === 'left'
+				? { height: '100%', overflow: 'auto' }
+				: { maxHeight: '33%', flex: 'none', overflow: 'auto', borderBottom: '1px solid #ddd' }}>
+			<AlbumPanel albumtier={albumtier} albumsk={albumsk} docuri={docuri} />
+		</div>), [albumAt, albumtier, albumsk, docuri]);
+
+	/**
+	 * Inside Puck: the album tree, left (drawer) or top (above Puck's ui); the header's toggles of it, where
+	 * Puck's state is got for onDrop. Top: the left side bar is closed, left: opened (Puck's ui).
+	 */
 	const overrides = React.useMemo(() => ({
-		drawer: function Drawer() {
-			getPuck.current = useGetPuck();
-			return <AlbumPanel albumtier={albumtier} albumsk={albumsk} docuri={docuri} />;
+		headerActions: function HeaderActions({ children }: { children: React.ReactNode }) {
+			const get = useGetPuck();
+			getPuck.current = get;
+			return (<>
+				<ToggleButtonGroup size='small' exclusive value={albumAt}
+					onChange={(_e, at: 'left' | 'top' | null) => {
+						if (!at) return;
+						setAlbumAt(at);
+						get().dispatch({ type: 'setUi', ui: { leftSideBarVisible: at === 'left' } });
+					}} >
+					<ToggleButton value='left' title={L('Album on the left')}><VerticalSplit fontSize='small' /></ToggleButton>
+					<ToggleButton value='top' title={L('Album on top')}><HorizontalSplit fontSize='small' /></ToggleButton>
+				</ToggleButtonGroup>
+				{children}
+			</>);
 		},
-	}), [albumtier, albumsk, docuri]);
+		drawer: function Drawer() {
+			return albumAt === 'left' ? album : <></>;
+		},
+		// top: above all of Puck's ui, not in its preview, which is zoomed
+		puck: function Layout({ children }: { children: React.ReactNode }) {
+			return albumAt === 'left' ? <>{children}</> : (
+				<div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+					{album}
+					<div style={{ flex: 1, minHeight: 0 }}>{children}</div>
+				</div>);
+		},
+	}), [albumAt, album]);
 
 	if (!data)
 		return <div style={{ height: props.height }}>{msg ?? 'Loading the story ...'}</div>;
 
 	return (
-		<div style={{ height: props.height }}>
+		<div style={{ height: props.height, display: 'flex', flexDirection: 'column' }}>
 			{msg && <div className='sdoc-story-msg'>{msg}</div>}
-			<Puck config={storyConfig} data={data} metadata={metadata}
-				onChange={onChange} overrides={overrides} />
+			<div style={{ flex: 1, minHeight: 0 }}>
+				<Puck config={storyConfig} data={data} metadata={metadata} height='100%'
+					onChange={onChange} overrides={overrides} />
+			</div>
 		</div>);
 }
