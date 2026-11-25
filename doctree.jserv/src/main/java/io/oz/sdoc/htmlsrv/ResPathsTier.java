@@ -48,6 +48,7 @@ import io.odysz.semantic.jprotocol.JServUrl;
 import io.odysz.semantic.jserv.DynaResource;
 import io.odysz.semantic.jserv.IResUpdater;
 import io.odysz.semantic.jserv.ServPort6;
+import io.odysz.semantic.jserv.StaticResource;
 import io.odysz.semantic.jserv.WebConfig;
 import io.odysz.semantic.meta.DocRef;
 import io.odysz.semantic.meta.SynChangeMeta;
@@ -186,6 +187,43 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 		start(wcfg, server);
 	}
 
+	/**
+	 * Copy the viewer of stories, built by the web pages' app into its web root's _story folder
+	 * (album-web: web-dist/_story/viewer.js), into the published docs' _story folder, where the
+	 * stories' shells load it ({@link StoryShell}). The web root is the configured path "/*".
+	 * Not there: warned, the published stories show nothing.
+	 */
+	void installViewer(WebConfig wcfg) throws IOException {
+		Path src = null;
+		if (wcfg.paths != null)
+			for (StaticResource p : wcfg.paths)
+				if (p != null && eq("/*", p.path) && !isblank(p.resource))
+					src = Paths.get(EnvPath.decodeUri(Paths.get(".").toAbsolutePath().toString(), p.resource))
+							.normalize().resolve(StoryShell.viewer);
+
+		if (src == null || !Files.isDirectory(src)) {
+			Utils.warn("[ResPathsTier] No viewer of stories in %s (the web pages' build, e.g. album-web's web-dist/%s): published stories show nothing.",
+					src, StoryShell.viewer);
+			return;
+		}
+
+		Path dst = resroot.resolve(StoryShell.viewer);
+		final Path from = src;
+		ArrayList<String> copied = new ArrayList<String>();
+		try (Stream<Path> files = Files.walk(from)) {
+			for (Path f : (Iterable<Path>) files::iterator) {
+				Path to = dst.resolve(from.relativize(f).toString());
+				if (Files.isDirectory(f))
+					Files.createDirectories(to);
+				else {
+					Files.copy(f, to, StandardCopyOption.REPLACE_EXISTING);
+					copied.add(from.relativize(f).toString());
+				}
+			}
+		}
+		Utils.logi("[ResPathsTier] The viewer of stories, %s file(s), %s -> %s", copied.size(), from, dst);
+	}
+
 	void start(WebConfig wcfg, Server server) throws IOException {
 		DynaResource res = wcfg.dynaResource;
 		mustnonull(res, "WebConfig.dynaResource (e.g. in html-service.json) is required by ResPathsTier.");
@@ -208,6 +246,7 @@ public class ResPathsTier extends ServPort6<HtmlPubReq> implements IResUpdater {
 		Files.createDirectories(staging);
 		// the viewer of stories, installed with the web assets: never a published doc's folder
 		Files.createDirectories(resroot.resolve(StoryShell.viewer));
+		installViewer(wcfg);
 		// the stories' resources, kept when restarted (the staging folder is not), not served
 		storyMedia = new StoryMedia(resroot.resolveSibling(resroot.getFileName() + ".res"), pubroot);
 

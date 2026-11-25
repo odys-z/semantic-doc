@@ -12,7 +12,8 @@
  *  - text edited in place; Puck's blocks drawer and fields panel are hidden (overrides), and
  *    kept for later;
  *  - the album tree and the page scroll each on its own, Puck being as high as the editor (height);
- *  - saved with u/page (autosave), committed and published as doc trees are (c/commit, c/publish).
+ *  - saved with u/page (autosave); Puck's Publish saves, commits and publishes it, as doc trees are
+ *    (c/commit, c/publish), and shows its link (as AnDoctreeditor).
  *
  * Puck takes its data once, when mounted: changes made outside it, a drop, are dispatched to it
  * (setData), as its own are, and saved by onChange.
@@ -28,11 +29,15 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import VerticalSplit from '@mui/icons-material/VerticalSplit';
 import HorizontalSplit from '@mui/icons-material/HorizontalSplit';
-import { GalleryView, L } from '@anclient/anreact';
+import Box from '@mui/material/Box';
+import Link from '@mui/material/Link';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import { ConfirmDialog, GalleryView, L, copyToClipboard } from '@anclient/anreact';
 import '@puckeditor/core/puck.css';
 import type { AnTreeNode, SessionClient, StreeTier } from '@anclient/semantier';
 
-import type { StreeDoctier } from '../doctree/doc-stree';
+import type { DocInf, StreeDoctier } from '../doctree/doc-stree';
 import { SAVE_DELAY } from '../doctree/AnDoctreeditor';
 import { templates } from './templates';
 import { AlbumPanel } from './AlbumPanel';
@@ -81,6 +86,56 @@ export function AnStoryEditor(props: AnStoryEditorProps) {
 
 	// saved when the editor is left
 	React.useEffect(() => flush, [flush]);
+
+	/** dialog: the published story's url */
+	const [publink, setPublink] = React.useState<string>();
+	/** why the link couldn't be copied, see copyLink() */
+	const [copyFail, setCopyFail] = React.useState<string>();
+	const linkInput = React.useRef<HTMLInputElement>(null);
+
+	/** url of the story published at html-service, as AnDoctreeditor's pubUrl() */
+	const pubUrl = (doc?: DocInf) => doc?.pubpath
+		? `${window.location.origin.replace(/\/+$/, '')}/${doc.pubpath}/` : undefined;
+
+	/**
+	 * Puck's Publish: the page as it is (u/page, not waiting for the autosave), committed (c/commit,
+	 * the synode commits a story's page), published at the synode's html-service (c/publish), and
+	 * its link shown.
+	 */
+	const publish = React.useCallback((d: Data) => {
+		if (pending.current) window.clearTimeout(pending.current.timer);
+		pending.current = undefined;
+		setMsg('Publishing ...');
+		doctier.savePage(docId, fromPuck(d),
+			() => doctier.commitDoc(docId, undefined,
+				() => doctier.publish(docId, (resp) => {
+						setMsg(undefined);
+						setPublink(pubUrl(resp.doc));
+					},
+					(m) => setMsg(`Not published: ${m}`)),
+				(m) => setMsg(`Not committed: ${m}`)),
+			(m) => setMsg(`Not saved: ${m}`));
+	}, [doctier, docId]);
+
+	const selectLink = () => {
+		const i = linkInput.current;
+		if (i) { i.focus(); i.select(); }
+	};
+
+	/** "Copy link" of the published dialog, as AnDoctreeditor's copyLink() */
+	const copyLink = (link: string): false => {
+		if (copyFail) {
+			selectLink();
+			return false;
+		}
+		copyToClipboard(link).then(
+			() => { setPublink(undefined); setCopyFail(undefined); setMsg('Link copied'); },
+			() => { setCopyFail(window.isSecureContext
+					? 'The browser didn\'t let this page write to the clipboard.'
+					: 'This page isn\'t served over https (a secure connection), so the browser doesn\'t let it write to the clipboard.');
+				setTimeout(selectLink); });
+		return false;
+	};
 
 	/** Puck's changes, its own and dispatched: autosaved */
 	const onChange = React.useCallback((d: Data) => {
@@ -204,7 +259,26 @@ export function AnStoryEditor(props: AnStoryEditorProps) {
 			{msg && <div className='sdoc-story-msg'>{msg}</div>}
 			<div style={{ flex: 1, minHeight: 0 }}>
 				<Puck config={storyConfig} data={data} metadata={metadata} height='100%'
-					onChange={onChange} overrides={overrides} />
+					onChange={onChange} onPublish={publish} overrides={overrides} />
 			</div>
+
+			{publink &&
+				<ConfirmDialog open={true} title='Published' msg={String(data.root?.props?.title ?? '')}
+					ok='Copy link' cancel='Close'
+					onOk={() => copyLink(publink)}
+					onClose={() => { setPublink(undefined); setCopyFail(undefined); }}>
+					{/* the story at html-service, in a new tab */}
+					<Link href={publink} target='_blank' rel='noopener' underline='hover' variant='body1'
+						sx={{ display: 'block', mt: 1, wordBreak: 'break-all' }}>{publink}</Link>
+					{/* not copied: the link as text, selected, for the user to copy */}
+					{copyFail && <Box sx={{ mt: 2 }}>
+						<Typography variant='body2' color='text.secondary'>
+							{copyFail} The link below is selected: press Ctrl+C (⌘C on a Mac) to copy it, or long-press it on a phone.
+						</Typography>
+						<TextField inputRef={linkInput} value={publink} fullWidth multiline size='small' margin='dense'
+							slotProps={{ htmlInput: { readOnly: true } }}
+							onFocus={(e) => (e.target as HTMLTextAreaElement).select()} />
+					</Box>}
+				</ConfirmDialog>}
 		</div>);
 }

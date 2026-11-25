@@ -6,7 +6,6 @@ import static j2html.TagCreator.div;
 import static j2html.TagCreator.head;
 import static j2html.TagCreator.html;
 import static j2html.TagCreator.iff;
-import static j2html.TagCreator.link;
 import static j2html.TagCreator.meta;
 import static j2html.TagCreator.script;
 import static j2html.TagCreator.title;
@@ -26,13 +25,13 @@ import io.oz.sdoc.SDocRef;
  * <pre>
  * &lt;title&gt;{title}&lt;/title&gt;
  * &lt;meta property="og:title" content="{title}"&gt; &lt;meta property="og:image" content="m/{cover}"&gt;
- * &lt;link rel="stylesheet" href="/{pubroot}/_story/viewer.css"&gt;
  * &lt;div id="story"&gt;&lt;/div&gt;
  * &lt;script src="/{pubroot}/_story/viewer.js" data-page="page.json"&gt;&lt;/script&gt;
  * </pre>
  *
- * The viewer (viewer.js, built by semantic-doc/src/viewer) renders page.json; its media files,
- * m/&lt;synuid&gt;, are to be served from the story's DocRefs (TODO).
+ * The viewer (viewer.js, semantic-doc/src/viewer, built by the app, its css in it) renders page.json,
+ * copied into /{pubroot}/_story/ by {@link ResPathsTier} when html-service starts; its media files,
+ * m/&lt;synuid&gt;, are served from the story's DocRefs ({@link StoryMedia}).
  *
  * @since 0.2.2
  */
@@ -68,8 +67,7 @@ public class StoryShell {
 				meta().attr("property", "og:title").withContent(t),
 				iff(!isblank(doc.subtitle), meta().attr("property", "og:description").withContent(doc.subtitle)),
 				iff(!isblank(doc.cover), meta().attr("property", "og:image")
-						.withContent("m/" + URLEncoder.encode(doc.cover == null ? "" : doc.cover, StandardCharsets.UTF_8))),
-				link().withRel("stylesheet").withHref(v + "viewer.css")),
+						.withContent("m/" + URLEncoder.encode(doc.cover == null ? "" : doc.cover, StandardCharsets.UTF_8)))),
 			body(
 				div().withId("story"),
 				script().withSrc(v + "viewer.js").attr("data-page", page))

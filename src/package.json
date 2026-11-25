@@ -10,13 +10,15 @@
     ".": "./editor/index.ts",
     "./doctree": "./doctree/index.ts",
     "./preview": "./preview/index.ts",
-    "./storytree": "./storytree/index.ts"
+    "./storytree": "./storytree/index.ts",
+    "./viewer": "./viewer/index.tsx"
   },
   "files": [
     "editor",
     "doctree",
     "preview",
     "storytree",
+    "viewer",
     "README.md"
   ],
   "engines": {
