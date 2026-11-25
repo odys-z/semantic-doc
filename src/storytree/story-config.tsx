@@ -14,6 +14,7 @@
 import React from 'react';
 import type { ComponentConfig, Config, Data } from '@puckeditor/core';
 import type { AnTreeNode } from '@anclient/semantier';
+import { regex } from '@anclient/anreact';
 
 import { PuckNode } from './templates';
 import { MediaDrop } from './MediaDrop';
@@ -47,15 +48,21 @@ const Hero: ComponentConfig<{ title?: string, subtitle?: string, media?: AnTreeN
 		title:    { type: 'text', label: 'title', contentEditable: true },
 		subtitle: { type: 'text', label: 'subtitle', contentEditable: true },
 	},
-	render: ({ id, title, subtitle, media, puck }) => (
+	render: ({ id, title, subtitle, media, puck }) => {
+	  /** the cover, the media dropped, with its src (Puck's metadata) */
+	  const cover = media && withSrc([media as AnTreeNode], puck.metadata.mediaSrc)[0];
+	  return (
 		<MediaDrop onDrop={(dropped) => puck.metadata.onDrop?.(id, dropped)}>
 			<div className='sdoc-story-hero'>
-				{/* TODO WP2: the cover, withSrc([media], puck.metadata.mediaSrc)[0] */}
-				{media && <span>{String(media.node?.docname ?? media.id)}</span>}
+				{cover && (regex.mime2type(String(cover.node?.mime ?? '')) === 'video'
+					? <video className='sdoc-story-cover' src={String(cover.node.src)} controls />
+					: <img className='sdoc-story-cover' src={String(cover.node.src)}
+						alt={String(cover.node?.docname ?? cover.id)} />)}
 				<h1 className='sdoc-story-editable'>{title}</h1>
 				{(puck.isEditing || subtitle) && <p className='sdoc-story-editable'>{subtitle}</p>}
 			</div>
-		</MediaDrop>),
+		</MediaDrop>);
+	},
 };
 
 const Text: ComponentConfig<{ content?: string }> = {
