@@ -3,6 +3,9 @@
  * a folder ('gallery') with its children. What a drop does is story-config.tsx dropTo()'s:
  * a Gallery adds the folder's images (or the media), a Hero takes a media, others ignore it.
  *
+ * While an album node is dragged, all of them are shown (story.css, sdoc-story-dragging), the one
+ * under the pointer more (over).
+ *
  * The drag is anreact's (TreegridProps.draggable): a HTML5 drag, its data 'application/json',
  * the node's {type, id, node}; Puck's own drags (dnd-kit, pointer events) are not HTML5 drags,
  * so the two don't meet.
@@ -25,7 +28,7 @@ export function MediaDrop({ onDrop, children }: MediaDropProps) {
 
 	return (
 		<div className={`sdoc-story-drop${over ? ' sdoc-story-drop-over' : ''}`}
-			style={over ? { outline: '2px dashed #1976d2', outlineOffset: -2 } : undefined}
+			style={over ? { outline: '3px solid #1976d2', outlineOffset: -3, background: 'rgba(25, 118, 210, 0.15)' } : undefined}
 			onDragOver={(e) => {
 				if (!isTreeDrag(e)) return;
 				e.preventDefault(); // accepts the drop

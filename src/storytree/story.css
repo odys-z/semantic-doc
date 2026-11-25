@@ -12,3 +12,39 @@
 .sdoc-story-text {
 	white-space: pre-wrap;
 }
+
+/*
+ * While an album node is dragged (AnStoryEditor, on the page's body): the blocks taking it, MediaDrop;
+ * the one under the pointer is shown more (MediaDrop's own style).
+ */
+.sdoc-story-dragging .sdoc-story-drop {
+	outline: 2px dashed #1976d2;
+	outline-offset: -2px;
+	background: rgba(25, 118, 210, 0.06);
+	min-height: 3em;
+}
+
+.sdoc-story-dragging .sdoc-story-drop::after {
+	content: 'Drop here';
+	display: block;
+	padding: 2px;
+	font: 12px sans-serif;
+	color: #1976d2;
+	text-align: center;
+}
+
+/*
+ * Puck stops pointer events inside its blocks ([data-puck-component] *), clicks being for selecting
+ * them: while an album node is dragged, the drop targets take them again, so a drop reaches MediaDrop.
+ */
+.sdoc-story-dragging .sdoc-story-drop {
+	pointer-events: auto;
+}
+
+/* a Hero's cover, the media dropped */
+.sdoc-story-cover {
+	display: block;
+	max-width: 100%;
+	max-height: 60vh;
+	object-fit: contain;
+}

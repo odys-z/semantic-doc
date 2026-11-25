@@ -5,7 +5,8 @@
  * page, a tree of PuckNode (templates.ts), instead of RST nodes:
  *  - loaded with r/page, a new story's page (none saved yet) from a template;
  *  - the album tree beside the page (AlbumPanel), in Puck's left side bar or above the page, as
- *    toggled in the header (headerActions); its media and folders dropped into the blocks
+ *    toggled beside Puck's side bar toggles (headerActions, rendered there); its media and folders
+ *    dropped into the blocks, which are shown while an album node is dragged
  *    as they are, AnTreeNodes (MediaDrop, story-config.tsx dropTo()); the tree's checkboxes show
  *    the media the page uses (the page's refs, s_stories.refs), unchecking clears them;
  *  - text edited in place; Puck's blocks drawer and fields panel are hidden (overrides), and
@@ -21,14 +22,15 @@
  * m/<synuid> (viewerMetadata()).
  */
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Puck, useGetPuck, type Data } from '@puckeditor/core';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import VerticalSplit from '@mui/icons-material/VerticalSplit';
 import HorizontalSplit from '@mui/icons-material/HorizontalSplit';
-import { L } from '@anclient/anreact';
+import { GalleryView, L } from '@anclient/anreact';
 import '@puckeditor/core/puck.css';
-import type { AnTreeNode, StreeTier } from '@anclient/semantier';
+import type { AnTreeNode, SessionClient, StreeTier } from '@anclient/semantier';
 
 import type { StreeDoctier } from '../doctree/doc-stree';
 import { SAVE_DELAY } from '../doctree/AnDoctreeditor';
@@ -100,8 +102,16 @@ export function AnStoryEditor(props: AnStoryEditorProps) {
 		puck.dispatch({ type: 'setData', data: { content: next } });
 	}, []);
 
-	/** TODO WP2: GalleryView.imgSrcReq(n.id, 'h_photos', { ...albumtier, docuri }) */
-	const metadata = React.useMemo(() => editorMetadata((_n) => '', onDrop), [onDrop]);
+	/**
+	 * Media's src while editing: a session link of the album's doc, as AlbumDocview's
+	 * (GalleryView.imgSrcReq()), its doc table as the album tree gives it (node.doctabl).
+	 */
+	const metadata = React.useMemo(() => editorMetadata((n) => albumtier
+			? GalleryView.imgSrcReq(n.id, String(n.node?.doctabl ?? 'h_photos'), {
+				uri: albumtier.uri, port: albumtier.port, client: albumtier.client as SessionClient,
+				docuri: () => docuri })
+			: '',
+		onDrop), [albumtier, docuri, onDrop]);
 
 	/** the album tree, scrolled on its own: in the left side bar, or above the page (at most a third of it) */
 	const album = React.useMemo(() => (
@@ -112,23 +122,63 @@ export function AnStoryEditor(props: AnStoryEditorProps) {
 		</div>), [albumAt, albumtier, albumsk, docuri]);
 
 	/**
-	 * Inside Puck: the album tree, left (drawer) or top (above Puck's ui); the header's toggles of it, where
-	 * Puck's state is got for onDrop. Top: the left side bar is closed, left: opened (Puck's ui).
+	 * Inside Puck: the album tree, left (drawer) or top (above Puck's ui); the toggles of it, beside Puck's
+	 * side bar toggles (or in the header's actions), where Puck's state is got for onDrop; the drop targets shown
+	 * while an album node is dragged. Top: the left side bar is closed, left: opened (Puck's ui).
 	 */
 	const overrides = React.useMemo(() => ({
 		headerActions: function HeaderActions({ children }: { children: React.ReactNode }) {
 			const get = useGetPuck();
 			getPuck.current = get;
-			return (<>
-				<ToggleButtonGroup size='small' exclusive value={albumAt}
+
+			/** in this Puck, where the toggles go: beside its header's side bar toggles, else here */
+			const anchor = React.useRef<HTMLSpanElement>(null);
+			const [controls, setControls] = React.useState<Element | null>(null);
+			React.useEffect(() => {
+				// Puck (0.24) has no override there (header replaces all of it): found by its css module's class name
+				setControls(anchor.current?.closest('.Puck')?.querySelector('[class*="PuckHeader-toggle"]') ?? null);
+			});
+
+			/**
+			 * While an album node is dragged (from the album panel; Puck's own drags aren't HTML5 drags),
+			 * the page's blocks taking it are shown (story.css, sdoc-story-dragging on the page's body,
+			 * in Puck's iframe). Capturing: the tree's dragstart stops its propagation.
+			 */
+			React.useEffect(() => {
+				const doc = anchor.current?.ownerDocument;
+				const root = anchor.current?.closest('.Puck');
+				if (!doc || !root) return;
+				const page = () => root.querySelector('iframe')?.contentDocument?.body;
+				const on = (e: DragEvent) => {
+					if ((e.target as Element)?.closest?.('.sdoc-story-album'))
+						page()?.classList.add('sdoc-story-dragging');
+				};
+				const off = () => page()?.classList.remove('sdoc-story-dragging');
+				doc.addEventListener('dragstart', on, true);
+				doc.addEventListener('dragend', off, true);
+				return () => {
+					doc.removeEventListener('dragstart', on, true);
+					doc.removeEventListener('dragend', off, true);
+					off();
+				};
+			}, []);
+
+			const toggles = (
+				<ToggleButtonGroup size='small' exclusive value={albumAt} sx={{ ml: 0.5 }}
 					onChange={(_e, at: 'left' | 'top' | null) => {
 						if (!at) return;
 						setAlbumAt(at);
 						get().dispatch({ type: 'setUi', ui: { leftSideBarVisible: at === 'left' } });
 					}} >
-					<ToggleButton value='left' title={L('Album on the left')}><VerticalSplit fontSize='small' /></ToggleButton>
-					<ToggleButton value='top' title={L('Album on top')}><HorizontalSplit fontSize='small' /></ToggleButton>
-				</ToggleButtonGroup>
+					<ToggleButton value='left' title={L('Album on the left')} sx={{ p: '3px' }}>
+						<VerticalSplit sx={{ fontSize: 16 }} /></ToggleButton>
+					<ToggleButton value='top' title={L('Album on top')} sx={{ p: '3px' }}>
+						<HorizontalSplit sx={{ fontSize: 16 }} /></ToggleButton>
+				</ToggleButtonGroup>);
+
+			return (<>
+				<span ref={anchor} hidden />
+				{controls ? createPortal(toggles, controls) : toggles}
 				{children}
 			</>);
 		},
