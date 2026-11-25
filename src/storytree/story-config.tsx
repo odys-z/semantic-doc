@@ -14,7 +14,7 @@
 import React from 'react';
 import type { ComponentConfig, Config, Data } from '@puckeditor/core';
 import type { AnTreeNode } from '@anclient/semantier';
-import { regex } from '@anclient/anreact';
+import { GalleryView, Lightbox, regex } from '@anclient/anreact';
 
 import { PuckNode } from './templates';
 import { MediaDrop } from './MediaDrop';
@@ -82,9 +82,13 @@ const Gallery: ComponentConfig<{ items?: AnTreeNode[], layout?: string }> = {
 		return (
 			<MediaDrop onDrop={(dropped) => puck.metadata.onDrop?.(id, dropped)}>
 				<div className='sdoc-story-gallery'>
-					{/* TODO WP2: <GalleryView visible photos={photos} lightbox={(ps, opts) => <Lightbox {...opts} photos={ps} />} />,
-					    after WP1: GalleryView / Lightbox use node.src, and pass props.photos to the lightbox */}
-					{photos.length} media
+					{photos.length
+					  ? // anreact's gallery, the photos with their src (node.src); remounted when they change,
+						// as GalleryView takes its photos once, when mounted
+						<GalleryView key={photos.map((n) => n.id).join(',')} visible uri='' cid={id} docuri=''
+							photos={photos}
+							lightbox={(ps, opts) => <Lightbox {...opts} open={!!opts?.open} showResourceCount photos={ps} />} />
+					  : puck.isEditing && <div className='sdoc-story-hint'>Drop a folder or media here</div>}
 				</div>
 			</MediaDrop>);
 	},
