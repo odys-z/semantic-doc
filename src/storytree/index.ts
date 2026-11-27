@@ -6,6 +6,6 @@
  */
 export { AnStoryEditor } from './AnStoryEditor';
 export type { AnStoryEditorProps } from './AnStoryEditor';
-export { templates, loadTemplates } from './templates';
-export type { StoryTemplate, PuckNode } from './templates';
+export { templates, loadTemplates, parseGifDimensions } from './templates';
+export type { StoryTemplate, PuckNode, GifSize } from './templates';
 export { storyConfig, toPuck, fromPuck, dropTo, pageRefs, unref, editorMetadata, viewerMetadata } from './story-config';

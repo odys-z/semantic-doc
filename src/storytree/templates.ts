@@ -87,8 +87,47 @@ export const templates: StoryTemplate[] = [
 	},
 ];
 
+export interface GifSize {
+	width: number;
+	height: number;
+	aspectRatio: string;
+}
+
+export function parseGifDimensions(gif?: string): GifSize | undefined {
+	if (!gif) return undefined;
+	const match = gif.match(/-(\d+)x(\d+)\.gif(?:$|[?#])/i);
+	if (!match) return undefined;
+
+	const width = Number(match[1]);
+	const height = Number(match[2]);
+	if (!width || !height) return undefined;
+
+	return {
+		width,
+		height,
+		aspectRatio: `${width} / ${height}`,
+	};
+}
+
 /** the templates loaded, by folder: once a session, see {@link loadTemplates} */
 const loaded: { [folder: string]: Promise<StoryTemplate[]> } = {};
+
+export function validateTemplates (tmpl: StoryTemplate): string | undefined {
+	if (!tmpl?.id) return 'Template missing required "id".';
+	if (!tmpl?.name) return `Template "${tmpl?.id ?? '(unknown)'}" missing required "name".`;
+	const d = tmpl.data as unknown as Record<string, unknown> | undefined;
+	if (!d || typeof d !== 'object') return `Template "${tmpl.id}" missing "data" object.`;
+	if (typeof d.pucktype !== 'string' || !d.pucktype) {
+		return `Template "${tmpl.id}" data missing required "pucktype" (got ${String(d.pucktype)}).`;
+	}
+	if (typeof d.id !== 'string' || !d.id) {
+		return `Template "${tmpl.id}" data missing required "id" (got ${String(d.id)}).`;
+	}
+	if (d.pucktype === 'page' && !Array.isArray(d.children)) {
+		return `Page template "${tmpl.id}" data missing "children" array (found keys: ${Object.keys(d).join(', ')}).`;
+	}
+	return undefined;
+};
 
 /**
  * Load the templates of an app's resources, [folder]/templates.json, a json array of

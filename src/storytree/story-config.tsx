@@ -163,8 +163,10 @@ export function unref(data: Data, pids: string[]): Data {
 /**
  * Album nodes dropped on a block → the block's new props; undefined: ignored.
  *
- * - Gallery: a folder ('gallery' node) adds its children, the folder's images; a media ('p')
- *   adds itself; only those not in the gallery yet (by id), never replacing.
+ * - Gallery:
+ *   a folder ('gallery' node) adds its children, the folder's images;
+ * 	 a media ('p') adds itself;
+ *   only those not in the gallery yet (by id), never replacing.
  * - Hero: a media replaces its media; a folder is ignored.
  * - anything else: ignored.
  */

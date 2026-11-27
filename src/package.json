@@ -32,7 +32,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anclient/anreact": "^0.8.4",
+    "@anclient/anreact": "^0.8.5",
     "@puckeditor/core": "^0.24.1",
     "@tiptap/core": "^3.32.2",
     "@tiptap/extension-document": "^3.32.2",
